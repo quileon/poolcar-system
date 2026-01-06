@@ -4,7 +4,7 @@ mod models;
 mod tracker_routes;
 
 use axum::{
-    routing::{get, post, put},
+    routing::{delete, get, post, put},
     Router,
 };
 use sqlx::PgPool;
@@ -26,6 +26,10 @@ pub fn create_app(pool: PgPool) -> Router {
         .route(
             "/trackers/{tracker_id}",
             put(tracker_routes::update_tracker),
+        )
+        .route(
+            "/trackers/{tracker_id}",
+            delete(tracker_routes::delete_tracker),
         )
         .with_state(app_state)
 }
