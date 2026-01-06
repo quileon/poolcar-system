@@ -1,11 +1,14 @@
-use crate::{models::PaginationParams, AppState};
+use crate::{
+    models::{CarType, PaginationParams},
+    AppState,
+};
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Postgres};
 use std::sync::Arc;
 
@@ -14,6 +17,11 @@ struct CarTypeWithCount {
     car_type_id: i32,
     name: String,
     car_count: i64,
+}
+
+#[derive(Debug, FromRow, Deserialize)]
+pub struct CarTypeBody {
+    pub name: String,
 }
 
 pub async fn get_car_types(
@@ -53,4 +61,29 @@ pub async fn get_car_types(
     })?;
 
     Ok(Json(car_types))
+}
+
+pub async fn create_car_type(
+    State(state): State<Arc<AppState>>,
+    Json(car_type): Json<CarTypeBody>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let created_car_type = sqlx::query_as::<Postgres, CarType>(
+        r#"
+            INSERT INTO car_types (name)
+            VALUES ($1)
+            RETURNING car_type_id, name
+        "#,
+    )
+    .bind(car_type.name)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| {
+        eprintln!("Database error: {:?}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Database error: {}", e),
+        )
+    })?;
+
+    Ok(Json(created_car_type))
 }

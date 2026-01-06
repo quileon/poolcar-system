@@ -33,5 +33,6 @@ pub fn create_app(pool: PgPool) -> Router {
             delete(tracker_routes::delete_tracker),
         )
         .route("/cars/types", get(car_type_routes::get_car_types))
+        .route("/cars/types", post(car_type_routes::create_car_type))
         .with_state(app_state)
 }
