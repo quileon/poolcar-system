@@ -23,18 +23,12 @@ pub struct Tracker {
 pub struct CarType {
     pub car_type_id: i32,
     pub name: String,
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
-    pub deleted_at: Option<NaiveDateTime>,
 }
 
 #[derive(Debug, FromRow, Serialize)]
 pub struct ContactType {
     pub contact_type_id: i32,
     pub name: String,
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
-    pub deleted_at: Option<NaiveDateTime>,
 }
 
 #[derive(Debug, FromRow, Serialize)]
@@ -44,18 +38,12 @@ pub struct Contact {
     pub latitude: Decimal,
     pub longitude: Decimal,
     pub contact_type_id: i32,
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
-    pub deleted_at: Option<NaiveDateTime>,
 }
 
 #[derive(Debug, FromRow, Serialize)]
 pub struct Activity {
     pub activity_id: i32,
     pub name: String,
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
-    pub deleted_at: Option<NaiveDateTime>,
 }
 
 #[derive(Debug, FromRow, Serialize)]
@@ -69,7 +57,4 @@ pub struct History {
     pub finished_latitude: Decimal,
     pub finished_longitude: Decimal,
     pub description: String,
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
-    pub deleted_at: Option<NaiveDateTime>,
 }

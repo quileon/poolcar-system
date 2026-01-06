@@ -1,6 +1,5 @@
 use poolcar_tracking_system_backend_test::create_app;
 use serde::{Deserialize, Serialize};
-use serial_test::serial;
 use sqlx::{prelude::FromRow, PgPool};
 use tokio::{net::TcpListener, task::JoinHandle};
 
