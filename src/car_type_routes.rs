@@ -19,6 +19,12 @@ struct CarTypeWithCount {
     car_count: i64,
 }
 
+#[derive(Debug, Serialize)]
+struct GetCarTypesResponse {
+    car_types: Vec<CarTypeWithCount>,
+    car_type_count: usize,
+}
+
 #[derive(Debug, FromRow, Deserialize)]
 pub struct CarTypeBody {
     pub name: String,
@@ -60,7 +66,12 @@ pub async fn get_car_types(
         )
     })?;
 
-    Ok(Json(car_types))
+    let response = GetCarTypesResponse {
+        car_type_count: car_types.len(),
+        car_types,
+    };
+
+    Ok(Json(response))
 }
 
 pub async fn create_car_type(
