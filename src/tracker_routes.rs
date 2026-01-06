@@ -131,3 +131,29 @@ pub async fn update_tracker(
 
     Ok(axum::Json(updated_tracker))
 }
+
+pub async fn delete_tracker(
+    State(state): State<Arc<AppState>>,
+    Path(tracker_id): Path<i32>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let deleted_tracker = sqlx::query_as::<Postgres, Tracker>(
+        r#"
+            UPDATE trackers
+            SET deleted_at = NOW()
+            WHERE tracker_id = $1
+            RETURNING tracker_id, name
+        "#,
+    )
+    .bind(tracker_id)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| {
+        eprintln!("Database error: {:?}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Database error: {}", e),
+        )
+    })?;
+
+    Ok(axum::Json(deleted_tracker))
+}
