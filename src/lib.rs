@@ -1,4 +1,5 @@
 mod car_routes;
+mod car_type_routes;
 mod dashboard_routes;
 mod models;
 mod tracker_routes;
@@ -31,5 +32,6 @@ pub fn create_app(pool: PgPool) -> Router {
             "/trackers/{tracker_id}",
             delete(tracker_routes::delete_tracker),
         )
+        .route("/cars/types", get(car_type_routes::get_car_types))
         .with_state(app_state)
 }
