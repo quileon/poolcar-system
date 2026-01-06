@@ -1,17 +1,7 @@
-mod dashboard_routes;
-mod models;
-
 use anyhow::Context;
-use axum::{routing::get, Router};
 use dotenvy;
-use sqlx::{postgres::PgPoolOptions, PgPool};
-use std::sync::Arc;
-
-use dashboard_routes::get_dashboard_data;
-
-pub struct AppState {
-    pub db: PgPool,
-}
+use poolcar_tracking_system_backend_test::create_app;
+use sqlx::postgres::PgPoolOptions;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -26,9 +16,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .context("Failed to connect to Postgres")?;
     println!("Database OK");
 
-    // App state
-    let app_state = Arc::new(AppState { db: pool });
-
     // Port binding
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
         .await
@@ -36,15 +23,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Listening on {}", listener.local_addr()?);
 
     // Axum
-    let app = Router::new()
-        .route("/", get(root))
-        .route("/dashboard", get(get_dashboard_data))
-        .with_state(app_state);
+    let app = create_app(pool);
     axum::serve(listener, app).await?;
 
     Ok(())
-}
-
-async fn root() -> &'static str {
-    "Hello world!"
 }

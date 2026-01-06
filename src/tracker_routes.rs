@@ -1,0 +1,133 @@
+use crate::models::Tracker;
+use crate::AppState;
+use axum::{
+    extract::{Path, Query, State},
+    http::StatusCode,
+    response::IntoResponse,
+    Json,
+};
+use serde::{Deserialize, Serialize};
+use sqlx::{FromRow, Postgres};
+use std::sync::Arc;
+
+#[derive(Debug, Deserialize)]
+pub struct TrackerPaginationParams {
+    pub page: Option<u32>,
+    pub limit: Option<u32>,
+}
+
+#[derive(Debug, FromRow, Serialize)]
+struct TrackerQuery {
+    tracker_id: i32,
+    name: String,
+    car_id: Option<i32>,
+    car_name: Option<String>,
+}
+
+#[derive(Debug, FromRow, Deserialize)]
+pub struct TrackerBody {
+    name: String,
+}
+
+#[derive(Debug, FromRow, Serialize)]
+struct GetTrackerResponse {
+    trackers: Vec<TrackerQuery>,
+    tracker_count: usize,
+}
+
+pub async fn get_trackers(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<TrackerPaginationParams>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let page = params.page.unwrap_or(1);
+    let limit = params.limit.unwrap_or(5);
+
+    let page = if page < 1 { 1 } else { page };
+    let limit = if limit < 1 { 1 } else { limit };
+    let offset = (page - 1) * 5;
+
+    let trackers = sqlx::query_as::<Postgres, TrackerQuery>(
+        r#"
+            SELECT
+                trackers.tracker_id,
+                trackers.name,
+                cars.car_id as car_id,
+                cars.name as car_name
+            FROM trackers
+            LEFT JOIN cars ON trackers.tracker_id = cars.tracker_id
+            WHERE trackers.deleted_at IS NULL
+            LIMIT $1 OFFSET $2
+        "#,
+    )
+    .bind(limit as i64)
+    .bind(offset as i64)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| {
+        eprintln!("Database error: {:?}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Database error: {}", e),
+        )
+    })?;
+
+    let response = GetTrackerResponse {
+        tracker_count: trackers.len(),
+        trackers,
+    };
+
+    Ok(axum::Json(response))
+}
+
+pub async fn create_tracker(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<TrackerBody>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let new_tracker = sqlx::query_as::<Postgres, Tracker>(
+        r#"
+            INSERT INTO trackers (name)
+            VALUES ($1)
+            RETURNING tracker_id, name
+        "#,
+    )
+    .bind(payload.name)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| {
+        eprintln!("Database error: {:?}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Database error: {}", e),
+        )
+    })?;
+
+    Ok(axum::Json(new_tracker))
+}
+
+pub async fn update_tracker(
+    State(state): State<Arc<AppState>>,
+    Path(tracker_id): Path<i32>,
+    Json(payload): Json<TrackerBody>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let updated_tracker = sqlx::query_as::<Postgres, Tracker>(
+        r#"
+            UPDATE trackers
+            SET name = $2
+            WHERE tracker_id = $1
+            RETURNING tracker_id, name
+        "#,
+    )
+    .bind(tracker_id)
+    .bind(payload.name)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| {
+        eprintln!("Database error: {:?}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Database error: {}", e),
+        )
+    })?;
+
+    Ok(axum::Json(updated_tracker))
+}
