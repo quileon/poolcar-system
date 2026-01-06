@@ -19,7 +19,7 @@ pub struct Tracker {
     pub name: String,
 }
 
-#[derive(Debug, FromRow, Serialize)]
+#[derive(Debug, FromRow, Deserialize, Serialize)]
 pub struct CarType {
     pub car_type_id: i32,
     pub name: String,
@@ -57,4 +57,10 @@ pub struct History {
     pub finished_latitude: Decimal,
     pub finished_longitude: Decimal,
     pub description: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PaginationParams {
+    pub page: Option<u32>,
+    pub limit: Option<u32>,
 }

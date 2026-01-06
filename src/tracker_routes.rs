@@ -1,4 +1,4 @@
-use crate::models::Tracker;
+use crate::models::{PaginationParams, Tracker};
 use crate::AppState;
 use axum::{
     extract::{Path, Query, State},
@@ -9,12 +9,6 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Postgres};
 use std::sync::Arc;
-
-#[derive(Debug, Deserialize)]
-pub struct TrackerPaginationParams {
-    pub page: Option<u32>,
-    pub limit: Option<u32>,
-}
 
 #[derive(Debug, FromRow, Serialize)]
 struct TrackerQuery {
@@ -37,7 +31,7 @@ struct GetTrackerResponse {
 
 pub async fn get_trackers(
     State(state): State<Arc<AppState>>,
-    Query(params): Query<TrackerPaginationParams>,
+    Query(params): Query<PaginationParams>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
     let page = params.page.unwrap_or(1);
     let limit = params.limit.unwrap_or(5);
