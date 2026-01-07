@@ -56,7 +56,7 @@ pub async fn get_contacts(
                 contacts.latitude,
                 contacts.longitude,
                 contact_types.contact_type_id,
-                contact_types.name as contact_type_name,
+                contact_types.name as contact_type_name
             FROM contacts
             LEFT JOIN contact_types ON contacts.contact_type_id = contact_types.contact_type_id
             WHERE contacts.deleted_at IS NULL
