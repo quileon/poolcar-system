@@ -23,6 +23,9 @@ pub fn create_app(pool: PgPool) -> Router {
         .route("/", get(|| async { "Hello, World!" }))
         .route("/dashboard", get(dashboard_routes::get_dashboard_data))
         .route("/cars", get(car_routes::get_cars))
+        .route("/cars", post(car_routes::create_car))
+        .route("/cars/{car_id}", put(car_routes::update_car))
+        .route("/cars/{car_id}", delete(car_routes::delete_car))
         .route("/trackers", get(tracker_routes::get_trackers))
         .route("/trackers", post(tracker_routes::create_tracker))
         .route(
