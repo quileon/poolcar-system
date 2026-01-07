@@ -76,7 +76,7 @@ async fn seed_database(pool: &PgPool) {
     )
     .execute(pool)
     .await
-    .expect("Failed to seed contact types");
+    .expect("Failed to seed cars");
 }
 
 #[sqlx::test]
@@ -100,7 +100,7 @@ async fn test_get_cars(pool: PgPool) {
         .expect("car_count should be a number");
     assert_eq!(car_count, 3, "Expected 3 car_count");
 
-    // Data check - deserialize into CarWithTracker to match API response
+    // Data check
     let cars: Vec<CarWithTracker> =
         serde_json::from_value(body["cars"].clone()).expect("Failed to deserialize cars array");
 
