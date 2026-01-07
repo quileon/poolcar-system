@@ -98,3 +98,57 @@ pub async fn create_car_type(
 
     Ok(Json(created_car_type))
 }
+
+pub async fn update_car_type(
+    State(state): State<Arc<AppState>>,
+    Path(car_type_id): Path<i32>,
+    Json(car_type): Json<CarTypeBody>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let updated_car_type = sqlx::query_as::<Postgres, CarType>(
+        r#"
+            UPDATE car_types
+            SET name = $2
+            WHERE car_type_id = $1
+            RETURNING car_type_id, name
+        "#,
+    )
+    .bind(car_type_id)
+    .bind(car_type.name)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| {
+        eprintln!("Database error: {:?}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Database error: {}", e),
+        )
+    })?;
+
+    Ok(Json(updated_car_type))
+}
+
+pub async fn delete_car_type(
+    State(state): State<Arc<AppState>>,
+    Path(car_type_id): Path<i32>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let deleted_car_type = sqlx::query_as::<Postgres, CarType>(
+        r#"
+            UPDATE car_types
+            SET deleted_at = NOW()
+            WHERE car_type_id = $1
+            RETURNING car_type_id, name
+        "#,
+    )
+    .bind(car_type_id)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| {
+        eprintln!("Database error: {:?}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Database error: {}", e),
+        )
+    })?;
+
+    Ok(Json(deleted_car_type))
+}
