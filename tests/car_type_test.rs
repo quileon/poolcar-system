@@ -24,7 +24,7 @@ async fn spawn_app(pool: PgPool) -> (String, JoinHandle<()>) {
 }
 
 async fn seed_car_types(pool: &PgPool) {
-    sqlx::query!(
+    sqlx::query(
         r#"
             INSERT INTO car_types (name)
             VALUES ('Delivery'), ('Passenger')
@@ -55,10 +55,10 @@ async fn test_get_car_types(pool: PgPool) {
     let car_type_count = body["car_type_count"]
         .as_u64()
         .expect("car_type_count should be a number");
-    assert_eq!(car_type_count, 2, "Expected 2 trackers");
+    assert_eq!(car_type_count, 2, "Expected 2 car_types");
     let car_types = body["car_types"]
         .as_array()
-        .expect("trackers should be an array");
+        .expect("car_types should be an array");
     assert_eq!(car_types.len(), 2, "Expected 2 car_types in array");
 
     handle.abort();
@@ -93,9 +93,89 @@ async fn test_create_car_type(pool: PgPool) {
     let car_type = sqlx::query_as::<_, CarType>("SELECT * FROM car_types WHERE car_type_id = 1")
         .fetch_one(&pool)
         .await
-        .expect("Failed to fetch tracker");
+        .expect("Failed to fetch car_type");
     assert_eq!(car_type.car_type_id, 1);
     assert_eq!(car_type.name, "Cargo");
+
+    handle.abort();
+}
+
+#[sqlx::test]
+async fn test_update_car_type(pool: PgPool) {
+    seed_car_types(&pool).await;
+    let (address, handle) = spawn_app(pool.clone()).await;
+    let client = reqwest::Client::new();
+
+    // Curl
+    let response = client
+        .put(format!("{}/cars/types/1", address))
+        .json(&serde_json::json!({
+            "name": "Cargo"
+        }))
+        .send()
+        .await
+        .expect("Failed to execute request");
+
+    // Response check
+    assert_eq!(response.status().as_u16(), 200);
+
+    // Body check
+    let body: serde_json::Value = response.json().await.expect("Failed to parse JSON");
+    assert_eq!(body["name"], "Cargo");
+    assert_eq!(
+        body["car_type_id"]
+            .as_u64()
+            .expect("car_type_id should be a number"),
+        1
+    );
+
+    // Database check
+    let query_response =
+        sqlx::query_as::<_, CarType>("SELECT * FROM car_types WHERE car_type_id = 1")
+            .fetch_one(&pool)
+            .await
+            .expect("Failed to fetch car_type");
+    assert_eq!(query_response.car_type_id, 1);
+    assert_eq!(query_response.name, "Cargo");
+
+    handle.abort();
+}
+
+#[sqlx::test]
+async fn test_delete_car_type(pool: PgPool) {
+    seed_car_types(&pool).await;
+    let (address, handle) = spawn_app(pool.clone()).await;
+    let client = reqwest::Client::new();
+
+    // Curl
+    let response = client
+        .delete(format!("{}/cars/types/1", address))
+        .send()
+        .await
+        .expect("Failed to execute request");
+
+    // Response check
+    assert_eq!(response.status().as_u16(), 200);
+
+    // Body check
+    let body: serde_json::Value = response.json().await.expect("Failed to parse JSON");
+    assert_eq!(body["name"], "Delivery");
+    assert_eq!(
+        body["car_type_id"]
+            .as_u64()
+            .expect("car_type_id should be a number"),
+        1
+    );
+
+    // Database check
+    let query_response = sqlx::query_as::<_, CarType>(
+        "SELECT * FROM car_types WHERE car_type_id = 1 AND deleted_at IS NOT NULL",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("Failed to fetch car_type");
+    assert_eq!(query_response.car_type_id, 1);
+    assert_eq!(query_response.name, "Delivery");
 
     handle.abort();
 }
