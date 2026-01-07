@@ -26,6 +26,8 @@ struct CarWithTracker {
     car_id: i32,
     name: String,
     police_number: String,
+    active: bool,
+    car_type_id: i32,
     car_type_name: String,
     tracker_id: Option<i32>,
     tracker_name: Option<String>,
@@ -54,6 +56,8 @@ pub async fn get_cars(
                 cars.car_id,
                 cars.name,
                 cars.police_number,
+                cars.active,
+                car_types.car_type_id,
                 car_types.name as car_type_name,
                 trackers.tracker_id,
                 trackers.name as tracker_name
@@ -152,7 +156,7 @@ pub async fn delete_car(
     let deleted_car = sqlx::query_as::<Postgres, Car>(
         r#"
             UPDATE cars
-            SET deleted_at = NOW()
+            SET deleted_at = NOW(), tracker_id = NULL
             WHERE car_id = $1
             RETURNING car_id, name, police_number, active, car_type_id, tracker_id
         "#,
