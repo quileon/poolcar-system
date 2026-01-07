@@ -31,7 +31,7 @@ pub struct ContactType {
     pub name: String,
 }
 
-#[derive(Debug, FromRow, Serialize)]
+#[derive(Debug, FromRow, Deserialize, Serialize)]
 pub struct Contact {
     pub contact_id: i32,
     pub name: String,
