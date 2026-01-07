@@ -1,5 +1,6 @@
 mod car_routes;
 mod car_type_routes;
+mod contact_type_routes;
 mod dashboard_routes;
 mod models;
 mod tracker_routes;
@@ -41,6 +42,22 @@ pub fn create_app(pool: PgPool) -> Router {
         .route(
             "/cars/types/{car_type_id}",
             delete(car_type_routes::delete_car_type),
+        )
+        .route(
+            "/contacts/types",
+            get(contact_type_routes::get_contact_types),
+        )
+        .route(
+            "/contacts/types",
+            post(contact_type_routes::create_contact_type),
+        )
+        .route(
+            "/contacts/types/{contact_type_id}",
+            put(contact_type_routes::update_contact_type),
+        )
+        .route(
+            "/contacts/types/{contact_type_id}",
+            delete(contact_type_routes::delete_contact_type),
         )
         .with_state(app_state)
 }
