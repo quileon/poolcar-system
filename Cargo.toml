@@ -11,7 +11,7 @@ dotenvy = "0.15.7"
 rumqttc = "0.25.1"
 rust_decimal = { version = "1.39.0", features = ["serde"] }
 serde = "1.0.228"
-sqlx = { version = "0.8.6", features = ["sqlite", "runtime-tokio", "mysql", "postgres", "tls-native-tls", "chrono"] }
+sqlx = { version = "0.8.6", features = ["sqlite", "runtime-tokio", "mysql", "postgres", "tls-native-tls", "chrono", "rust_decimal"] }
 tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread"] }
 
 [dev-dependencies]
