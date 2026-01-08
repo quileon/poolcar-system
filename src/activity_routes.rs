@@ -46,9 +46,9 @@ pub async fn get_activities(
             SELECT
                 activities.activity_id,
                 activities.name,
-                COUNT(activities.activity_id) as activity_count
+                COUNT(histories.history_id) as activity_count
             FROM activities
-            LEFT JOIN histories ON histories.history_id = activities.activity_id
+            LEFT JOIN histories ON histories.activity_id = activities.activity_id
             WHERE activities.deleted_at IS NULL
             GROUP BY activities.activity_id, activities.name
             LIMIT $1 OFFSET $2
