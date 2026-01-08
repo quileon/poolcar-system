@@ -1,5 +1,4 @@
 mod activity_routes;
-mod activity_routes;
 mod car_routes;
 mod car_type_routes;
 mod contact_routes;
