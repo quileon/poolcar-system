@@ -1,5 +1,5 @@
 use crate::{
-    models::{Activity, History, PaginationParams},
+    models::{History, PaginationParams},
     AppState,
 };
 use axum::{
