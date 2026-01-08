@@ -2,6 +2,7 @@
 CREATE TABLE histories (
     history_id SERIAL PRIMARY KEY,
     car_id INTEGER NOT NULL REFERENCES cars(car_id),
+    contact_id INTEGER NOT NULL REFERENCES contacts(contact_id),
     activity_id INTEGER NOT NULL REFERENCES activities(activity_id),
     tracker_id INTEGER NOT NULL REFERENCES trackers(tracker_id),
     finished_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -15,5 +16,7 @@ CREATE TABLE histories (
 );
 
 CREATE INDEX idx_histories_car_id ON histories(car_id);
+CREATE INDEX idx_histories_contact_id ON histories(contact_id);
 CREATE INDEX idx_histories_activity_id ON histories(activity_id);
 CREATE INDEX idx_histories_tracker_id ON histories(tracker_id);
+CREATE INDEX idx_histories_finished_at ON histories(finished_at);
