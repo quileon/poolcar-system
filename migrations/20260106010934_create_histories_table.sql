@@ -8,7 +8,7 @@ CREATE TABLE histories (
     started_at TIMESTAMP NOT NULL DEFAULT NOW(),
     finished_latitude DECIMAL(10, 8) NOT NULL,
     finished_longitude DECIMAL(11, 8) NOT NULL,
-    description TEXT NOT NULL,
+    description TEXT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMP NULL
