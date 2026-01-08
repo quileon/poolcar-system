@@ -56,7 +56,7 @@ pub struct History {
     pub started_at: NaiveDateTime,
     pub finished_latitude: Decimal,
     pub finished_longitude: Decimal,
-    pub description: String,
+    pub description: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

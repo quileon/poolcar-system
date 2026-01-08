@@ -4,6 +4,7 @@ mod car_type_routes;
 mod contact_routes;
 mod contact_type_routes;
 mod dashboard_routes;
+mod history_routes;
 mod models;
 mod tracker_routes;
 
@@ -83,6 +84,16 @@ pub fn create_app(pool: PgPool) -> Router {
         .route(
             "/activities/{activity_id}",
             delete(activity_routes::delete_activity),
+        )
+        .route("/histories", get(history_routes::get_histories))
+        .route("/histories", post(history_routes::create_history))
+        .route(
+            "/histories/{history_id}",
+            put(history_routes::update_history),
+        )
+        .route(
+            "/histories/{history_id}",
+            delete(history_routes::delete_history),
         )
         .with_state(app_state)
 }
