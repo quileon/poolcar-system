@@ -50,12 +50,13 @@ pub struct Activity {
 pub struct History {
     pub history_id: i32,
     pub car_id: i32,
+    pub contact_id: i32,
     pub activity_id: i32,
     pub tracker_id: i32,
-    pub finished_at: NaiveDateTime,
-    pub started_at: NaiveDateTime,
-    pub finished_latitude: Decimal,
-    pub finished_longitude: Decimal,
+    pub finished_at: Option<NaiveDateTime>,
+    pub started_at: Option<NaiveDateTime>,
+    pub finished_latitude: Option<Decimal>,
+    pub finished_longitude: Option<Decimal>,
     pub description: Option<String>,
 }
 
