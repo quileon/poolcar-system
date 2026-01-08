@@ -81,9 +81,11 @@ pub async fn get_histories(
                 histories.description
             FROM histories
             JOIN cars ON cars.car_id = histories.car_id
+            JOIN contacts ON contacts.contact_id = histories.contact_id
             JOIN activities ON activities.activity_id = histories.activity_id
             JOIN trackers ON trackers.tracker_id = histories.tracker_id
             WHERE histories.deleted_at IS NULL
+            ORDER BY histories.history_id
             LIMIT $1 OFFSET $2
         "#,
     )
