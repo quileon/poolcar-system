@@ -168,7 +168,7 @@ async fn test_create_car_without_tracker(pool: PgPool) {
     let query_response = sqlx::query_as::<_, Car>("SELECT * FROM cars WHERE car_id = 4")
         .fetch_one(&pool)
         .await
-        .expect("Failed to fetch car_type");
+        .expect("Failed to fetch car");
     assert_eq!(query_response.car_id, 4);
     assert_eq!(query_response.police_number, "JKL101112");
     assert_eq!(query_response.active, true);
@@ -207,7 +207,7 @@ async fn test_create_car_with_tracker(pool: PgPool) {
     let query_response = sqlx::query_as::<_, Car>("SELECT * FROM cars WHERE car_id = 4")
         .fetch_one(&pool)
         .await
-        .expect("Failed to fetch car_type");
+        .expect("Failed to fetch car");
     assert_eq!(query_response.car_id, 4);
     assert_eq!(query_response.name, "Car 4");
     assert_eq!(query_response.police_number, "JKL101112");
@@ -243,14 +243,96 @@ async fn test_create_car_with_existing_tracker(pool: PgPool) {
     let query_response = sqlx::query_scalar::<_, i32>("SELECT COUNT(*) FROM cars WHERE car_id = 4")
         .fetch_one(&pool)
         .await
-        .expect("Failed to fetch car_type");
+        .expect("Failed to fetch car");
     assert_eq!(query_response, 0, "Car 4 should not exist");
 
     handle.abort();
 }
 
 #[sqlx::test]
-async fn test_update_car(pool: PgPool) {
+async fn test_update_car_without_tracker(pool: PgPool) {
+    let (address, handle) = spawn_app(pool.clone()).await;
+    let client = reqwest::Client::new();
+
+    // Curl
+    let response = client
+        .put(format!("{}/cars/3", address))
+        .json(&serde_json::json!({ "name": "Car 3.3", "police_number": "JKL101112", "active": false, "car_type_id": 2, "tracker_id": null }))
+        .send()
+        .await
+        .expect("Failed to execute request");
+
+    // Response check
+    assert_eq!(response.status().as_u16(), 200);
+
+    // Body check
+    let body: Car = serde_json::from_value(response.json().await.expect("Failed to parse JSON"))
+        .expect("Failed to deserialize JSON");
+    assert_eq!(body.car_id, 3);
+    assert_eq!(body.name, "Car 3.3");
+    assert_eq!(body.police_number, "JKL101112");
+    assert_eq!(body.active, false);
+    assert_eq!(body.car_type_id, 2);
+    assert_eq!(body.tracker_id, None);
+
+    // Database check
+    let query_response = sqlx::query_as::<_, Car>("SELECT * FROM cars WHERE car_id = 3")
+        .fetch_one(&pool)
+        .await
+        .expect("Failed to fetch car");
+    assert_eq!(query_response.car_id, 3);
+    assert_eq!(query_response.name, "Car 3.3");
+    assert_eq!(query_response.police_number, "JKL101112");
+    assert_eq!(query_response.active, false);
+    assert_eq!(query_response.car_type_id, 2);
+    assert_eq!(query_response.tracker_id, None);
+
+    handle.abort();
+}
+
+#[sqlx::test]
+async fn test_update_car_into_with_tracker(pool: PgPool) {
+    let (address, handle) = spawn_app(pool.clone()).await;
+    let client = reqwest::Client::new();
+
+    // Curl
+    let response = client
+        .put(format!("{}/cars/3", address))
+        .json(&serde_json::json!({ "name": "Car 3.3", "police_number": "JKL101112", "active": false, "car_type_id": 2, "tracker_id": 3 }))
+        .send()
+        .await
+        .expect("Failed to execute request");
+
+    // Response check
+    assert_eq!(response.status().as_u16(), 200);
+
+    // Body check
+    let body: Car = serde_json::from_value(response.json().await.expect("Failed to parse JSON"))
+        .expect("Failed to deserialize JSON");
+    assert_eq!(body.car_id, 3);
+    assert_eq!(body.name, "Car 3.3");
+    assert_eq!(body.police_number, "JKL101112");
+    assert_eq!(body.active, false);
+    assert_eq!(body.car_type_id, 2);
+    assert_eq!(body.tracker_id, Some(3));
+
+    // Database check
+    let query_response = sqlx::query_as::<_, Car>("SELECT * FROM cars WHERE car_id = 3")
+        .fetch_one(&pool)
+        .await
+        .expect("Failed to fetch car");
+    assert_eq!(query_response.car_id, 3);
+    assert_eq!(query_response.name, "Car 3.3");
+    assert_eq!(query_response.police_number, "JKL101112");
+    assert_eq!(query_response.active, false);
+    assert_eq!(query_response.car_type_id, 2);
+    assert_eq!(query_response.tracker_id, Some(3));
+
+    handle.abort();
+}
+
+#[sqlx::test]
+async fn test_update_car_with_tracker(pool: PgPool) {
     let (address, handle) = spawn_app(pool.clone()).await;
     let client = reqwest::Client::new();
 
@@ -279,13 +361,47 @@ async fn test_update_car(pool: PgPool) {
     let query_response = sqlx::query_as::<_, Car>("SELECT * FROM cars WHERE car_id = 1")
         .fetch_one(&pool)
         .await
-        .expect("Failed to fetch car_type");
+        .expect("Failed to fetch car");
     assert_eq!(query_response.car_id, 1);
     assert_eq!(query_response.name, "Car 1.1");
     assert_eq!(query_response.police_number, "JKL101112");
     assert_eq!(query_response.active, false);
     assert_eq!(query_response.car_type_id, 2);
     assert_eq!(query_response.tracker_id, Some(3));
+
+    handle.abort();
+}
+
+#[sqlx::test]
+async fn test_update_car_with_existing_tracker(pool: PgPool) {
+    let (address, handle) = spawn_app(pool.clone()).await;
+    let client = reqwest::Client::new();
+
+    // Curl
+    let response = client
+        .put(format!("{}/cars/1", address))
+        .json(&serde_json::json!({ "name": "Car 1.1", "police_number": "JKL101112", "active": false, "car_type_id": 2, "tracker_id": 2 }))
+        .send()
+        .await
+        .expect("Failed to execute request");
+
+    // Body check
+    let body: ErrorResponse =
+        serde_json::from_value(response.json().await.expect("Failed to parse JSON"))
+            .expect("Failed to deserialize JSON");
+    assert_eq!(body.message, "Tracker is already assigned");
+
+    // Database check
+    let query_response = sqlx::query_scalar::<_, i32>(
+        "SELECT COUNT(*) FROM cars WHERE car_id = 1 AND tracker_id = 1",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("Failed to fetch car");
+    assert_eq!(
+        query_response, 0,
+        "Car 1 should still exist with tracker_id still 1"
+    );
 
     handle.abort();
 }
@@ -320,7 +436,7 @@ async fn test_delete_car_without_tracker(pool: PgPool) {
         sqlx::query_as::<_, Car>("SELECT * FROM cars WHERE car_id = 3 AND deleted_at IS NOT NULL")
             .fetch_one(&pool)
             .await
-            .expect("Failed to fetch car_type");
+            .expect("Failed to fetch car");
     assert_eq!(query_response.car_id, 3);
     assert_eq!(query_response.name, "Car 3");
     assert_eq!(query_response.police_number, "GHI789");
@@ -361,7 +477,7 @@ async fn test_delete_car_with_tracker(pool: PgPool) {
         sqlx::query_as::<_, Car>("SELECT * FROM cars WHERE car_id = 1 AND deleted_at IS NOT NULL")
             .fetch_one(&pool)
             .await
-            .expect("Failed to fetch car_type");
+            .expect("Failed to fetch car");
     assert_eq!(query_response.car_id, 1);
     assert_eq!(query_response.name, "Car 1");
     assert_eq!(query_response.police_number, "ABC123");
