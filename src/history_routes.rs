@@ -17,12 +17,13 @@ use std::sync::Arc;
 #[derive(Debug, Deserialize)]
 pub struct HistoryBody {
     pub car_id: i32,
+    pub contact_id: i32,
     pub activity_id: i32,
     pub tracker_id: i32,
     pub finished_at: NaiveDateTime,
     pub started_at: NaiveDateTime,
-    pub finished_latitude: Decimal,
-    pub finished_longitude: Decimal,
+    pub finished_latitude: Option<Decimal>,
+    pub finished_longitude: Option<Decimal>,
     pub description: Option<String>,
 }
 
@@ -31,14 +32,16 @@ struct HistoryWithDetails {
     pub history_id: i32,
     pub car_id: i32,
     pub car_name: String,
+    pub contact_id: i32,
+    pub contact_name: String,
     pub activity_id: i32,
     pub activity_name: String,
     pub tracker_id: i32,
     pub tracker_name: String,
     pub finished_at: NaiveDateTime,
     pub started_at: NaiveDateTime,
-    pub finished_latitude: Decimal,
-    pub finished_longitude: Decimal,
+    pub finished_latitude: Option<Decimal>,
+    pub finished_longitude: Option<Decimal>,
     pub description: Option<String>,
 }
 
@@ -65,6 +68,8 @@ pub async fn get_histories(
                 histories.history_id,
                 histories.car_id,
                 cars.name AS car_name,
+                histories.contact_id,
+                contacts.name AS contact_name,
                 histories.activity_id,
                 activities.name AS activity_name,
                 histories.tracker_id,
@@ -108,12 +113,13 @@ pub async fn create_history(
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
     let created_history = sqlx::query_as::<Postgres, History>(
         r#"
-            INSERT INTO histories (car_id, activity_id, tracker_id, finished_at, started_at, finished_latitude, finished_longitude, description)
+            INSERT INTO histories (car_id, contact_id, activity_id, tracker_id, finished_at, started_at, finished_latitude, finished_longitude, description)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING history_id, car_id, activity_id, tracker_id, finished_at, started_at, finished_latitude, finished_longitude, description
+            RETURNING history_id, car_id, contact_id, activity_id, tracker_id, finished_at, started_at, finished_latitude, finished_longitude, description
         "#,
     )
     .bind(history.car_id)
+    .bind(history.contact_id)
     .bind(history.activity_id)
     .bind(history.tracker_id)
     .bind(history.finished_at)
@@ -142,13 +148,14 @@ pub async fn update_history(
     let updated_history = sqlx::query_as::<Postgres, History>(
         r#"
             UPDATE histories
-            SET car_id = $2, activity_id = $3, tracker_id = $4, finished_at = $5, started_at = $6, finished_latitude = $7, finished_longitude = $8, description = $9
+            SET car_id = $2, contact_id = $3, activity_id = $4, tracker_id = $5, finished_at = $6, started_at = $7, finished_latitude = $8, finished_longitude = $9, description = $10
             WHERE history_id = $1
             RETURNING history_id, car_id, activity_id, tracker_id, finished_at, started_at, finished_latitude, finished_longitude, description
         "#,
     )
     .bind(history_id)
     .bind(history.car_id)
+    .bind(history.contact_id)
     .bind(history.activity_id)
     .bind(history.tracker_id)
     .bind(history.finished_at)
@@ -178,7 +185,7 @@ pub async fn delete_history(
             UPDATE histories
             SET deleted_at = NOW()
             WHERE history_id = $1
-            RETURNING history_id, car_id, activity_id, tracker_id, finished_at, started_at, finished_latitude, finished_longitude, description
+            RETURNING history_id, car_id, contact_id, activity_id, tracker_id, finished_at, started_at, finished_latitude, finished_longitude, description
         "#,
     )
     .bind(history_id)
