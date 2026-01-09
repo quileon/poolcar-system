@@ -51,6 +51,7 @@ pub async fn get_activities(
             LEFT JOIN histories ON histories.activity_id = activities.activity_id
             WHERE activities.deleted_at IS NULL
             GROUP BY activities.activity_id, activities.name
+            ORDER BY activities.activity_id ASC
             LIMIT $1 OFFSET $2
         "#,
     )

@@ -85,7 +85,7 @@ pub async fn get_histories(
             JOIN activities ON activities.activity_id = histories.activity_id
             JOIN trackers ON trackers.tracker_id = histories.tracker_id
             WHERE histories.deleted_at IS NULL
-            ORDER BY histories.history_id
+            ORDER BY histories.history_id ASC
             LIMIT $1 OFFSET $2
         "#,
     )

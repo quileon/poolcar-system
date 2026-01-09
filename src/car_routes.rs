@@ -65,6 +65,7 @@ pub async fn get_cars(
             LEFT JOIN car_types ON cars.car_type_id = car_types.car_type_id
             LEFT JOIN trackers ON cars.tracker_id = trackers.tracker_id
             WHERE cars.deleted_at IS NULL
+            ORDER BY cars.car_id ASC
             LIMIT $1 OFFSET $2
         "#,
     )

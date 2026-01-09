@@ -52,6 +52,7 @@ pub async fn get_contact_types(
             LEFT JOIN contacts ON contact_types.contact_type_id = contacts.contact_type_id
             WHERE contact_types.deleted_at IS NULL
             GROUP BY contact_types.contact_type_id, contact_types.name
+            ORDER BY contact_types.contact_type_id ASC
             LIMIT $1 OFFSET $2
         "#,
     )

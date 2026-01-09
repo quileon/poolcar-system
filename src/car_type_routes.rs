@@ -51,6 +51,7 @@ pub async fn get_car_types(
             LEFT JOIN cars ON car_types.car_type_id = cars.car_type_id
             WHERE car_types.deleted_at IS NULL
             GROUP BY car_types.car_type_id, car_types.name
+            ORDER BY car_types.car_type_id ASC
             LIMIT $1 OFFSET $2
         "#,
     )
