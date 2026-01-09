@@ -1,3 +1,4 @@
+use anyhow::Context;
 use poolcar_tracking_system_backend_test::create_app;
 use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, PgPool};
@@ -9,8 +10,21 @@ pub struct Tracker {
     pub name: String,
 }
 
-async fn spawn_app(pool: PgPool) -> (String, JoinHandle<()>) {
-    let app = create_app(pool);
+async fn spawn_app(db_pool: PgPool) -> (String, JoinHandle<()>) {
+    seed_database(&db_pool).await;
+
+    // Setup redis pool
+    dotenvy::dotenv().ok();
+
+    let redis_url = std::env::var("REDIS_URL")
+        .context("Failed to read REDIS_URL")
+        .unwrap();
+    let redis_cfg = deadpool_redis::Config::from_url(redis_url);
+    let redis_pool = redis_cfg
+        .create_pool(Some(deadpool_redis::Runtime::Tokio1))
+        .expect("Failed to create Redis pool");
+
+    let app = create_app(db_pool, redis_pool);
 
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let port = listener.local_addr().unwrap().port();
@@ -23,7 +37,7 @@ async fn spawn_app(pool: PgPool) -> (String, JoinHandle<()>) {
     (address, handle)
 }
 
-async fn seed_trackers(pool: &PgPool) {
+async fn seed_database(pool: &PgPool) {
     sqlx::query(
         r#"
             INSERT INTO trackers (name)
@@ -37,7 +51,6 @@ async fn seed_trackers(pool: &PgPool) {
 
 #[sqlx::test]
 async fn test_get_trackers(pool: PgPool) {
-    seed_trackers(&pool).await;
     let (address, handle) = spawn_app(pool.clone()).await;
     let client = reqwest::Client::new();
 
@@ -88,15 +101,15 @@ async fn test_create_tracker(pool: PgPool) {
         body["tracker_id"]
             .as_u64()
             .expect("tracker_id should be a number"),
-        1
+        4
     );
 
     // Database check
-    let tracker = sqlx::query_as::<_, Tracker>("SELECT * FROM trackers WHERE tracker_id = 1")
+    let tracker = sqlx::query_as::<_, Tracker>("SELECT * FROM trackers WHERE tracker_id = 4")
         .fetch_one(&pool)
         .await
         .expect("Failed to fetch tracker");
-    assert_eq!(tracker.tracker_id, 1);
+    assert_eq!(tracker.tracker_id, 4);
     assert_eq!(tracker.name, "Created Tracker");
 
     handle.abort();
@@ -104,7 +117,6 @@ async fn test_create_tracker(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_update_tracker(pool: PgPool) {
-    seed_trackers(&pool).await;
     let (address, handle) = spawn_app(pool.clone()).await;
     let client = reqwest::Client::new();
 
@@ -144,7 +156,6 @@ async fn test_update_tracker(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_delete_tracker(pool: PgPool) {
-    seed_trackers(&pool).await;
     let (address, handle) = spawn_app(pool.clone()).await;
     let client = reqwest::Client::new();
 

@@ -1,3 +1,4 @@
+use anyhow::Context;
 use poolcar_tracking_system_backend_test::create_app;
 use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, PgPool};
@@ -9,8 +10,21 @@ pub struct CarType {
     pub name: String,
 }
 
-async fn spawn_app(pool: PgPool) -> (String, JoinHandle<()>) {
-    let app = create_app(pool);
+async fn spawn_app(db_pool: PgPool) -> (String, JoinHandle<()>) {
+    seed_database(&db_pool).await;
+
+    // Setup redis pool
+    dotenvy::dotenv().ok();
+
+    let redis_url = std::env::var("REDIS_URL")
+        .context("Failed to read REDIS_URL")
+        .unwrap();
+    let redis_cfg = deadpool_redis::Config::from_url(redis_url);
+    let redis_pool = redis_cfg
+        .create_pool(Some(deadpool_redis::Runtime::Tokio1))
+        .expect("Failed to create Redis pool");
+
+    let app = create_app(db_pool, redis_pool);
 
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let port = listener.local_addr().unwrap().port();
@@ -23,7 +37,7 @@ async fn spawn_app(pool: PgPool) -> (String, JoinHandle<()>) {
     (address, handle)
 }
 
-async fn seed_car_types(pool: &PgPool) {
+async fn seed_database(pool: &PgPool) {
     sqlx::query(
         r#"
             INSERT INTO car_types (name)
@@ -37,7 +51,6 @@ async fn seed_car_types(pool: &PgPool) {
 
 #[sqlx::test]
 async fn test_get_car_types(pool: PgPool) {
-    seed_car_types(&pool).await;
     let (address, handle) = spawn_app(pool.clone()).await;
     let client = reqwest::Client::new();
 
@@ -86,15 +99,15 @@ async fn test_create_car_type(pool: PgPool) {
         body["car_type_id"]
             .as_i64()
             .expect("car_type_id should be a number"),
-        1,
+        3,
     );
 
     // Database check
-    let car_type = sqlx::query_as::<_, CarType>("SELECT * FROM car_types WHERE car_type_id = 1")
+    let car_type = sqlx::query_as::<_, CarType>("SELECT * FROM car_types WHERE car_type_id = 3")
         .fetch_one(&pool)
         .await
         .expect("Failed to fetch car_type");
-    assert_eq!(car_type.car_type_id, 1);
+    assert_eq!(car_type.car_type_id, 3);
     assert_eq!(car_type.name, "Cargo");
 
     handle.abort();
@@ -102,7 +115,6 @@ async fn test_create_car_type(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_update_car_type(pool: PgPool) {
-    seed_car_types(&pool).await;
     let (address, handle) = spawn_app(pool.clone()).await;
     let client = reqwest::Client::new();
 
@@ -143,7 +155,6 @@ async fn test_update_car_type(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_delete_car_type(pool: PgPool) {
-    seed_car_types(&pool).await;
     let (address, handle) = spawn_app(pool.clone()).await;
     let client = reqwest::Client::new();
 

@@ -1,3 +1,4 @@
+use anyhow::Context;
 use poolcar_tracking_system_backend_test::create_app;
 use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, PgPool};
@@ -30,9 +31,21 @@ pub struct ErrorResponse {
     pub message: String,
 }
 
-async fn spawn_app(pool: PgPool) -> (String, JoinHandle<()>) {
-    seed_database(&pool).await;
-    let app = create_app(pool);
+async fn spawn_app(db_pool: PgPool) -> (String, JoinHandle<()>) {
+    seed_database(&db_pool).await;
+
+    // Setup redis pool
+    dotenvy::dotenv().ok();
+
+    let redis_url = std::env::var("REDIS_URL")
+        .context("Failed to read REDIS_URL")
+        .unwrap();
+    let redis_cfg = deadpool_redis::Config::from_url(redis_url);
+    let redis_pool = redis_cfg
+        .create_pool(Some(deadpool_redis::Runtime::Tokio1))
+        .expect("Failed to create Redis pool");
+
+    let app = create_app(db_pool, redis_pool);
 
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let port = listener.local_addr().unwrap().port();
