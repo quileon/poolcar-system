@@ -12,15 +12,18 @@ use axum::{
     routing::{delete, get, post, put},
     Router,
 };
-use sqlx::PgPool;
 use std::sync::Arc;
 
 pub struct AppState {
-    pub db: PgPool,
+    pub db: sqlx::PgPool,
+    pub redis: deadpool_redis::Pool,
 }
 
-pub fn create_app(pool: PgPool) -> Router {
-    let app_state = Arc::new(AppState { db: pool });
+pub fn create_app(db_pool: sqlx::PgPool, redis_pool: deadpool_redis::Pool) -> Router {
+    let app_state = Arc::new(AppState {
+        db: db_pool,
+        redis: redis_pool,
+    });
 
     Router::new()
         .route("/", get(|| async { "Hello, World!" }))
