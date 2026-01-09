@@ -152,7 +152,7 @@ pub async fn update_history(
             UPDATE histories
             SET car_id = $2, contact_id = $3, activity_id = $4, tracker_id = $5, finished_at = $6, started_at = $7, finished_latitude = $8, finished_longitude = $9, description = $10
             WHERE history_id = $1
-            RETURNING history_id, car_id, activity_id, tracker_id, finished_at, started_at, finished_latitude, finished_longitude, description
+            RETURNING history_id, car_id, contact_id, activity_id, tracker_id, finished_at, started_at, finished_latitude, finished_longitude, description
         "#,
     )
     .bind(history_id)
