@@ -1,0 +1,11 @@
+services:
+  valkey:
+    image: docker.io/valkey/valkey:9-alpine
+
+    container_name: valkey
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: valkey-server --appendonly no --save 300 1 --save 60 100
+    volumes:
+      - ${HOME}/Services/valkey:/data
