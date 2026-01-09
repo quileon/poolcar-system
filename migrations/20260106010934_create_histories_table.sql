@@ -1,10 +1,10 @@
 -- Add migration script here
 CREATE TABLE histories (
     history_id SERIAL PRIMARY KEY,
-    car_id INTEGER NOT NULL REFERENCES cars(car_id),
+    car_id INTEGER NULL REFERENCES cars(car_id),
     contact_id INTEGER NOT NULL REFERENCES contacts(contact_id),
     activity_id INTEGER NOT NULL REFERENCES activities(activity_id),
-    tracker_id INTEGER NOT NULL REFERENCES trackers(tracker_id),
+    tracker_id INTEGER NULL REFERENCES trackers(tracker_id),
     started_at TIMESTAMP NULL DEFAULT NOW(),
     finished_at TIMESTAMP NULL,
     finished_latitude DECIMAL(10, 8) NULL,

@@ -16,10 +16,10 @@ use std::sync::Arc;
 
 #[derive(Debug, Deserialize)]
 pub struct HistoryBody {
-    pub car_id: i32,
+    pub car_id: Option<i32>,
     pub contact_id: i32,
     pub activity_id: i32,
-    pub tracker_id: i32,
+    pub tracker_id: Option<i32>,
     pub finished_at: Option<NaiveDateTime>,
     pub started_at: Option<NaiveDateTime>,
     pub finished_latitude: Option<Decimal>,
@@ -30,14 +30,14 @@ pub struct HistoryBody {
 #[derive(Debug, FromRow, Serialize)]
 struct HistoryWithDetails {
     pub history_id: i32,
-    pub car_id: i32,
-    pub car_name: String,
+    pub car_id: Option<i32>,
+    pub car_name: Option<String>,
     pub contact_id: i32,
     pub contact_name: String,
     pub activity_id: i32,
     pub activity_name: String,
-    pub tracker_id: i32,
-    pub tracker_name: String,
+    pub tracker_id: Option<i32>,
+    pub tracker_name: Option<String>,
     pub finished_at: Option<NaiveDateTime>,
     pub started_at: Option<NaiveDateTime>,
     pub finished_latitude: Option<Decimal>,

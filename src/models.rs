@@ -49,10 +49,10 @@ pub struct Activity {
 #[derive(Debug, FromRow, Serialize)]
 pub struct History {
     pub history_id: i32,
-    pub car_id: i32,
+    pub car_id: Option<i32>,
     pub contact_id: i32,
     pub activity_id: i32,
-    pub tracker_id: i32,
+    pub tracker_id: Option<i32>,
     pub finished_at: Option<NaiveDateTime>,
     pub started_at: Option<NaiveDateTime>,
     pub finished_latitude: Option<Decimal>,
