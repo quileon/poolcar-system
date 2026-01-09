@@ -80,10 +80,10 @@ pub async fn get_histories(
                 histories.finished_longitude,
                 histories.description
             FROM histories
-            JOIN cars ON cars.car_id = histories.car_id
-            JOIN contacts ON contacts.contact_id = histories.contact_id
-            JOIN activities ON activities.activity_id = histories.activity_id
-            JOIN trackers ON trackers.tracker_id = histories.tracker_id
+            LEFT JOIN cars ON cars.car_id = histories.car_id
+            LEFT JOIN contacts ON contacts.contact_id = histories.contact_id
+            LEFT JOIN activities ON activities.activity_id = histories.activity_id
+            LEFT JOIN trackers ON trackers.tracker_id = histories.tracker_id
             WHERE histories.deleted_at IS NULL
             ORDER BY histories.history_id ASC
             LIMIT $1 OFFSET $2
@@ -116,7 +116,7 @@ pub async fn create_history(
     let created_history = sqlx::query_as::<Postgres, History>(
         r#"
             INSERT INTO histories (car_id, contact_id, activity_id, tracker_id, finished_at, started_at, finished_latitude, finished_longitude, description)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING history_id, car_id, contact_id, activity_id, tracker_id, finished_at, started_at, finished_latitude, finished_longitude, description
         "#,
     )
