@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use rumqttc::{AsyncClient, Event, Packet, QoS};
 
-use crate::AppState;
+use crate::{mqtt_payload, AppState};
 
 pub async fn handle_mqtt_loop(state: Arc<AppState>, mqtt_options: rumqttc::MqttOptions) {
     let (mqtt_client, mut mqtt_event_loop) = AsyncClient::new(mqtt_options, 10);
@@ -25,7 +25,12 @@ pub async fn handle_mqtt_loop(state: Arc<AppState>, mqtt_options: rumqttc::MqttO
 
                 // Handle incoming messages
                 if let Event::Incoming(Packet::Publish(msg)) = notification {
-                    println!("Received message on {}: {:?}", msg.topic, msg.payload);
+                    match mqtt_payload::save_latest_payload(state.clone(), &msg.topic, msg.payload)
+                        .await
+                    {
+                        Ok(_) => {}
+                        Err(e) => eprintln!("Error processing topic {}: {}", msg.topic, e),
+                    };
                 }
             }
             Err(e) => {

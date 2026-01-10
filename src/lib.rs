@@ -7,6 +7,7 @@ mod dashboard_routes;
 mod history_routes;
 mod models;
 mod mqtt_handlers;
+mod mqtt_payload;
 mod tracker_routes;
 
 use axum::{
