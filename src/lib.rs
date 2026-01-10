@@ -5,6 +5,7 @@ mod contact_routes;
 mod contact_type_routes;
 mod dashboard_routes;
 mod history_routes;
+mod live_tracking_websocket;
 mod models;
 mod mqtt_handlers;
 mod mqtt_payload;
@@ -15,10 +16,12 @@ use axum::{
     Router,
 };
 use std::sync::Arc;
+use tokio::sync::broadcast;
 
 pub struct AppState {
     pub db: sqlx::PgPool,
     pub redis: deadpool_redis::Pool,
+    pub tx: broadcast::Sender<String>,
 }
 
 pub fn create_app(
@@ -26,9 +29,12 @@ pub fn create_app(
     redis_pool: deadpool_redis::Pool,
     mqtt_options: Option<rumqttc::MqttOptions>,
 ) -> Router {
+    let (tx, _) = broadcast::channel::<String>(100);
+
     let app_state = Arc::new(AppState {
         db: db_pool,
         redis: redis_pool,
+        tx,
     });
 
     // Only spawn MQTT task if mqtt_options are provided (for testing)
@@ -111,6 +117,10 @@ pub fn create_app(
         .route(
             "/histories/{history_id}",
             delete(history_routes::delete_history),
+        )
+        .route(
+            "/ws/live",
+            get(live_tracking_websocket::live_tracking_handler),
         )
         .with_state(app_state)
 }

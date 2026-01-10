@@ -156,3 +156,18 @@ pub struct TrackerPayload {
     pub hdop: TrackerHdop,
     pub stats: TrackerStats,
 }
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TrackerPayloadWithId {
+    pub id: u8,
+    pub uptime: u32,
+    pub connection: TrackerConnection,
+    pub location: TrackerLocation,
+    pub altitude: TrackerAltitude,
+    pub speed: TrackerSpeed,
+    pub course: TrackerCourse,
+    pub datetime: TrackerDateTime,
+    pub satellites: TrackerSatellites,
+    pub hdop: TrackerHdop,
+    pub stats: TrackerStats,
+}
