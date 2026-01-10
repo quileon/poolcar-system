@@ -59,7 +59,7 @@ async fn spawn_app(db_pool: PgPool) -> (String, JoinHandle<()>) {
         .create_pool(Some(deadpool_redis::Runtime::Tokio1))
         .expect("Failed to create Redis pool");
 
-    let app = create_app(db_pool, redis_pool);
+    let app = create_app(db_pool, redis_pool, None);
 
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let port = listener.local_addr().unwrap().port();
