@@ -12,10 +12,9 @@ dotenvy = "0.15.7"
 rumqttc = { version = "0.25.1", features = ["use-rustls"] }
 rust_decimal = { version = "1.39.0", features = ["serde"] }
 serde = "1.0.228"
+serde_json = "1.0.148"
 sqlx = { version = "0.8.6", features = ["sqlite", "runtime-tokio", "mysql", "postgres", "tls-native-tls", "chrono", "rust_decimal"] }
 tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread"] }
 
 [dev-dependencies]
 reqwest = { version = "0.13.1", features = ["json"] }
-serde_json = "1.0.148"
-serial_test = "3.3.1"
