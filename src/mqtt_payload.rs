@@ -33,5 +33,6 @@ pub async fn save_latest_payload(
     conn.set::<u8, String, ()>(tracker_id, payload_json)
         .await
         .map_err(|e| anyhow::anyhow!("Failed to save to Redis: {}", e))?;
+
     Ok(())
 }

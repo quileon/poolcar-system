@@ -25,6 +25,7 @@ pub async fn handle_mqtt_loop(state: Arc<AppState>, mqtt_options: rumqttc::MqttO
 
                 // Handle incoming messages
                 if let Event::Incoming(Packet::Publish(msg)) = notification {
+                    println!("Received message on topic '{}'", msg.topic);
                     match mqtt_payload::save_latest_payload(state.clone(), &msg.topic, msg.payload)
                         .await
                     {
