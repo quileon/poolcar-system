@@ -1,7 +1,10 @@
+use std::time::Duration;
+
 use anyhow::Context;
 use deadpool_redis::Runtime;
 use dotenvy;
 use poolcar_tracking_system_backend_test::create_app;
+use rumqttc::{MqttOptions, Transport};
 use sqlx::postgres::PgPoolOptions;
 
 #[tokio::main]
@@ -23,6 +26,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let redis_pool = redis_cfg
         .create_pool(Some(Runtime::Tokio1))
         .expect("Failed to create Redis pool");
+    println!("Redis OK");
+
+    // Setup MQTT options with TLS
+    let mqtt_url = std::env::var("MQTT_URL").context("Failed to read MQTT_URL")?;
+    let mqtt_client = std::env::var("MQTT_CLIENT").context("Failed to read MQTT_CLIENT")?;
+    let mqtt_username = std::env::var("MQTT_USERNAME").context("Failed to read MQTT_USERNAME")?;
+    let mqtt_password = std::env::var("MQTT_PASSWORD").context("Failed to read MQTT_PASSWORD")?;
+
+    let mut mqtt_options = MqttOptions::new(mqtt_client, mqtt_url, 8883);
+    mqtt_options.set_keep_alive(Duration::from_secs(5));
+    mqtt_options.set_credentials(mqtt_username, mqtt_password);
+
+    let ca_cert = include_bytes!("../assets/emqxsl-ca.crt").to_vec();
+    let transport = Transport::Tls(rumqttc::TlsConfiguration::Simple {
+        ca: ca_cert,
+        alpn: None,
+        client_auth: None,
+    });
+    mqtt_options.set_transport(transport);
+    println!("MQTT OK");
 
     // Port binding
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
@@ -31,7 +54,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Listening on {}", listener.local_addr()?);
 
     // Axum
-    let app = create_app(db_pool, redis_pool);
+    let app = create_app(db_pool, redis_pool, Some(mqtt_options));
     axum::serve(listener, app).await?;
 
     Ok(())

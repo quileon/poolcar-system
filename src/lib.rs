@@ -6,6 +6,7 @@ mod contact_type_routes;
 mod dashboard_routes;
 mod history_routes;
 mod models;
+mod mqtt_handlers;
 mod tracker_routes;
 
 use axum::{
@@ -19,11 +20,23 @@ pub struct AppState {
     pub redis: deadpool_redis::Pool,
 }
 
-pub fn create_app(db_pool: sqlx::PgPool, redis_pool: deadpool_redis::Pool) -> Router {
+pub fn create_app(
+    db_pool: sqlx::PgPool,
+    redis_pool: deadpool_redis::Pool,
+    mqtt_options: Option<rumqttc::MqttOptions>,
+) -> Router {
     let app_state = Arc::new(AppState {
         db: db_pool,
         redis: redis_pool,
     });
+
+    // Only spawn MQTT task if mqtt_options are provided (for testing)
+    if let Some(mqtt_options) = mqtt_options {
+        let mqtt_state = app_state.clone();
+        tokio::spawn(
+            async move { mqtt_handlers::handle_mqtt_loop(mqtt_state, mqtt_options).await },
+        );
+    }
 
     Router::new()
         .route("/", get(|| async { "Hello, World!" }))
