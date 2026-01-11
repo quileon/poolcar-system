@@ -1,5 +1,4 @@
-use std::sync::Arc;
-
+use crate::AppState;
 use axum::{
     extract::{
         ws::{Message, WebSocket},
@@ -7,9 +6,8 @@ use axum::{
     },
     response::Response,
 };
+use std::sync::Arc;
 use tokio::sync::broadcast::error::RecvError;
-
-use crate::AppState;
 
 pub async fn live_tracking_handler(
     ws: WebSocketUpgrade,
@@ -23,7 +21,7 @@ async fn handle_live_tracking_connection(mut socket: WebSocket, state: Arc<AppSt
 
     loop {
         tokio::select! {
-            // Receive from broadcast channel
+            // Receive MQTT payload from broadcast channel
             result = rx.recv() => {
                 match result {
                     Ok(msg) => {
