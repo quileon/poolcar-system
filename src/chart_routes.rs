@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 #[derive(Debug, Deserialize, Serialize)]
-struct ChartPayload {
+struct ChartHistoryPayload {
     tracker_id: i32,
     payload: Vec<TrackerPayloadWithId>,
 }
@@ -39,7 +39,7 @@ pub async fn get_chart_history(
         )
     })?;
 
-    let mut chart_payloads: Vec<ChartPayload> = Vec::new();
+    let mut chart_payloads: Vec<ChartHistoryPayload> = Vec::new();
 
     for tracker_id in tracker_ids {
         let chart_history = conn
@@ -68,12 +68,12 @@ pub async fn get_chart_history(
                 payload.push(parsed);
             }
 
-            chart_payloads.push(ChartPayload {
+            chart_payloads.push(ChartHistoryPayload {
                 tracker_id,
                 payload,
             });
         } else {
-            chart_payloads.push(ChartPayload {
+            chart_payloads.push(ChartHistoryPayload {
                 tracker_id,
                 payload: Vec::new(),
             });
