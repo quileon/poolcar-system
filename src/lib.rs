@@ -128,5 +128,9 @@ pub fn create_app(
             "/ws/live",
             get(live_tracking_websocket::live_tracking_handler),
         )
+        .route(
+            "/live",
+            get(live_tracking_routes::get_live_tracking_history),
+        )
         .with_state(app_state)
 }
