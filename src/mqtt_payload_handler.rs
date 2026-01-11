@@ -45,10 +45,10 @@ pub async fn save_latest_payload(
     let payload_json = serde_json::to_string(&tracker_payload_with_id)
         .map_err(|e| anyhow::anyhow!("Failed to serialize payload: {}", e))?;
 
-    // Save to Redis (Latest)
-    conn.set::<u8, String, ()>(tracker_id, payload_json.clone())
+    // Save to Redis (live)
+    conn.set::<String, String, ()>(format!("tracker:{}:live", tracker_id), payload_json.clone())
         .await
-        .map_err(|e| anyhow::anyhow!("Failed to save to Redis: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Failed to save to Redis (live): {}", e))?;
 
     // Broadcast to websocket clients
     state

@@ -1,14 +1,16 @@
 mod activity_routes;
 mod car_routes;
 mod car_type_routes;
+mod chart_handler;
 mod contact_routes;
 mod contact_type_routes;
 mod dashboard_routes;
 mod history_routes;
+mod live_tracking_routes;
 mod live_tracking_websocket;
 mod models;
 mod mqtt_handlers;
-mod mqtt_payload;
+mod mqtt_payload_handler;
 mod tracker_routes;
 
 use axum::{
@@ -44,6 +46,10 @@ pub fn create_app(
             async move { mqtt_handlers::handle_mqtt_loop(mqtt_state, mqtt_options).await },
         );
     }
+
+    // Spawn chart handler background task
+    let chart_state = app_state.clone();
+    tokio::spawn(async move { chart_handler::chart_handler(chart_state).await });
 
     Router::new()
         .route("/", get(|| async { "Hello, World!" }))
