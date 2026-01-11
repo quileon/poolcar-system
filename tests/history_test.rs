@@ -242,6 +242,11 @@ async fn test_get_histories(pool: PgPool) {
         Some(Decimal::from_str("1.0").unwrap()),
         "first array finished_longitude should be 1.0"
     );
+    assert_eq!(
+        histories[0].description,
+        Some("Meeting with supplier".to_string()),
+        "first array description should be Meeting with supplier"
+    );
 
     // history 2
     assert_eq!(
@@ -300,6 +305,11 @@ async fn test_get_histories(pool: PgPool) {
         histories[1].finished_longitude, None,
         "second array finished_longitude should be None"
     );
+    assert_eq!(
+        histories[1].description,
+        Some("Delivery to consumer".to_string()),
+        "first array description should be Delivery to consumer"
+    );
 
     // history 3
     assert_eq!(
@@ -357,6 +367,11 @@ async fn test_get_histories(pool: PgPool) {
     assert_eq!(
         histories[2].finished_longitude, None,
         "third array finished_longitude should be None"
+    );
+    assert_eq!(
+        histories[2].description,
+        Some("Trial test".to_string()),
+        "first array description should be Trial test"
     );
 
     handle.abort();
