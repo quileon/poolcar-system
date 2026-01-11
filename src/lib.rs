@@ -2,6 +2,7 @@ mod activity_routes;
 mod car_routes;
 mod car_type_routes;
 mod chart_handler;
+mod chart_routes;
 mod contact_routes;
 mod contact_type_routes;
 mod dashboard_routes;
@@ -132,5 +133,6 @@ pub fn create_app(
             "/live",
             get(live_tracking_routes::get_live_tracking_history),
         )
+        .route("/chart", get(chart_routes::get_chart_history))
         .with_state(app_state)
 }
