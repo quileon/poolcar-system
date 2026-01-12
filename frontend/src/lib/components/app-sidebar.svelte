@@ -3,12 +3,12 @@
 	import HouseIcon from "@lucide/svelte/icons/house";
 	import CarIcon from "@lucide/svelte/icons/car";
 	import CarFrontIcon from "@lucide/svelte/icons/car-front";
-	import MapPinPen from "@lucide/svelte/icons/map-pin-pen";
-	import Notebook from "@lucide/svelte/icons/notebook";
-	import NotebookPen from "@lucide/svelte/icons/notebook-pen";
-	import BookOpen from "@lucide/svelte/icons/book-open";
-	import History from "@lucide/svelte/icons/history";
-	import Map from "@lucide/svelte/icons/map";
+	import MapPinPenIcon from "@lucide/svelte/icons/map-pin-pen";
+	import NotebookIcon from "@lucide/svelte/icons/notebook";
+	import NotebookPenIcon from "@lucide/svelte/icons/notebook-pen";
+	import BookOpenIcon from "@lucide/svelte/icons/book-open";
+	import HistoryIcon from "@lucide/svelte/icons/history";
+	import MapIcon from "@lucide/svelte/icons/map";
 	import { resolve } from "$app/paths";
 	import type { Component } from "svelte";
 	import type { Url } from "$lib/url";
@@ -35,32 +35,32 @@
 		{
 			title: "Trackers",
 			url: "/trackers",
-			icon: MapPinPen
+			icon: MapPinPenIcon
 		},
 		{
 			title: "Contacts",
 			url: "/contacts",
-			icon: Notebook
+			icon: NotebookIcon
 		},
 		{
 			title: "Contact Types",
 			url: "/contact-types",
-			icon: NotebookPen
+			icon: NotebookPenIcon
 		},
 		{
 			title: "Activity",
 			url: "/activity",
-			icon: BookOpen
+			icon: BookOpenIcon
 		},
 		{
 			title: "History",
 			url: "/history",
-			icon: History
+			icon: HistoryIcon
 		},
 		{
 			title: "Live Tracking",
 			url: "/live",
-			icon: Map
+			icon: MapIcon
 		}
 	];
 </script>
