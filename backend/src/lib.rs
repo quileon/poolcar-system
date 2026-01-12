@@ -16,11 +16,13 @@ mod mqtt_payload_handler;
 mod tracker_routes;
 
 use axum::{
+    http::Method,
     routing::{delete, get, post, put},
     Router,
 };
 use std::sync::Arc;
 use tokio::sync::broadcast;
+use tower_http::cors::{Any, CorsLayer};
 
 pub struct AppState {
     pub db: sqlx::PgPool,
@@ -40,6 +42,10 @@ pub fn create_app(
         redis: redis_pool,
         tx,
     });
+
+    let cors = CorsLayer::new()
+        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
+        .allow_origin(Any);
 
     // Only spawn MQTT task if mqtt_options are provided (for testing)
     if let Some(mqtt_options) = mqtt_options {
@@ -137,4 +143,5 @@ pub fn create_app(
         .route("/ws/chart", get(chart_websocket::chart_handler))
         .route("/chart", get(chart_routes::get_chart_history))
         .with_state(app_state)
+        .layer(cors)
 }
