@@ -1,4 +1,6 @@
-use crate::models::{PaginationParams, Tracker};
+use crate::models::{
+    GetTrackerResponse, PaginationParams, Tracker, TrackerBody, TrackerWithDetails,
+};
 use crate::AppState;
 use axum::{
     extract::{Path, Query, State},
@@ -6,28 +8,8 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, Postgres};
+use sqlx::Postgres;
 use std::sync::Arc;
-
-#[derive(Debug, FromRow, Serialize)]
-struct TrackerQuery {
-    tracker_id: i32,
-    name: String,
-    car_id: Option<i32>,
-    car_name: Option<String>,
-}
-
-#[derive(Debug, FromRow, Deserialize)]
-pub struct TrackerBody {
-    name: String,
-}
-
-#[derive(Debug, FromRow, Serialize)]
-struct GetTrackerResponse {
-    trackers: Vec<TrackerQuery>,
-    tracker_count: usize,
-}
 
 pub async fn get_trackers(
     State(state): State<Arc<AppState>>,
@@ -40,7 +22,7 @@ pub async fn get_trackers(
     let limit = if limit < 1 { 1 } else { limit };
     let offset = (page - 1) * 5;
 
-    let trackers = sqlx::query_as::<Postgres, TrackerQuery>(
+    let trackers = sqlx::query_as::<Postgres, TrackerWithDetails>(
         r#"
             SELECT
                 trackers.tracker_id,

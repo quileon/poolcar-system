@@ -1,5 +1,5 @@
 use crate::{
-    models::{CarType, PaginationParams},
+    models::{CarType, CarTypeBody, CarTypeWithCount, GetCarTypesResponse, PaginationParams},
     AppState,
 };
 use axum::{
@@ -8,27 +8,8 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, Postgres};
+use sqlx::Postgres;
 use std::sync::Arc;
-
-#[derive(Debug, FromRow, Serialize)]
-struct CarTypeWithCount {
-    car_type_id: i32,
-    name: String,
-    car_count: i64,
-}
-
-#[derive(Debug, Serialize)]
-struct GetCarTypesResponse {
-    car_types: Vec<CarTypeWithCount>,
-    car_type_count: usize,
-}
-
-#[derive(Debug, FromRow, Deserialize)]
-pub struct CarTypeBody {
-    pub name: String,
-}
 
 pub async fn get_car_types(
     State(state): State<Arc<AppState>>,

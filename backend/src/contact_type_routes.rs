@@ -1,35 +1,18 @@
+use crate::{
+    models::{
+        ContactType, ContactTypeBody, ContactTypeWithCount, GetContactTypesResponse,
+        PaginationParams,
+    },
+    AppState,
+};
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
 };
-use serde::{Deserialize, Serialize};
-use sqlx::{prelude::FromRow, Postgres};
+use sqlx::Postgres;
 use std::sync::Arc;
-
-use crate::{
-    models::{ContactType, PaginationParams},
-    AppState,
-};
-
-#[derive(Debug, FromRow, Serialize)]
-struct ContactTypeWithCount {
-    contact_type_id: i32,
-    name: String,
-    contact_count: i64,
-}
-
-#[derive(Debug, FromRow, Deserialize)]
-pub struct ContactTypeBody {
-    pub name: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct GetContactTypesResponse {
-    contact_types: Vec<ContactTypeWithCount>,
-    contact_type_count: usize,
-}
 
 pub async fn get_contact_types(
     State(state): State<Arc<AppState>>,

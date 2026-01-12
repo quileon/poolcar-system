@@ -1,5 +1,5 @@
 use crate::{
-    models::{Contact, PaginationParams},
+    models::{Contact, ContactBody, ContactWithDetails, GetContactsResponse, PaginationParams},
     AppState,
 };
 use axum::{
@@ -8,34 +8,8 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use rust_decimal::Decimal;
-use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, Postgres};
+use sqlx::Postgres;
 use std::sync::Arc;
-
-#[derive(Debug, Deserialize)]
-pub struct ContactBody {
-    pub name: String,
-    pub latitude: Decimal,
-    pub longitude: Decimal,
-    pub contact_type_id: i32,
-}
-
-#[derive(Debug, FromRow, Serialize)]
-struct ContactWithContactType {
-    pub contact_id: i32,
-    pub name: String,
-    pub latitude: Decimal,
-    pub longitude: Decimal,
-    pub contact_type_id: i32,
-    pub contact_type_name: String,
-}
-
-#[derive(Debug, FromRow, Serialize)]
-struct GetContactsResponse {
-    contacts: Vec<ContactWithContactType>,
-    contact_count: usize,
-}
 
 pub async fn get_contacts(
     State(state): State<Arc<AppState>>,
@@ -48,7 +22,7 @@ pub async fn get_contacts(
     let limit = if limit < 1 { 1 } else { limit };
     let offset = (page - 1) * 5;
 
-    let contacts = sqlx::query_as::<Postgres, ContactWithContactType>(
+    let contacts = sqlx::query_as::<Postgres, ContactWithDetails>(
         r#"
             SELECT
                 contacts.contact_id,

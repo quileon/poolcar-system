@@ -1,5 +1,5 @@
 use crate::{
-    models::{Activity, PaginationParams},
+    models::{Activity, ActivityBody, ActivityWithCount, GetActivitiesResponse, PaginationParams},
     AppState,
 };
 use axum::{
@@ -8,27 +8,8 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, Postgres};
+use sqlx::Postgres;
 use std::sync::Arc;
-
-#[derive(Debug, Deserialize)]
-pub struct ActivityBody {
-    pub name: String,
-}
-
-#[derive(Debug, FromRow, Serialize)]
-struct ActivityWithCount {
-    pub activity_id: i32,
-    pub name: String,
-    pub activity_count: i64,
-}
-
-#[derive(Debug, Serialize)]
-struct GetActivitiesResponse {
-    activities: Vec<ActivityWithCount>,
-    activity_count: usize,
-}
 
 pub async fn get_activities(
     State(state): State<Arc<AppState>>,
