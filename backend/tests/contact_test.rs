@@ -1,5 +1,5 @@
 use anyhow::Context;
-use poolcar_tracking_system_backend_test::create_app;
+use poolcar_backend::create_app;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, PgPool};

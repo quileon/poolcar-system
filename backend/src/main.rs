@@ -3,7 +3,7 @@ use std::time::Duration;
 use anyhow::Context;
 use deadpool_redis::Runtime;
 use dotenvy;
-use poolcar_tracking_system_backend_test::create_app;
+use poolcar_backend::create_app;
 use rumqttc::{MqttOptions, Transport};
 use sqlx::postgres::PgPoolOptions;
 
