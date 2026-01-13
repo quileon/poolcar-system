@@ -8,13 +8,13 @@
 	<form>
 		<Field.Group>
 			<Field.Set>
-				<Field.Legend>Create Car Type</Field.Legend>
-				<Field.Description>Car Type will be used to categorize cars.</Field.Description>
+				<Field.Legend>Create Tracker</Field.Legend>
+				<Field.Description>Tracker will be assigned to each car uniquely.</Field.Description>
 
 				<Field.Group>
 					<Field.Field>
-						<Field.Label for="name">Car Type Name</Field.Label>
-						<Input id="name" name="name" type="text" placeholder="Enter car type name" required />
+						<Field.Label for="name">Tracker Name</Field.Label>
+						<Input id="name" name="name" type="text" placeholder="Enter tracker name" required />
 					</Field.Field>
 				</Field.Group>
 			</Field.Set>
