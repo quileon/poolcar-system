@@ -45,7 +45,8 @@ pub fn create_app(
 
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
-        .allow_origin(Any);
+        .allow_origin(Any)
+        .allow_headers(Any);
 
     // Only spawn MQTT task if mqtt_options are provided (for testing)
     if let Some(mqtt_options) = mqtt_options {
