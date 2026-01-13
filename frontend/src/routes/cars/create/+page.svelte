@@ -60,7 +60,7 @@
 			return response.json();
 		},
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["cars"] });
+			queryClient.invalidateQueries({ queryKey: ["cars", "car-types", "trackers"] });
 			goto(resolve("/cars"));
 		}
 	}));
