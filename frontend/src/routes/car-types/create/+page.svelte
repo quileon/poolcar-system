@@ -1,11 +1,45 @@
 <script lang="ts">
+	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
 	import Button from "$lib/components/ui/button/button.svelte";
 	import * as Field from "$lib/components/ui/field/index";
 	import Input from "$lib/components/ui/input/input.svelte";
+	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
+
+	let carTypeName = "";
+
+	const queryClient = useQueryClient();
+	const mutation = createMutation(() => ({
+		mutationFn: async (carTypeName: string) => {
+			const response = await fetch("http://localhost:3000/cars/types", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json"
+				},
+				body: JSON.stringify({ name: carTypeName })
+			});
+
+			if (!response.ok) {
+				throw new Error("Failed to create car type");
+			}
+
+			return response.json();
+		},
+
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ["car-types"] });
+			goto(resolve("/car-types"));
+		}
+	}));
+
+	function handleSubmit(e: Event) {
+		e.preventDefault();
+		mutation.mutate(carTypeName);
+	}
 </script>
 
 <div class="mx-auto w-full max-w-md">
-	<form>
+	<form on:submit={handleSubmit}>
 		<Field.Group>
 			<Field.Set>
 				<Field.Legend>Create Car Type</Field.Legend>
@@ -14,7 +48,14 @@
 				<Field.Group>
 					<Field.Field>
 						<Field.Label for="name">Car Type Name</Field.Label>
-						<Input id="name" name="name" type="text" placeholder="Enter car type name" required />
+						<Input
+							id="name"
+							bind:value={carTypeName}
+							name="name"
+							type="text"
+							placeholder="Enter car type name"
+							required
+						/>
 					</Field.Field>
 				</Field.Group>
 			</Field.Set>
