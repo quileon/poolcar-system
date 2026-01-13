@@ -9,7 +9,7 @@
 	import Button from "$lib/components/ui/button/button.svelte";
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
-	import type { TrackerWithDetails } from "$lib/bindings/TrackerWithDetails";
+	import type { GetTrackerResponse } from "$lib/bindings/GetTrackerResponse";
 
 	const filters = [
 		{ label: "Active", value: "active" },
@@ -21,7 +21,7 @@
 		filters.find((filter) => filter.value === filterValue)?.label ?? "Filter by"
 	);
 
-	const trackersQuery = createQuery<TrackerWithDetails[]>(() => ({
+	const trackersQuery = createQuery<GetTrackerResponse>(() => ({
 		queryKey: ["trackers"],
 		queryFn: async () => {
 			const response = await fetch("http://localhost:3000/trackers");
@@ -92,7 +92,7 @@
 			</Table.Row>
 		</Table.Header>
 		<Table.Body>
-			{#each trackersQuery.data as tracker (tracker.tracker_id)}
+			{#each trackersQuery.data.trackers as tracker (tracker.tracker_id)}
 				<Table.Row>
 					<Table.Cell>{tracker.tracker_id}</Table.Cell>
 					<Table.Cell>{tracker.name}</Table.Cell>

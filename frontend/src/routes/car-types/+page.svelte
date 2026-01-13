@@ -9,7 +9,7 @@
 	import Button from "$lib/components/ui/button/button.svelte";
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
-	import type { CarTypeWithCount } from "$lib/bindings/CarTypeWithCount";
+	import type { GetCarTypesResponse } from "$lib/bindings/GetCarTypesResponse";
 
 	const filters = [
 		{ label: "Active", value: "active" },
@@ -21,7 +21,7 @@
 		filters.find((filter) => filter.value === filterValue)?.label ?? "Filter by"
 	);
 
-	const carTypesQuery = createQuery<CarTypeWithCount[]>(() => ({
+	const carTypesQuery = createQuery<GetCarTypesResponse>(() => ({
 		queryKey: ["car-types"],
 		queryFn: async () => {
 			const response = await fetch("http://localhost:3000/cars/types");
@@ -92,7 +92,7 @@
 			</Table.Row>
 		</Table.Header>
 		<Table.Body>
-			{#each carTypesQuery.data as carType (carType.car_type_id)}
+			{#each carTypesQuery.data.car_types as carType (carType.car_type_id)}
 				<Table.Row>
 					<Table.Cell>{carType.car_type_id}</Table.Cell>
 					<Table.Cell>{carType.name}</Table.Cell>

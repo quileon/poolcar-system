@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { createQuery } from "@tanstack/svelte-query";
-	import type { CarWithTracker } from "$lib/bindings/CarWithTracker";
 	import Skeleton from "$lib/components/ui/skeleton/skeleton.svelte";
 	import AlertCircleIcon from "@lucide/svelte/icons/alert-circle";
 	import * as Alert from "$lib/components/ui/alert/index";
@@ -10,6 +9,7 @@
 	import Button from "$lib/components/ui/button/button.svelte";
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
+	import type { GetCarsResponse } from "$lib/bindings/GetCarsResponse";
 
 	const filters = [
 		{ label: "Active", value: "active" },
@@ -21,7 +21,7 @@
 		filters.find((filter) => filter.value === filterValue)?.label ?? "Filter by"
 	);
 
-	const carsQuery = createQuery<CarWithTracker[]>(() => ({
+	const carsQuery = createQuery<GetCarsResponse>(() => ({
 		queryKey: ["cars"],
 		queryFn: async () => {
 			const response = await fetch("http://localhost:3000/cars");
@@ -95,7 +95,7 @@
 			</Table.Row>
 		</Table.Header>
 		<Table.Body>
-			{#each carsQuery.data as car (car.car_id)}
+			{#each carsQuery.data.cars as car (car.car_id)}
 				<Table.Row>
 					<Table.Cell>{car.car_id}</Table.Cell>
 					<Table.Cell>{car.name}</Table.Cell>
