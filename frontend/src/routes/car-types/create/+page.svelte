@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as Alert from "$lib/components/ui/alert/index";
+	import AlertCircleIcon from "@lucide/svelte/icons/alert-circle";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import Button from "$lib/components/ui/button/button.svelte";
@@ -65,4 +67,15 @@
 			</Field.Field>
 		</Field.Group>
 	</form>
+	<div class="mt-8">
+		{#if mutation.isError}
+			<Alert.Root variant="destructive">
+				<AlertCircleIcon />
+				<Alert.Title>Error</Alert.Title>
+				<Alert.Description>
+					<p>{mutation.error.message}</p>
+				</Alert.Description>
+			</Alert.Root>
+		{/if}
+	</div>
 </div>
