@@ -41,7 +41,7 @@
 </script>
 
 <div class="mx-auto w-full max-w-md">
-	<form on:submit={handleSubmit}>
+	<form onsubmit={handleSubmit}>
 		<Field.Group>
 			<Field.Set>
 				<Field.Legend>Create Car Type</Field.Legend>
