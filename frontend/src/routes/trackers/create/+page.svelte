@@ -8,7 +8,7 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 
-	let trackerName = "";
+	let trackerName = $state("");
 
 	const queryClient = useQueryClient();
 	const mutation = createMutation(() => ({

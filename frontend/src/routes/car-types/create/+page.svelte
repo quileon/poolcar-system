@@ -8,7 +8,7 @@
 	import Input from "$lib/components/ui/input/input.svelte";
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 
-	let carTypeName = "";
+	let carTypeName = $state("");
 
 	const queryClient = useQueryClient();
 	const mutation = createMutation(() => ({
@@ -62,8 +62,10 @@
 				</Field.Group>
 			</Field.Set>
 			<Field.Field orientation="horizontal">
-				<Button type="submit">Submit</Button>
-				<Button variant="outline" type="button">Cancel</Button>
+				<Button type="submit" disabled={mutation.isPending}>Submit</Button>
+				<Button variant="outline" type="button" disabled={mutation.isPending} href="/cars"
+					>Cancel</Button
+				>
 			</Field.Field>
 		</Field.Group>
 	</form>
