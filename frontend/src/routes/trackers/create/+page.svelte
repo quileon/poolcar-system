@@ -11,7 +11,6 @@
 	let trackerName = "";
 
 	const queryClient = useQueryClient();
-
 	const mutation = createMutation(() => ({
 		mutationFn: async (trackerName: string) => {
 			const response = await fetch("http://localhost:3000/trackers", {
@@ -41,7 +40,7 @@
 </script>
 
 <div class="mx-auto w-full max-w-md">
-	<form onsubmit={handleSubmit}>
+	<form on:submit={handleSubmit}>
 		<Field.Group>
 			<Field.Set>
 				<Field.Legend>Create Tracker</Field.Legend>
