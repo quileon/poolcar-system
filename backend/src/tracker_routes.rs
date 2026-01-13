@@ -28,7 +28,9 @@ pub async fn get_trackers(
                 trackers.tracker_id,
                 trackers.name,
                 cars.car_id as car_id,
-                cars.name as car_name
+                cars.name as car_name,
+                cars.car_type_id as car_type_id,
+                cars.car_type_name as car_type_name
             FROM trackers
             LEFT JOIN cars ON trackers.tracker_id = cars.tracker_id
             WHERE trackers.deleted_at IS NULL

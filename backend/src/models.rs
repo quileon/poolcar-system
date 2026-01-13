@@ -87,6 +87,8 @@ pub struct TrackerWithDetails {
     pub name: String,
     pub car_id: Option<i32>,
     pub car_name: Option<String>,
+    pub car_type_id: Option<i32>,
+    pub car_type_name: Option<String>,
 }
 
 #[derive(Debug, FromRow, Deserialize, TS)]
