@@ -8,9 +8,17 @@
 	import { getCarIcon, getTruckIcon, panToMarker, updateMarker } from "$lib/utils/map";
 	import type { GetTrackerResponse } from "$lib/bindings/GetTrackerResponse";
 	import { onMount } from "svelte";
+	import * as Select from "$lib/components/ui/select/index";
+	import { useSidebar } from "$lib/components/ui/sidebar/context.svelte";
+	import AlertCircleIcon from "@lucide/svelte/icons/alert-circle";
+	import * as Alert from "$lib/components/ui/alert/index";
+	import FocusIcon from "@lucide/svelte/icons/focus";
+	import * as ButtonGroup from "$lib/components/ui/button-group/index";
+	import Button from "$lib/components/ui/button/button.svelte";
 
 	const initialCoordinates = { lat: -6.382310833, lng: 107.1725405 };
 	const trackerData = new LiveData<TrackerPayloadWithId>("ws://localhost:3000/ws/live");
+	const sidebar = useSidebar();
 	let mapElement: HTMLElement;
 	let map: L.Map;
 	let L_module: typeof import("leaflet");
@@ -24,6 +32,37 @@
 			return response.json();
 		}
 	}));
+	let focusId = $state<string | undefined>(undefined);
+	let focusMap = $state<boolean>(false);
+	const focus = $derived({
+		map: focusMap,
+		id: focusId ? parseInt(focusId, 10) : null
+	});
+
+	// Set focusMap to true when focusId changes
+	$effect(() => {
+		if (focusId !== undefined) {
+			focusMap = true;
+		}
+	});
+
+	// Pan to marker when focusMap becomes true
+	$effect(() => {
+		if (focusMap && focus.id && map && trackerMarkerList[focus.id]) {
+			const marker = trackerMarkerList[focus.id];
+			const position = marker.getLatLng();
+			map.panTo(position);
+		}
+	});
+
+	function enableFocus() {
+		focusMap = true;
+	}
+
+	const trackerTrigger = $derived(
+		trackersQuery.data?.trackers.find((tracker) => tracker.tracker_id.toString() === focusId)
+			?.name ?? "Select Tracker to View"
+	);
 
 	// Map initialization - runs once on mount
 	onMount(() => {
@@ -51,6 +90,10 @@
 			setTimeout(() => {
 				map.invalidateSize();
 			}, 100);
+
+			map.on("dragstart", () => {
+				focusMap = false;
+			});
 		});
 
 		// Cleanup on unmount
@@ -61,16 +104,30 @@
 		};
 	});
 
-	// Tracker updates - runs when tracker data changes
+	// Invalidate map size when sidebar state changes
 	$effect(() => {
-		const currentData = trackerData.current;
+		// Track sidebar state to make this reactive
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		const sidebarState = sidebar.state;
+
+		if (map) {
+			setTimeout(() => {
+				map.invalidateSize();
+			}, 300);
+		}
+	});
+
+	// WebSocket
+	$effect(() => {
+		// Clone `trackerData.current`
+		const currentData = { ...trackerData.current };
 
 		if (!currentData || !map || !L_module) {
-			console.error("Exiting early: missing deps");
+			console.warn("Exiting early: missing deps");
 			return;
 		}
 		if (!currentData.location) {
-			console.error("Exiting early: no location");
+			console.warn("Exiting early: no location");
 			return;
 		}
 		if (
@@ -79,7 +136,7 @@
 			!currentData.id ||
 			!trackersQuery.data
 		) {
-			console.error("Exiting early: missing location data or query", {
+			console.warn("Exiting early: missing location data or query", {
 				lng: currentData.location.longitude,
 				lat: currentData.location.latitude,
 				id: currentData.id,
@@ -105,7 +162,7 @@
 
 		if (tracker) {
 			// Update existing marker
-			if (currentData.id) {
+			if (focus.map && focus.id === currentData.id) {
 				panToMarker(map, tracker, currentData.location.latitude, currentData.location.longitude);
 			} else {
 				updateMarker(tracker, currentData.location.latitude, currentData.location.longitude);
@@ -123,6 +180,62 @@
 
 <h1 class="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl">Live Tracking</h1>
 
+<div class="z-100">
+	<ButtonGroup.Root>
+		<ButtonGroup.Root>
+			<Select.Root type="single" bind:value={focusId}>
+				<Select.Trigger class="w-75">{trackerTrigger}</Select.Trigger>
+				<Select.Content>
+					<Select.Group>
+						<Select.Label>Trackers</Select.Label>
+						{#each trackersQuery.data?.trackers as tracker (tracker.tracker_id)}
+							<Select.Item value={tracker.tracker_id.toString()}>
+								{tracker.name}
+								{#if tracker.car_type_name}({tracker.car_name}){/if}
+							</Select.Item>
+						{/each}
+					</Select.Group>
+				</Select.Content>
+			</Select.Root>
+		</ButtonGroup.Root>
+		<ButtonGroup.Root>
+			<Button
+				aria-label="Focus"
+				size="icon"
+				variant={focusMap ? "default" : "outline"}
+				disabled={!focus.id}
+				onclick={enableFocus}
+			>
+				<FocusIcon />
+			</Button>
+		</ButtonGroup.Root>
+	</ButtonGroup.Root>
+</div>
+
+{#if trackerData.error || trackersQuery.isError}
+	<div class="space-y-4">
+		{#if trackerData.error}
+			<Alert.Root variant="destructive">
+				<AlertCircleIcon />
+				<Alert.Title>Error</Alert.Title>
+				<Alert.Description>
+					<p>{trackerData.error}</p>
+				</Alert.Description>
+			</Alert.Root>
+		{/if}
+
+		{#if trackersQuery.isError}
+			<Alert.Root variant="destructive">
+				<AlertCircleIcon />
+				<Alert.Title>Error</Alert.Title>
+				<Alert.Description>
+					<p>{trackersQuery.error.message}</p>
+				</Alert.Description>
+			</Alert.Root>
+		{/if}
+	</div>
+{/if}
+
 <div bind:this={mapElement} class="map h-[calc(100vh-10rem)] w-full"></div>
 
 <style>
@@ -130,10 +243,5 @@
 		height: 100%;
 		width: 100%;
 		z-index: 0;
-	}
-
-	/* Ensure Select dropdown appears above the map */
-	:global([data-portal]) {
-		z-index: 9999 !important;
 	}
 </style>
