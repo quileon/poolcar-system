@@ -4,6 +4,7 @@ export class LiveData<T> {
 	#socket: WebSocket | null = null;
 	#url: string;
 	#latestData: T | null = null;
+	#error: string | null = null;
 
 	#subscribe: () => void;
 
@@ -13,12 +14,27 @@ export class LiveData<T> {
 		this.#subscribe = createSubscriber((update) => {
 			this.#socket = new WebSocket(this.#url);
 
-			this.#socket.onopen = () => update(); // Update status
+			this.#socket.onopen = () => {
+				this.#error = null; // Clear error on successful connection
+				update();
+			};
+
+			this.#socket.onerror = () => {
+				this.#error = "WebSocket connection failed";
+				update();
+			};
+
+			this.#socket.onclose = (event) => {
+				if (!event.wasClean) {
+					this.#error = `WebSocket closed unexpectedly (code: ${event.code})`;
+					update();
+				}
+			};
 
 			this.#socket.onmessage = (event) => {
 				try {
 					this.#latestData = JSON.parse(event.data);
-					update(); // TRIGGER REACTIVITY
+					update();
 				} catch (e) {
 					console.error("Failed to parse WS message", e);
 				}
@@ -32,12 +48,17 @@ export class LiveData<T> {
 
 	// The getter the UI will use
 	get current() {
-		this.#subscribe(); // <--- CRITICAL: Tells Svelte "I am using this!"
+		this.#subscribe();
 		return this.#latestData;
 	}
 
 	get isConnected() {
 		this.#subscribe();
 		return this.#socket?.readyState === WebSocket.OPEN;
+	}
+
+	get error() {
+		this.#subscribe();
+		return this.#error;
 	}
 }
