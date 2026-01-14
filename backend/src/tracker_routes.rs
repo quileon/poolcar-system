@@ -30,9 +30,10 @@ pub async fn get_trackers(
                 cars.car_id as car_id,
                 cars.name as car_name,
                 cars.car_type_id as car_type_id,
-                cars.car_type_name as car_type_name
+                car_types.name as car_type_name
             FROM trackers
-            LEFT JOIN cars ON trackers.tracker_id = cars.tracker_id
+   LEFT JOIN cars ON trackers.tracker_id = cars.tracker_id
+            LEFT JOIN car_types ON cars.car_type_id = car_types.car_type_id
             WHERE trackers.deleted_at IS NULL
             ORDER BY trackers.tracker_id ASC
             LIMIT $1 OFFSET $2
