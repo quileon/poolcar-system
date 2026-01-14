@@ -1,4 +1,139 @@
 <script lang="ts">
+	import type L from "leaflet";
+	import "leaflet/dist/leaflet.css";
+	import chroma from "chroma-js";
+	import { LiveData } from "$lib/hooks/socket.svelte";
+	import type { TrackerPayloadWithId } from "$lib/bindings/TrackerPayloadWithId";
+	import { createQuery } from "@tanstack/svelte-query";
+	import { getCarIcon, getTruckIcon, panToMarker, updateMarker } from "$lib/utils/map";
+	import type { GetTrackerResponse } from "$lib/bindings/GetTrackerResponse";
+	import { onMount } from "svelte";
+
+	const initialCoordinates = { lat: -6.382310833, lng: 107.1725405 };
+	const trackerData = new LiveData<TrackerPayloadWithId>("ws://localhost:3000/ws/live");
+	let mapElement: HTMLElement;
+	let map: L.Map;
+	let L_module: typeof import("leaflet");
+	let trackerMarkerList: { [id: number]: L.Marker } = {};
+	const colors = chroma.scale(["#fafa6e", "#2a4a58"]).mode("lch").colors(10);
+	const trackersQuery = createQuery<GetTrackerResponse>(() => ({
+		queryKey: ["trackers"],
+		queryFn: async () => {
+			const response = await fetch("http://localhost:3000/trackers");
+			if (!response.ok) throw new Error("Failed to fetch trackers");
+			return response.json();
+		}
+	}));
+
+	// Map initialization - runs once on mount
+	onMount(() => {
+		import("leaflet").then((module) => {
+			const L = module.default;
+			L_module = L;
+
+			const homeIcon = L.icon({
+				iconUrl:
+					"https://api.geoapify.com/v2/icon/?type=circle&color=%230083ff&size=36&icon=home&iconType=awesome&contentSize=15&scaleFactor=2&apiKey=e0f80f7132454023b038a039b4d8c962",
+				iconSize: [42, 42],
+				iconAnchor: [21, 21],
+				popupAnchor: [0, -15]
+			});
+
+			// Map Initialization
+			map = L.map(mapElement, { preferCanvas: true }).setView(initialCoordinates, 13);
+
+			L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+				attribution:
+					'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+			}).addTo(map);
+			L.marker(initialCoordinates, { icon: homeIcon }).addTo(map);
+
+			setTimeout(() => {
+				map.invalidateSize();
+			}, 100);
+		});
+
+		// Cleanup on unmount
+		return () => {
+			if (map) {
+				map.remove();
+			}
+		};
+	});
+
+	// Tracker updates - runs when tracker data changes
+	$effect(() => {
+		const currentData = trackerData.current;
+
+		if (!currentData || !map || !L_module) {
+			console.error("Exiting early: missing deps");
+			return;
+		}
+		if (!currentData.location) {
+			console.error("Exiting early: no location");
+			return;
+		}
+		if (
+			!currentData.location.longitude ||
+			!currentData.location.latitude ||
+			!currentData.id ||
+			!trackersQuery.data
+		) {
+			console.error("Exiting early: missing location data or query", {
+				lng: currentData.location.longitude,
+				lat: currentData.location.latitude,
+				id: currentData.id,
+				queryData: !!trackersQuery.data
+			});
+			return;
+		}
+
+		const tracker = trackerMarkerList[currentData.id];
+		const trackerDetails = trackersQuery.data.trackers.find((t) => t.tracker_id === currentData.id);
+
+		if (!trackerDetails) {
+			console.log("Exiting early: no tracker details");
+			return;
+		}
+
+		const icon =
+			trackerDetails.car_type_name === "Passenger"
+				? getCarIcon(L_module, colors, currentData.id)
+				: trackerDetails.car_type_name === "Truck"
+					? getTruckIcon(L_module, colors, currentData.id)
+					: getCarIcon(L_module, colors, currentData.id); // Default to car icon
+
+		if (tracker) {
+			// Update existing marker
+			if (currentData.id) {
+				panToMarker(map, tracker, currentData.location.latitude, currentData.location.longitude);
+			} else {
+				updateMarker(tracker, currentData.location.latitude, currentData.location.longitude);
+			}
+		} else {
+			const marker = L_module.marker(
+				[currentData.location.latitude, currentData.location.longitude],
+				{ icon }
+			);
+			trackerMarkerList[currentData.id] = marker;
+			marker.addTo(map);
+		}
+	});
 </script>
 
 <h1 class="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl">Live Tracking</h1>
+
+<div bind:this={mapElement} class="map h-[calc(100vh-10rem)] w-full"></div>
+
+<style>
+	:global(.leaflet-container) {
+		height: 100%;
+		width: 100%;
+		z-index: 0;
+	}
+
+	/* Ensure Select dropdown appears above the map */
+	:global([data-portal]) {
+		z-index: 9999 !important;
+	}
+</style>
