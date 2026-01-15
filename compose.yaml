@@ -1,0 +1,37 @@
+services:
+  valkey:
+    image: docker.io/valkey/valkey:9-alpine
+    container_name: poolcar-system-valkey
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    env_file:
+      - .docker.env
+    command: valkey-server --appendonly no --save 300 1 --save 60 100
+    volumes:
+      - ${HOME}/Services/valkey:/data
+
+  postgres:
+    image: docker.io/postgres:18-alpine
+    container_name: poolcar-system-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - ${HOME}/Services/postgres:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend/.
+    container_name: poolcar-system-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .docker.env
+    depends_on:
+      - postgres
+      - valkey
