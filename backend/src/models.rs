@@ -328,7 +328,7 @@ pub struct TrackerDateTime {
     pub hour: Option<u8>,
     pub minute: Option<u8>,
     pub second: Option<u8>,
-    pub millisecond: Option<u32>,
+    pub centisecond: Option<u32>,
     pub valid: bool,
 }
 
