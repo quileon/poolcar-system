@@ -1,11 +1,11 @@
-use std::time::Duration;
-
 use anyhow::Context;
 use deadpool_redis::Runtime;
 use dotenvy;
 use poolcar_backend::create_app;
 use rumqttc::{MqttOptions, Transport};
 use sqlx::postgres::PgPoolOptions;
+use std::time::Duration;
+use tokio::signal;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -48,14 +48,40 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("MQTT OK");
 
     // Port binding
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
         .await
         .context("Failed to bind to port 3000")?;
     println!("Listening on {}", listener.local_addr()?);
 
     // Axum
     let app = create_app(db_pool, redis_pool, Some(mqtt_options));
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
 
     Ok(())
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
 }
