@@ -56,6 +56,36 @@ pub async fn get_car_types(
     Ok(Json(response))
 }
 
+pub async fn get_car_type(
+    State(state): State<Arc<AppState>>,
+    Path(car_type_id): Path<i32>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let car_type = sqlx::query_as::<Postgres, CarTypeWithCount>(
+        r#"
+            SELECT
+                car_types.car_type_id,
+                car_types.name,
+                COUNT(cars.car_id) as car_count
+            FROM car_types
+            LEFT JOIN cars ON car_types.car_type_id = cars.car_type_id
+            WHERE car_types.car_type_id = $1 AND car_types.deleted_at IS NULL
+            GROUP BY car_types.car_type_id, car_types.name
+        "#,
+    )
+    .bind(car_type_id)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| {
+        eprintln!("Database error: {:?}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Database error: {}", e),
+        )
+    })?;
+
+    Ok(Json(car_type))
+}
+
 pub async fn create_car_type(
     State(state): State<Arc<AppState>>,
     Json(car_type): Json<CarTypeBody>,
