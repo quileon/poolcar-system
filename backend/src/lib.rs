@@ -68,6 +68,7 @@ pub fn create_app(
         .route("/cars/{car_id}", put(car_routes::update_car))
         .route("/cars/{car_id}", delete(car_routes::delete_car))
         .route("/trackers", get(tracker_routes::get_trackers))
+        .route("/trackers/{tracker_id}", get(tracker_routes::get_tracker))
         .route("/trackers", post(tracker_routes::create_tracker))
         .route(
             "/trackers/{tracker_id}",
