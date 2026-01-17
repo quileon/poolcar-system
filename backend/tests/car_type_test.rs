@@ -10,6 +10,19 @@ pub struct CarType {
     pub name: String,
 }
 
+#[derive(Debug, FromRow, Deserialize, Serialize)]
+pub struct CarTypeWithCount {
+    pub car_type_id: i32,
+    pub name: String,
+    pub car_count: i64,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct GetCarTypesResponse {
+    pub car_types: Vec<CarTypeWithCount>,
+    pub car_type_count: usize,
+}
+
 async fn spawn_app(db_pool: PgPool) -> (String, JoinHandle<()>) {
     seed_database(&db_pool).await;
 
@@ -64,15 +77,51 @@ async fn test_get_car_types(pool: PgPool) {
     assert_eq!(response.status().as_u16(), 200);
 
     // Body check
-    let body: serde_json::Value = response.json().await.expect("Failed to parse JSON");
-    let car_type_count = body["car_type_count"]
-        .as_u64()
-        .expect("car_type_count should be a number");
-    assert_eq!(car_type_count, 2, "Expected 2 car_types");
-    let car_types = body["car_types"]
-        .as_array()
-        .expect("car_types should be an array");
-    assert_eq!(car_types.len(), 2, "Expected 2 car_types in array");
+    let body = response
+        .json::<GetCarTypesResponse>()
+        .await
+        .expect("Failed to parse JSON");
+
+    assert_eq!(body.car_type_count, 2, "Expected 2 car_types");
+    assert_eq!(body.car_types.len(), 2, "Expected 2 car_types in array");
+
+    // Car Type 1
+    assert_eq!(body.car_types[0].car_type_id, 1);
+    assert_eq!(body.car_types[0].name, "Delivery");
+    assert_eq!(body.car_types[0].car_count, 0);
+
+    // Car Type 2
+    assert_eq!(body.car_types[1].car_type_id, 2);
+    assert_eq!(body.car_types[1].name, "Passenger");
+    assert_eq!(body.car_types[1].car_count, 0);
+
+    handle.abort();
+}
+
+#[sqlx::test]
+async fn test_get_car_type(pool: PgPool) {
+    let (address, handle) = spawn_app(pool.clone()).await;
+    let client = reqwest::Client::new();
+
+    let response = client
+        .get(format!("{}/cars/types/1", address))
+        .send()
+        .await
+        .expect("Failed to execute request");
+
+    // Response check
+    assert_eq!(response.status().as_u16(), 200);
+
+    // Body check
+    let body = response
+        .json::<CarTypeWithCount>()
+        .await
+        .expect("Failed to parse JSON");
+
+    // Car Type 1
+    assert_eq!(body.car_type_id, 1);
+    assert_eq!(body.name, "Delivery");
+    assert_eq!(body.car_count, 0);
 
     handle.abort();
 }
