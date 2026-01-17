@@ -10,6 +10,16 @@ pub struct Tracker {
     pub name: String,
 }
 
+#[derive(Debug, FromRow, Serialize, Deserialize)]
+pub struct TrackerWithDetails {
+    pub tracker_id: i32,
+    pub name: String,
+    pub car_id: Option<i32>,
+    pub car_name: Option<String>,
+    pub car_type_id: Option<i32>,
+    pub car_type_name: Option<String>,
+}
+
 async fn spawn_app(db_pool: PgPool) -> (String, JoinHandle<()>) {
     seed_database(&db_pool).await;
 
@@ -41,7 +51,7 @@ async fn seed_database(pool: &PgPool) {
     sqlx::query(
         r#"
             INSERT INTO trackers (name)
-            VALUES ('Batman Tracker'), ('Superman Tracker'), ('Robin Tracker')
+            VALUES ('Tracker 1'), ('Tracker 2'), ('Tracker 3')
         "#,
     )
     .execute(pool)
@@ -68,10 +78,33 @@ async fn test_get_trackers(pool: PgPool) {
         .as_u64()
         .expect("tracker_count should be a number");
     assert_eq!(tracker_count, 3, "Expected 3 trackers");
-    let trackers = body["trackers"]
-        .as_array()
-        .expect("trackers should be an array");
+    let trackers: Vec<TrackerWithDetails> = serde_json::from_value(body["trackers"].clone())
+        .expect("Failed to deserialize trackers array");
     assert_eq!(trackers.len(), 3, "Expected 3 trackers in array");
+
+    // Tracker 1 check
+    assert_eq!(trackers[0].tracker_id, 1);
+    assert_eq!(trackers[0].name, "Tracker 1");
+    assert_eq!(trackers[0].car_id, None);
+    assert_eq!(trackers[0].car_name, None);
+    assert_eq!(trackers[0].car_type_id, None);
+    assert_eq!(trackers[0].car_type_name, None);
+
+    // Tracker 2 check
+    assert_eq!(trackers[1].tracker_id, 2);
+    assert_eq!(trackers[1].name, "Tracker 2");
+    assert_eq!(trackers[1].car_id, None);
+    assert_eq!(trackers[1].car_name, None);
+    assert_eq!(trackers[1].car_type_id, None);
+    assert_eq!(trackers[1].car_type_name, None);
+
+    // Tracker 3 check
+    assert_eq!(trackers[2].tracker_id, 3);
+    assert_eq!(trackers[2].name, "Tracker 3");
+    assert_eq!(trackers[2].car_id, None);
+    assert_eq!(trackers[2].car_name, None);
+    assert_eq!(trackers[2].car_type_id, None);
+    assert_eq!(trackers[2].car_type_name, None);
 
     handle.abort();
 }
@@ -171,7 +204,7 @@ async fn test_delete_tracker(pool: PgPool) {
 
     // Body check
     let body: serde_json::Value = response.json().await.expect("Failed to parse JSON");
-    assert_eq!(body["name"], "Batman Tracker");
+    assert_eq!(body["name"], "Tracker 1");
     assert_eq!(
         body["tracker_id"]
             .as_u64()
@@ -187,7 +220,7 @@ async fn test_delete_tracker(pool: PgPool) {
     .await
     .expect("Failed to fetch tracker");
     assert_eq!(tracker.tracker_id, 1);
-    assert_eq!(tracker.name, "Batman Tracker");
+    assert_eq!(tracker.name, "Tracker 1");
 
     handle.abort();
 }
