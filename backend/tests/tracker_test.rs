@@ -110,6 +110,35 @@ async fn test_get_trackers(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn test_get_tracker(pool: PgPool) {
+    let (address, handle) = spawn_app(pool.clone()).await;
+    let client = reqwest::Client::new();
+
+    let response = client
+        .get(format!("{}/trackers/1", address))
+        .send()
+        .await
+        .expect("Failed to execute request");
+
+    assert_eq!(response.status().as_u16(), 200);
+
+    // Body check
+    let body = response
+        .json::<TrackerWithDetails>()
+        .await
+        .expect("Failed to parse and deserialize tracker");
+
+    assert_eq!(body.tracker_id, 1);
+    assert_eq!(body.name, "Tracker 1");
+    assert_eq!(body.car_id, None);
+    assert_eq!(body.car_name, None);
+    assert_eq!(body.car_type_id, None);
+    assert_eq!(body.car_type_name, None);
+
+    handle.abort();
+}
+
+#[sqlx::test]
 async fn test_create_tracker(pool: PgPool) {
     let (address, handle) = spawn_app(pool.clone()).await;
     let client = reqwest::Client::new();
