@@ -61,6 +61,41 @@ pub async fn get_cars(
     Ok(axum::Json(response))
 }
 
+pub async fn get_car(
+    State(state): State<Arc<AppState>>,
+    Path(car_id): Path<i32>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let car = sqlx::query_as::<Postgres, CarWithTracker>(
+        r#"
+            SELECT
+                cars.car_id,
+                cars.name,
+                cars.police_number,
+                cars.active,
+                car_types.car_type_id,
+                car_types.name as car_type_name,
+                trackers.tracker_id,
+                trackers.name as tracker_name
+            FROM cars
+            LEFT JOIN car_types ON cars.car_type_id = car_types.car_type_id
+            LEFT JOIN trackers ON cars.tracker_id = trackers.tracker_id
+            WHERE cars.car_id = $1 AND cars.deleted_at IS NULL
+        "#,
+    )
+    .bind(car_id)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| {
+        eprintln!("Database error: {:?}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Database error: {}", e),
+        )
+    })?;
+
+    Ok(axum::Json(car))
+}
+
 pub async fn create_car(
     State(state): State<Arc<AppState>>,
     Json(car): Json<CarBody>,
