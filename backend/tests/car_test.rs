@@ -26,6 +26,12 @@ pub struct CarWithTracker {
     pub tracker_name: Option<String>,
 }
 
+#[derive(Debug, FromRow, Deserialize, Serialize)]
+pub struct GetCarsResponse {
+    pub cars: Vec<CarWithTracker>,
+    pub car_count: usize,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ErrorResponse {
     pub message: String,
@@ -107,47 +113,83 @@ async fn test_get_cars(pool: PgPool) {
     assert_eq!(response.status().as_u16(), 200);
 
     // Body check
-    let body: serde_json::Value = response.json().await.expect("Failed to parse JSON");
-    let car_count = body["car_count"]
-        .as_u64()
-        .expect("car_count should be a number");
-    assert_eq!(car_count, 3, "Expected 3 car_count");
+    let body = response
+        .json::<GetCarsResponse>()
+        .await
+        .expect("Failed to parse JSON");
+    assert_eq!(body.car_count, 3, "Expected 3 car_count");
 
     // Data check
-    let cars: Vec<CarWithTracker> =
-        serde_json::from_value(body["cars"].clone()).expect("Failed to deserialize cars array");
-
-    assert_eq!(cars.len(), 3, "Expected 3 cars in array");
+    assert_eq!(body.cars.len(), 3, "Expected 3 cars in array");
 
     // Car 1
-    assert_eq!(cars[0].car_id, 1);
-    assert_eq!(cars[0].name, "Car 1");
-    assert_eq!(cars[0].police_number, "ABC123");
-    assert_eq!(cars[0].active, true);
-    assert_eq!(cars[0].car_type_id, 1);
-    assert_eq!(cars[0].car_type_name, "Delivery");
-    assert_eq!(cars[0].tracker_id, Some(1));
-    assert_eq!(cars[0].tracker_name, Some("Batman Tracker".to_string()));
+    assert_eq!(body.cars[0].car_id, 1);
+    assert_eq!(body.cars[0].name, "Car 1");
+    assert_eq!(body.cars[0].police_number, "ABC123");
+    assert_eq!(body.cars[0].active, true);
+    assert_eq!(body.cars[0].car_type_id, 1);
+    assert_eq!(body.cars[0].car_type_name, "Delivery");
+    assert_eq!(body.cars[0].tracker_id, Some(1));
+    assert_eq!(
+        body.cars[0].tracker_name,
+        Some("Batman Tracker".to_string())
+    );
 
     // Car 2
-    assert_eq!(cars[1].car_id, 2);
-    assert_eq!(cars[1].name, "Car 2");
-    assert_eq!(cars[1].police_number, "DEF456");
-    assert_eq!(cars[1].active, false);
-    assert_eq!(cars[1].car_type_id, 2);
-    assert_eq!(cars[1].car_type_name, "Passenger");
-    assert_eq!(cars[1].tracker_id, Some(2));
-    assert_eq!(cars[1].tracker_name, Some("Superman Tracker".to_string()));
+    assert_eq!(body.cars[1].car_id, 2);
+    assert_eq!(body.cars[1].name, "Car 2");
+    assert_eq!(body.cars[1].police_number, "DEF456");
+    assert_eq!(body.cars[1].active, false);
+    assert_eq!(body.cars[1].car_type_id, 2);
+    assert_eq!(body.cars[1].car_type_name, "Passenger");
+    assert_eq!(body.cars[1].tracker_id, Some(2));
+    assert_eq!(
+        body.cars[1].tracker_name,
+        Some("Superman Tracker".to_string())
+    );
 
     // Car 3 - has no tracker
-    assert_eq!(cars[2].car_id, 3);
-    assert_eq!(cars[2].name, "Car 3");
-    assert_eq!(cars[2].police_number, "GHI789");
-    assert_eq!(cars[2].active, true);
-    assert_eq!(cars[2].car_type_id, 1);
-    assert_eq!(cars[2].car_type_name, "Delivery");
-    assert_eq!(cars[2].tracker_id, None);
-    assert_eq!(cars[2].tracker_name, None);
+    assert_eq!(body.cars[2].car_id, 3);
+    assert_eq!(body.cars[2].name, "Car 3");
+    assert_eq!(body.cars[2].police_number, "GHI789");
+    assert_eq!(body.cars[2].active, true);
+    assert_eq!(body.cars[2].car_type_id, 1);
+    assert_eq!(body.cars[2].car_type_name, "Delivery");
+    assert_eq!(body.cars[2].tracker_id, None);
+    assert_eq!(body.cars[2].tracker_name, None);
+
+    handle.abort();
+}
+
+#[sqlx::test]
+async fn test_get_car(pool: PgPool) {
+    let (address, handle) = spawn_app(pool.clone()).await;
+    let client = reqwest::Client::new();
+
+    let response = client
+        .get(format!("{}/cars/1", address))
+        .send()
+        .await
+        .expect("Failed to execute request");
+
+    // Response check
+    assert_eq!(response.status().as_u16(), 200);
+
+    // Body check
+    let body = response
+        .json::<CarWithTracker>()
+        .await
+        .expect("Failed to parse JSON");
+
+    // Car 1
+    assert_eq!(body.car_id, 1);
+    assert_eq!(body.name, "Car 1");
+    assert_eq!(body.police_number, "ABC123");
+    assert_eq!(body.active, true);
+    assert_eq!(body.car_type_id, 1);
+    assert_eq!(body.car_type_name, "Delivery");
+    assert_eq!(body.tracker_id, Some(1));
+    assert_eq!(body.tracker_name, Some("Batman Tracker".to_string()));
 
     handle.abort();
 }
