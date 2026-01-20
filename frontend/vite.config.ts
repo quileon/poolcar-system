@@ -4,39 +4,47 @@ import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 
 export default defineConfig({
-	plugins: [tailwindcss(), sveltekit()],
+    plugins: [tailwindcss(), sveltekit()],
 
-	test: {
-		expect: { requireAssertions: true },
+    server: {
+        port: 7271
+    },
 
-		projects: [
-			{
-				extends: './vite.config.ts',
+    preview: {
+        port: 7271
+    },
 
-				test: {
-					name: 'client',
+    test: {
+        expect: { requireAssertions: true },
 
-					browser: {
-						enabled: true,
-						provider: playwright(),
-						instances: [{ browser: 'chromium', headless: true }]
-					},
+        projects: [
+            {
+                extends: './vite.config.ts',
 
-					include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
-					exclude: ['src/lib/server/**']
-				}
-			},
+                test: {
+                    name: 'client',
 
-			{
-				extends: './vite.config.ts',
+                    browser: {
+                        enabled: true,
+                        provider: playwright(),
+                        instances: [{ browser: 'chromium', headless: true }]
+                    },
 
-				test: {
-					name: 'server',
-					environment: 'node',
-					include: ['src/**/*.{test,spec}.{js,ts}'],
-					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
-				}
-			}
-		]
-	}
+                    include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
+                    exclude: ['src/lib/server/**']
+                }
+            },
+
+            {
+                extends: './vite.config.ts',
+
+                test: {
+                    name: 'server',
+                    environment: 'node',
+                    include: ['src/**/*.{test,spec}.{js,ts}'],
+                    exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
+                }
+            }
+        ]
+    }
 });

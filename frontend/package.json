@@ -52,6 +52,7 @@
 		"vitest-browser-svelte": "^2.0.1"
 	},
 	"dependencies": {
+		"@sveltejs/adapter-static": "^3.0.10",
 		"@tanstack/svelte-query": "^6.0.14",
 		"@types/chroma-js": "^3.1.2",
 		"chroma-js": "^3.2.0",
