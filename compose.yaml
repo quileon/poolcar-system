@@ -5,11 +5,9 @@ services:
     restart: unless-stopped
     ports:
       - "6379:6379"
-    env_file:
-      - .docker.env
     command: valkey-server --appendonly no --save 300 1 --save 60 100
     volumes:
-      - ${HOME}/Services/valkey:/data
+      - ${VALKEY_DIR}:/data
 
   postgres:
     image: docker.io/postgres:18-alpine
@@ -22,16 +20,21 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - ${HOME}/Services/postgres:/var/lib/postgresql/data
+      - ${POSTGRES_DIR}:/var/lib/postgresql/data
 
   backend:
-    build: ./backend/.
+    build: gitea.quileon.me/quileon/poolcar-system-backend:latest
     container_name: poolcar-system-backend
     restart: unless-stopped
     ports:
-      - "3000:3000"
-    env_file:
-      - .docker.env
+      - "${BACKEND_PORT}:7270"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      MQTT_URL: ${MQTT_URL}
+      MQTT_CLIENT: ${MQTT_CLIENT}
+      MQTT_USERNAME: ${MQTT_USERNAME}
+      MQTT_PASSWORD: ${MQTT_PASSWORD}
     depends_on:
       - postgres
       - valkey
