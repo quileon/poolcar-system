@@ -48,10 +48,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("MQTT OK");
 
     // Port binding
-    let listen_port = std::env::var("BACKEND_PORT").context("Failed to read BACKEND_PORT")?;
-    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", listen_port))
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:7270")
         .await
-        .context(format!("Failed to bind to port {}", listen_port))?;
+        .context(format!("Failed to bind to port 7270"))?;
     println!("Listening on {}", listener.local_addr()?);
 
     // Axum
