@@ -64,7 +64,7 @@
 			</Field.Set>
 			<Field.Field orientation="horizontal">
 				<Button type="submit" disabled={mutation.isPending}>Submit</Button>
-				<Button variant="outline" type="button" disabled={mutation.isPending} href="/cars"
+				<Button variant="outline" type="button" disabled={mutation.isPending} href="/car-types"
 					>Cancel</Button
 				>
 			</Field.Field>
