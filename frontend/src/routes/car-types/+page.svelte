@@ -99,7 +99,7 @@
 					<Table.Cell>{carType.name}</Table.Cell>
 					<Table.Cell>{carType.car_count}</Table.Cell>
 					<Table.Cell>
-						<Button href={`/cars-types/${carType.car_type_id}`} size="icon" variant="outline">
+						<Button href={`/car-types/${carType.car_type_id}`} size="icon" variant="outline">
 							<PencilIcon />
 						</Button>
 					</Table.Cell>
