@@ -27,7 +27,7 @@
 		}
 	});
 	const queryClient = useQueryClient();
-	const carTypeMutation = createMutation(() => ({
+	const editCarTypeMutation = createMutation(() => ({
 		mutationFn: async (carTypeName: string) => {
 			const response = await fetch(`${config.apiBaseUrl}/cars/types/${carTypeId}`, {
 				method: "PUT",
@@ -42,22 +42,43 @@
 			return response.json();
 		},
 		onSuccess: async () => {
+			await goto(resolve("/car-types"));
 			await queryClient.invalidateQueries({ queryKey: ["car-types"] });
-			goto(resolve("/car-types"));
+		}
+	}));
+	const deleteCarTypeMutation = createMutation(() => ({
+		mutationFn: async () => {
+			const response = await fetch(`${config.apiBaseUrl}/cars/types/${carTypeId}`, {
+				method: "DELETE"
+			});
+			if (!response.ok) {
+				throw new Error("Failed to delete car type");
+			}
+			return response.json();
+		},
+		onSuccess: async () => {
+			await goto(resolve("/car-types"));
+			await queryClient.invalidateQueries({ queryKey: ["car-types"] });
 		}
 	}));
 
-	function handleMutationSubmit(event: Event) {
+	function handleSubmit(event: Event) {
 		event.preventDefault();
-		carTypeMutation.mutate(carTypeName);
+		editCarTypeMutation.mutate(carTypeName);
+	}
+
+	function handleDelete() {
+		if (confirm(`Are you sure you want to delete "${carTypeName}"?`)) {
+			deleteCarTypeMutation.mutate();
+		}
 	}
 </script>
 
 <div class="mx-auto w-full max-w-md">
-	<form onsubmit={handleMutationSubmit}>
+	<form onsubmit={handleSubmit}>
 		<Field.Group>
 			<Field.Set>
-				<Field.Legend>Create Car Type</Field.Legend>
+				<Field.Legend>Modify Car Type</Field.Legend>
 				<Field.Description>Car Type will be used to categorize cars.</Field.Description>
 
 				<Field.Group>
@@ -75,13 +96,30 @@
 					</Field.Field>
 				</Field.Group>
 			</Field.Set>
-			<Field.Field orientation="horizontal">
-				<Button type="submit" disabled={carTypeMutation.isPending}>Submit</Button>
+			<Field.Field orientation="horizontal" class="flex justify-between">
+				<div class="flex gap-3">
+					<Button
+						type="submit"
+						disabled={editCarTypeMutation.isPending ||
+							carTypeQuery.isPending ||
+							deleteCarTypeMutation.isPending}>Submit</Button
+					>
+					<Button
+						variant="outline"
+						type="button"
+						disabled={editCarTypeMutation.isPending ||
+							carTypeQuery.isPending ||
+							deleteCarTypeMutation.isPending}
+						href="/car-types">Cancel</Button
+					>
+				</div>
 				<Button
-					variant="outline"
 					type="button"
-					disabled={carTypeMutation.isPending}
-					href="/car-types">Cancel</Button
+					disabled={editCarTypeMutation.isPending ||
+						carTypeQuery.isPending ||
+						deleteCarTypeMutation.isPending}
+					variant="destructive"
+					onclick={handleDelete}>Delete</Button
 				>
 			</Field.Field>
 		</Field.Group>
@@ -97,12 +135,22 @@
 			</Alert.Root>
 		{/if}
 
-		{#if carTypeMutation.isError}
+		{#if editCarTypeMutation.isError}
 			<Alert.Root variant="destructive">
 				<AlertCircleIcon />
 				<Alert.Title>Error</Alert.Title>
 				<Alert.Description>
-					<p>{carTypeMutation.error.message}</p>
+					<p>{editCarTypeMutation.error.message}</p>
+				</Alert.Description>
+			</Alert.Root>
+		{/if}
+
+		{#if deleteCarTypeMutation.isError}
+			<Alert.Root variant="destructive">
+				<AlertCircleIcon />
+				<Alert.Title>Error</Alert.Title>
+				<Alert.Description>
+					<p>{deleteCarTypeMutation.error.message}</p>
 				</Alert.Description>
 			</Alert.Root>
 		{/if}
