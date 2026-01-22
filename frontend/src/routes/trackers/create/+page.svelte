@@ -7,13 +7,14 @@
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
+	import { config } from "$lib/config";
 
 	let trackerName = $state("");
 
 	const queryClient = useQueryClient();
 	const mutation = createMutation(() => ({
 		mutationFn: async (trackerName: string) => {
-			const response = await fetch("http://localhost:3000/trackers", {
+			const response = await fetch(`${config.apiBaseUrl}/trackers`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json"

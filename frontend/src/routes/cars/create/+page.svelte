@@ -11,6 +11,7 @@
 	import { goto } from "$app/navigation";
 	import * as Alert from "$lib/components/ui/alert/index";
 	import AlertCircleIcon from "@lucide/svelte/icons/alert-circle";
+	import { config } from "$lib/config";
 
 	let carName = $state("");
 	let policeNumber = $state("");
@@ -21,7 +22,7 @@
 	const trackersQuery = createQuery<GetTrackerResponse>(() => ({
 		queryKey: ["trackers"],
 		queryFn: async () => {
-			const response = await fetch("http://localhost:3000/trackers");
+			const response = await fetch(`${config.apiBaseUrl}/trackers`);
 			if (!response.ok) throw new Error("Failed to fetch trackers");
 			return response.json();
 		}
@@ -29,7 +30,7 @@
 	const carTypesQuery = createQuery<GetCarTypesResponse>(() => ({
 		queryKey: ["carTypes"],
 		queryFn: async () => {
-			const response = await fetch("http://localhost:3000/cars/types");
+			const response = await fetch(`${config.apiBaseUrl}/cars/types`);
 			if (!response.ok) throw new Error("Failed to fetch car types");
 			return response.json();
 		}
@@ -43,7 +44,7 @@
 			trackerId: number | null;
 			active: boolean;
 		}) => {
-			const response = await fetch("http://localhost:3000/cars", {
+			const response = await fetch(`${config.apiBaseUrl}/cars`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json"

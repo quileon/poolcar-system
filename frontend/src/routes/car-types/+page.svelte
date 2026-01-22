@@ -10,6 +10,7 @@
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import type { GetCarTypesResponse } from "$lib/bindings/GetCarTypesResponse";
+	import { config } from "$lib/config";
 
 	const filters = [
 		{ label: "Active", value: "active" },
@@ -24,7 +25,7 @@
 	const carTypesQuery = createQuery<GetCarTypesResponse>(() => ({
 		queryKey: ["car-types"],
 		queryFn: async () => {
-			const response = await fetch("http://localhost:3000/cars/types");
+			const response = await fetch(`${config.apiBaseUrl}/cars/types`);
 			if (!response.ok) throw new Error("Failed to fetch car types");
 			return response.json();
 		}

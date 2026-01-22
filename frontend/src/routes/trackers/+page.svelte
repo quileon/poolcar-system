@@ -10,6 +10,7 @@
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import type { GetTrackerResponse } from "$lib/bindings/GetTrackerResponse";
+	import { config } from "$lib/config";
 
 	const filters = [
 		{ label: "Active", value: "active" },
@@ -24,7 +25,7 @@
 	const trackersQuery = createQuery<GetTrackerResponse>(() => ({
 		queryKey: ["trackers"],
 		queryFn: async () => {
-			const response = await fetch("http://localhost:3000/trackers");
+			const response = await fetch(`${config.apiBaseUrl}/trackers`);
 			if (!response.ok) throw new Error("Failed to fetch trackers");
 			return response.json();
 		}

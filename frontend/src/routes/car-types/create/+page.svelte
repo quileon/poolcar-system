@@ -7,13 +7,14 @@
 	import * as Field from "$lib/components/ui/field/index";
 	import Input from "$lib/components/ui/input/input.svelte";
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
+	import { config } from "$lib/config";
 
 	let carTypeName = $state("");
 
 	const queryClient = useQueryClient();
 	const mutation = createMutation(() => ({
 		mutationFn: async (carTypeName: string) => {
-			const response = await fetch("http://localhost:3000/cars/types", {
+			const response = await fetch(`${config.apiBaseUrl}/cars/types`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json"
