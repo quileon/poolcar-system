@@ -1,0 +1,40 @@
+name: Build and Push Image
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: gitea
+
+    steps:
+    - name: Checkout into latest
+      uses: actions/checkout@v4
+      
+    - name: Get backend version
+      id: backend_meta
+      run: |
+        # Use grep/cut to avoid needing extra tools, or use yq if preferred
+        VERSION=$(grep '^version =' backend/Cargo.toml | cut -d '"' -f 2)
+        echo "Backend version: ${VERSION}" >> $GITHUB_OUTPUT
+
+    - name: Login to Gitea Registry
+      uses: docker/login-action@v3
+      with:
+        registry: gitea.quileon.me
+        username: ${{ vars.USERNAME }}
+        password: ${{ secrets.PASSWORD_TOKEN }}
+
+    - name: Build and Push Backend Image
+      uses: docker/build-push-action@v6
+      with:
+        context: ./backend
+        file: ./backend/Dockerfile
+        push: true
+        tags: |
+          gitea.quileon.me/quileon/poolcar-system:${{ steps.backend_meta.outputs.version }}-backend
+          gitea.quileon.me/quileon/poolcar-system:latest-backend
