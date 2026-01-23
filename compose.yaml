@@ -23,7 +23,7 @@ services:
       - ${POSTGRES_DIR}:/var/lib/postgresql/data
 
   backend:
-    image: gitea.quileon.me/quileon/poolcar-system-backend:latest
+    image: gitea.quileon.me/quileon/poolcar-system:latest-backend
     container_name: poolcar-system:latest-backend
     restart: unless-stopped
     ports:
