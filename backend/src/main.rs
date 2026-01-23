@@ -20,6 +20,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .context("Failed to connect to Postgres")?;
     println!("Database OK");
 
+    // Run migrations
+    sqlx::migrate!("./migrations")
+        .run(&db_pool)
+        .await
+        .context("Failed to run migrations")?;
+    println!("Migrations OK");
+
     // Setup redis pool
     let redis_url = std::env::var("REDIS_URL").context("Failed to read REDIS_URL")?;
     let redis_cfg = deadpool_redis::Config::from_url(redis_url);
