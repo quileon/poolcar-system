@@ -18,9 +18,9 @@ jobs:
     - name: Get backend version
       id: backend_meta
       run: |
-        # Use grep/cut to avoid needing extra tools, or use yq if preferred
         VERSION=$(grep '^version =' backend/Cargo.toml | cut -d '"' -f 2)
-        echo "Backend version: ${VERSION}" >> $GITHUB_OUTPUT
+        echo "version=${VERSION}" >> $GITHUB_OUTPUT
+        echo "Backend version: ${VERSION}"
 
     - name: Login to Gitea Registry
       uses: docker/login-action@v3
