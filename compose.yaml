@@ -24,7 +24,7 @@ services:
 
   backend:
     image: gitea.quileon.me/quileon/poolcar-system:latest-backend
-    container_name: poolcar-system:latest-backend
+    container_name: poolcar-system-backend
     restart: unless-stopped
     ports:
       - "${BACKEND_PORT}:7270"
