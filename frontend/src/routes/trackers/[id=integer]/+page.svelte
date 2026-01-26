@@ -1,72 +1,38 @@
 <script lang="ts">
-	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
-	import type { TrackerWithDetails } from "$lib/bindings/TrackerWithDetails";
-	import { config } from "$lib/config";
-	import { createMutation, createQuery, useQueryClient } from "@tanstack/svelte-query";
 	import * as Field from "$lib/components/ui/field/index";
 	import * as Alert from "$lib/components/ui/alert/index";
 	import Input from "$lib/components/ui/input/input.svelte";
 	import Button from "$lib/components/ui/button/button.svelte";
 	import AlertCircleIcon from "@lucide/svelte/icons/alert-circle";
+	import { useTrackerQuery } from "$lib/hooks/use-query";
+	import { useDeleteTrackerMutation, useEditTrackerMutation } from "$lib/hooks/use-mutations";
 
 	const trackerId = $derived(parseInt(page.params.id!, 10));
-	const trackerQuery = createQuery<TrackerWithDetails>(() => ({
-		queryKey: ["trackers"],
-		queryFn: async () => {
-			const response = await fetch(`${config.apiBaseUrl}/trackers/${trackerId}`);
-			if (!response.ok) throw new Error("Failed to fetch tracker type");
-			return response.json();
-		}
-	}));
+
+	// Queries
+	const trackerQuery = useTrackerQuery(() => trackerId);
+
+	// Mutations
+	const editTrackerMutation = useEditTrackerMutation(() => trackerId);
+	const deleteTrackerMutation = useDeleteTrackerMutation(() => trackerId);
+
+	// Form state
 	let trackerName = $state("");
+
+	// Sync form with loaded data
 	$effect(() => {
 		if (trackerQuery.data) {
 			trackerName = trackerQuery.data.name;
 		}
 	});
-	const queryClient = useQueryClient();
-	const editTrackerMutation = createMutation(() => ({
-		mutationFn: async (trackerName: string) => {
-			const response = await fetch(`${config.apiBaseUrl}/trackers/${trackerId}`, {
-				method: "PUT",
-				headers: {
-					"Content-Type": "application/json"
-				},
-				body: JSON.stringify({ name: trackerName })
-			});
-			if (!response.ok) {
-				throw new Error("Failed to modify tracker");
-			}
-			return response.json();
-		},
-		onSuccess: async () => {
-			await goto(resolve("/trackers"));
-			await queryClient.invalidateQueries({ queryKey: ["trackers"] });
-		}
-	}));
-	const deleteTrackerMutation = createMutation(() => ({
-		mutationFn: async () => {
-			const response = await fetch(`${config.apiBaseUrl}/trackers/${trackerId}`, {
-				method: "DELETE"
-			});
-			if (!response.ok) {
-				throw new Error("Failed to delete tracker");
-			}
-			return response.json();
-		},
-		onSuccess: async () => {
-			await goto(resolve("/trackers"));
-			await queryClient.invalidateQueries({ queryKey: ["trackers"] });
-		}
-	}));
 
+	// Event handlers
 	function handleSubmit(event: Event) {
 		event.preventDefault();
-		editTrackerMutation.mutate(trackerName);
+		editTrackerMutation.mutate({ name: trackerName });
 	}
-
 	function handleDelete() {
 		if (confirm(`Are you sure you want to delete "${trackerName}"?`)) {
 			deleteTrackerMutation.mutate();

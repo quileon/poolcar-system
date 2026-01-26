@@ -4,39 +4,15 @@
 	import Button from "$lib/components/ui/button/button.svelte";
 	import * as Field from "$lib/components/ui/field/index";
 	import Input from "$lib/components/ui/input/input.svelte";
-	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
-	import { goto } from "$app/navigation";
-	import { resolve } from "$app/paths";
-	import { config } from "$lib/config";
+	import { useCreateTrackerMutation } from "$lib/hooks/use-mutations";
 
 	let trackerName = $state("");
 
-	const queryClient = useQueryClient();
-	const mutation = createMutation(() => ({
-		mutationFn: async (trackerName: string) => {
-			const response = await fetch(`${config.apiBaseUrl}/trackers`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json"
-				},
-				body: JSON.stringify({ name: trackerName })
-			});
-
-			if (!response.ok) {
-				throw new Error("Failed to create tracker");
-			}
-
-			return response.json();
-		},
-		onSuccess: async () => {
-			await queryClient.invalidateQueries({ queryKey: ["trackers"] });
-			goto(resolve("/trackers"));
-		}
-	}));
+	const createTrackerMutation = useCreateTrackerMutation();
 
 	function handleSubmit(e: Event) {
 		e.preventDefault();
-		mutation.mutate(trackerName);
+		createTrackerMutation.mutate({ name: trackerName });
 	}
 </script>
 
@@ -61,20 +37,23 @@
 				</Field.Group>
 			</Field.Set>
 			<Field.Field orientation="horizontal">
-				<Button type="submit" disabled={mutation.isPending}>Submit</Button>
-				<Button variant="outline" type="button" disabled={mutation.isPending} href="/trackers"
-					>Cancel</Button
+				<Button type="submit" disabled={createTrackerMutation.isPending}>Submit</Button>
+				<Button
+					variant="outline"
+					type="button"
+					disabled={createTrackerMutation.isPending}
+					href="/trackers">Cancel</Button
 				>
 			</Field.Field>
 		</Field.Group>
 	</form>
 	<div class="mt-8">
-		{#if mutation.isError}
+		{#if createTrackerMutation.isError}
 			<Alert.Root variant="destructive">
 				<AlertCircleIcon />
 				<Alert.Title>Error</Alert.Title>
 				<Alert.Description>
-					<p>{mutation.error.message}</p>
+					<p>{createTrackerMutation.error.message}</p>
 				</Alert.Description>
 			</Alert.Root>
 		{/if}
