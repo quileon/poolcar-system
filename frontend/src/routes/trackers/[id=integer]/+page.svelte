@@ -10,21 +10,29 @@
 	import { useDeleteTrackerMutation, useEditTrackerMutation } from "$lib/hooks/use-mutations";
 
 	const trackerId = $derived(parseInt(page.params.id!, 10));
+
+	// Queries
 	const trackerQuery = useTrackerQuery(() => trackerId);
+
+	// Mutations
+	const editTrackerMutation = useEditTrackerMutation(() => trackerId);
+	const deleteTrackerMutation = useDeleteTrackerMutation(() => trackerId);
+
+	// Form state
 	let trackerName = $state("");
+
+	// Sync form with loaded data
 	$effect(() => {
 		if (trackerQuery.data) {
 			trackerName = trackerQuery.data.name;
 		}
 	});
-	const editTrackerMutation = useEditTrackerMutation(() => trackerId);
-	const deleteTrackerMutation = useDeleteTrackerMutation(() => trackerId);
 
+	// Event handlers
 	function handleSubmit(event: Event) {
 		event.preventDefault();
 		editTrackerMutation.mutate({ name: trackerName });
 	}
-
 	function handleDelete() {
 		if (confirm(`Are you sure you want to delete "${trackerName}"?`)) {
 			deleteTrackerMutation.mutate();
