@@ -3,11 +3,12 @@ import { goto } from "$app/navigation";
 import { resolve } from "$app/paths";
 import { config } from "$lib/config";
 
-export function useEditTrackerMutation(trackerId: number) {
+export function useEditTrackerMutation(getTrackerId: () => number) {
 	const queryClient = useQueryClient();
 
 	return createMutation(() => ({
 		mutationFn: async (data: { name: string }) => {
+			const trackerId = getTrackerId();
 			const response = await fetch(`${config.apiBaseUrl}/trackers/${trackerId}`, {
 				method: "PUT",
 				headers: {
@@ -27,11 +28,12 @@ export function useEditTrackerMutation(trackerId: number) {
 	}));
 }
 
-export function useDeleteTrackerMutation(trackerId: number) {
+export function useDeleteTrackerMutation(getTrackerId: () => number) {
 	const queryClient = useQueryClient();
 
 	return createMutation(() => ({
 		mutationFn: async () => {
+			const trackerId = getTrackerId();
 			const response = await fetch(`${config.apiBaseUrl}/trackers/${trackerId}`, {
 				method: "DELETE"
 			});
@@ -45,11 +47,12 @@ export function useDeleteTrackerMutation(trackerId: number) {
 	}));
 }
 
-export function useEditCarTypeMutation(carTypeId: number) {
+export function useEditCarTypeMutation(getCarTypeId: () => number) {
 	const queryClient = useQueryClient();
 
 	return createMutation(() => ({
 		mutationFn: async (data: { name: string }) => {
+			const carTypeId = getCarTypeId();
 			const response = await fetch(`${config.apiBaseUrl}/cars/types/${carTypeId}`, {
 				method: "PUT",
 				headers: {
@@ -69,11 +72,12 @@ export function useEditCarTypeMutation(carTypeId: number) {
 	}));
 }
 
-export function useDeleteCarTypeMutation(carTypeId: number) {
+export function useDeleteCarTypeMutation(getCarTypeId: () => number) {
 	const queryClient = useQueryClient();
 
 	return createMutation(() => ({
 		mutationFn: async () => {
+			const carTypeId = getCarTypeId();
 			const response = await fetch(`${config.apiBaseUrl}/cars/types/${carTypeId}`, {
 				method: "DELETE"
 			});
@@ -87,7 +91,7 @@ export function useDeleteCarTypeMutation(carTypeId: number) {
 	}));
 }
 
-export function useEditCarMutation(carId: number) {
+export function useEditCarMutation(getCarId: () => number) {
 	const queryClient = useQueryClient();
 
 	return createMutation(() => ({
@@ -98,6 +102,7 @@ export function useEditCarMutation(carId: number) {
 			trackerId: number | null;
 			active: boolean;
 		}) => {
+			const carId = getCarId();
 			const response = await fetch(`${config.apiBaseUrl}/cars/${carId}`, {
 				method: "PUT",
 				headers: {
@@ -121,11 +126,12 @@ export function useEditCarMutation(carId: number) {
 	}));
 }
 
-export function useDeleteCarMutation(carId: number) {
+export function useDeleteCarMutation(getCarId: () => number) {
 	const queryClient = useQueryClient();
 
 	return createMutation(() => ({
 		mutationFn: async () => {
+			const carId = getCarId();
 			const response = await fetch(`${config.apiBaseUrl}/cars/${carId}`, {
 				method: "DELETE"
 			});
