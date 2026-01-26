@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { createQuery } from "@tanstack/svelte-query";
 	import Skeleton from "$lib/components/ui/skeleton/skeleton.svelte";
 	import AlertCircleIcon from "@lucide/svelte/icons/alert-circle";
 	import * as Alert from "$lib/components/ui/alert/index";
@@ -9,8 +8,7 @@
 	import Button from "$lib/components/ui/button/button.svelte";
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
-	import type { GetCarTypesResponse } from "$lib/bindings/GetCarTypesResponse";
-	import { config } from "$lib/config";
+	import { useCarTypesQuery } from "$lib/hooks/use-reference-queries";
 
 	const filters = [
 		{ label: "Active", value: "active" },
@@ -22,14 +20,7 @@
 		filters.find((filter) => filter.value === filterValue)?.label ?? "Filter by"
 	);
 
-	const carTypesQuery = createQuery<GetCarTypesResponse>(() => ({
-		queryKey: ["car-types"],
-		queryFn: async () => {
-			const response = await fetch(`${config.apiBaseUrl}/cars/types`);
-			if (!response.ok) throw new Error("Failed to fetch car types");
-			return response.json();
-		}
-	}));
+	const carTypesQuery = useCarTypesQuery();
 </script>
 
 <h1 class="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl">Car Types Management</h1>
