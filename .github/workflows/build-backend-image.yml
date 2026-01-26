@@ -3,8 +3,12 @@ name: Build and Push Image
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'backend/**'
   pull_request:
     branches: [ "main" ]
+    paths:
+      - 'backend/**'
 
 jobs:
   build:
@@ -12,7 +16,7 @@ jobs:
     environment: gitea
 
     steps:
-    - name: Checkout into latest
+    - name: Checkout
       uses: actions/checkout@v4
       
     - name: Get backend version
@@ -20,7 +24,17 @@ jobs:
       run: |
         VERSION=$(grep '^version =' backend/Cargo.toml | cut -d '"' -f 2)
         echo "version=${VERSION}" >> $GITHUB_OUTPUT
-        echo "Backend version: ${VERSION}"
+    
+    - name: Docker meta
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: gitea.quileon.me/quileon/poolcar-system
+        tags: |
+          type=raw,value=${{ steps.backend_meta.outputs.version }}-backend
+          type=semver,pattern={{major}}-backend,value=${{ steps.backend_meta.outputs.version }}
+          type=semver,pattern={{major}}.{{minor}}-backend,value=${{ steps.backend_meta.outputs.version }}
+          type=raw,value=latest-backend
 
     - name: Login to Gitea Registry
       uses: docker/login-action@v3
@@ -29,12 +43,10 @@ jobs:
         username: ${{ vars.USERNAME }}
         password: ${{ secrets.PASSWORD_TOKEN }}
 
-    - name: Build and Push Backend Image
+    - name: Build and Push
       uses: docker/build-push-action@v6
       with:
         context: ./backend
         file: ./backend/Dockerfile
         push: true
-        tags: |
-          gitea.quileon.me/quileon/poolcar-system:${{ steps.backend_meta.outputs.version }}-backend
-          gitea.quileon.me/quileon/poolcar-system:latest-backend
+        tags: ${{ steps.meta.outputs.tags }}
