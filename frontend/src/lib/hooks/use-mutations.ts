@@ -3,6 +3,30 @@ import { goto } from "$app/navigation";
 import { resolve } from "$app/paths";
 import { config } from "$lib/config";
 
+export function useCreateTrackerMutation() {
+	const queryClient = useQueryClient();
+
+	return createMutation(() => ({
+		mutationFn: async (data: { name: string }) => {
+			const response = await fetch(`${config.apiBaseUrl}/trackers`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json"
+				},
+				body: JSON.stringify({ name: data.name })
+			});
+			if (!response.ok) {
+				throw new Error("Failed to create tracker");
+			}
+			return response.json();
+		},
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ["trackers"] });
+			goto(resolve("/trackers"));
+		}
+	}));
+}
+
 export function useEditTrackerMutation(getTrackerId: () => number) {
 	const queryClient = useQueryClient();
 
@@ -47,6 +71,31 @@ export function useDeleteTrackerMutation(getTrackerId: () => number) {
 	}));
 }
 
+export function useCreateCarTypeMutation() {
+	const queryClient = useQueryClient();
+
+	return createMutation(() => ({
+		mutationFn: async (data: { name: string }) => {
+			const response = await fetch(`${config.apiBaseUrl}/cars/types`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json"
+				},
+				body: JSON.stringify({ name: data.name })
+			});
+			if (!response.ok) {
+				throw new Error("Failed to create car type");
+			}
+			return response.json();
+		},
+
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ["car-types"] });
+			goto(resolve("/car-types"));
+		}
+	}));
+}
+
 export function useEditCarTypeMutation(getCarTypeId: () => number) {
 	const queryClient = useQueryClient();
 
@@ -87,6 +136,40 @@ export function useDeleteCarTypeMutation(getCarTypeId: () => number) {
 		onSuccess: async () => {
 			await goto(resolve("/car-types"));
 			await queryClient.invalidateQueries({ queryKey: ["car-types"] });
+		}
+	}));
+}
+
+export function useCreateCarMutation() {
+	const queryClient = useQueryClient();
+
+	return createMutation(() => ({
+		mutationFn: async (data: {
+			carName: string;
+			policeNumber: string;
+			carTypeId: number;
+			trackerId: number | null;
+			active: boolean;
+		}) => {
+			const response = await fetch(`${config.apiBaseUrl}/cars`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json"
+				},
+				body: JSON.stringify({
+					name: data.carName,
+					police_number: data.policeNumber,
+					car_type_id: data.carTypeId,
+					tracker_id: data.trackerId,
+					active: data.active
+				})
+			});
+			if (!response.ok) throw new Error("Failed to create car");
+			return response.json();
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["cars", "car-types", "trackers"] });
+			goto(resolve("/cars"));
 		}
 	}));
 }

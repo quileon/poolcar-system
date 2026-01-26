@@ -4,14 +4,10 @@
 	import * as Select from "$lib/components/ui/select/index";
 	import Input from "$lib/components/ui/input/input.svelte";
 	import Checkbox from "$lib/components/ui/checkbox/checkbox.svelte";
-	import { createMutation, createQuery, useQueryClient } from "@tanstack/svelte-query";
-	import type { GetTrackerResponse } from "$lib/bindings/GetTrackerResponse";
-	import type { GetCarTypesResponse } from "$lib/bindings/GetCarTypesResponse";
-	import { resolve } from "$app/paths";
-	import { goto } from "$app/navigation";
 	import * as Alert from "$lib/components/ui/alert/index";
 	import AlertCircleIcon from "@lucide/svelte/icons/alert-circle";
-	import { config } from "$lib/config";
+	import { useCarTypesQuery, useTrackersQuery } from "$lib/hooks/use-reference-queries";
+	import { useCreateCarMutation } from "$lib/hooks/use-mutations";
 
 	let carName = $state("");
 	let policeNumber = $state("");
@@ -19,56 +15,13 @@
 	let trackerId = $state("");
 	let active = $state(true);
 
-	const trackersQuery = createQuery<GetTrackerResponse>(() => ({
-		queryKey: ["trackers"],
-		queryFn: async () => {
-			const response = await fetch(`${config.apiBaseUrl}/trackers`);
-			if (!response.ok) throw new Error("Failed to fetch trackers");
-			return response.json();
-		}
-	}));
-	const carTypesQuery = createQuery<GetCarTypesResponse>(() => ({
-		queryKey: ["carTypes"],
-		queryFn: async () => {
-			const response = await fetch(`${config.apiBaseUrl}/cars/types`);
-			if (!response.ok) throw new Error("Failed to fetch car types");
-			return response.json();
-		}
-	}));
-	const queryClient = useQueryClient();
-	const mutation = createMutation(() => ({
-		mutationFn: async (data: {
-			carName: string;
-			policeNumber: string;
-			carTypeId: number;
-			trackerId: number | null;
-			active: boolean;
-		}) => {
-			const response = await fetch(`${config.apiBaseUrl}/cars`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json"
-				},
-				body: JSON.stringify({
-					name: data.carName,
-					police_number: data.policeNumber,
-					car_type_id: data.carTypeId,
-					tracker_id: data.trackerId,
-					active: data.active
-				})
-			});
-			if (!response.ok) throw new Error("Failed to create car");
-			return response.json();
-		},
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["cars", "car-types", "trackers"] });
-			goto(resolve("/cars"));
-		}
-	}));
+	const trackersQuery = useTrackersQuery();
+	const carTypesQuery = useCarTypesQuery();
+	const createCarMutation = useCreateCarMutation();
 
 	function handleSubmit(e: Event) {
 		e.preventDefault();
-		mutation.mutate({
+		createCarMutation.mutate({
 			carName,
 			policeNumber,
 			carTypeId: Number.parseInt(carTypeId),
@@ -169,8 +122,8 @@
 				</Field.Group>
 			</Field.Set>
 			<Field.Field orientation="horizontal">
-				<Button type="submit" disabled={mutation.isPending}>Submit</Button>
-				<Button variant="outline" type="button" disabled={mutation.isPending} href="/cars"
+				<Button type="submit" disabled={createCarMutation.isPending}>Submit</Button>
+				<Button variant="outline" type="button" disabled={createCarMutation.isPending} href="/cars"
 					>Cancel</Button
 				>
 			</Field.Field>
@@ -198,12 +151,12 @@
 			</Alert.Root>
 		{/if}
 
-		{#if mutation.isError}
+		{#if createCarMutation.isError}
 			<Alert.Root variant="destructive">
 				<AlertCircleIcon />
 				<Alert.Title>Error Creating Car</Alert.Title>
 				<Alert.Description>
-					<p>{mutation.error.message}</p>
+					<p>{createCarMutation.error.message}</p>
 				</Alert.Description>
 			</Alert.Root>
 		{/if}
