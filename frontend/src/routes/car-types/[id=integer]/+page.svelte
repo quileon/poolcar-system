@@ -13,7 +13,7 @@
 
 	const carTypeId = $derived(parseInt(page.params.id!, 10));
 	const carTypeQuery = createQuery<CarTypeWithCount>(() => ({
-		queryKey: ["car-types"],
+		queryKey: ["car-type"],
 		queryFn: async () => {
 			const response = await fetch(`${config.apiBaseUrl}/cars/types/${carTypeId}`);
 			if (!response.ok) throw new Error("Failed to fetch car type");

@@ -13,10 +13,10 @@
 
 	const trackerId = $derived(parseInt(page.params.id!, 10));
 	const trackerQuery = createQuery<TrackerWithDetails>(() => ({
-		queryKey: ["trackers"],
+		queryKey: ["tracker"],
 		queryFn: async () => {
 			const response = await fetch(`${config.apiBaseUrl}/trackers/${trackerId}`);
-			if (!response.ok) throw new Error("Failed to fetch tracker type");
+			if (!response.ok) throw new Error("Failed to fetch tracker");
 			return response.json();
 		}
 	}));
