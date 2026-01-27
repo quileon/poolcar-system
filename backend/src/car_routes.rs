@@ -182,3 +182,82 @@ pub async fn delete_car(
 
     Ok(Json(deleted_car))
 }
+
+pub async fn export_cars(
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let cars = sqlx::query_as::<Postgres, CarWithTracker>(
+        r#"
+            SELECT
+                cars.car_id,
+                cars.name,
+                cars.police_number,
+                cars.active,
+                car_types.car_type_id,
+                car_types.name as car_type_name,
+                trackers.tracker_id,
+                trackers.name as tracker_name
+            FROM cars
+            LEFT JOIN car_types ON cars.car_type_id = car_types.car_type_id
+            LEFT JOIN trackers ON cars.tracker_id = trackers.tracker_id
+            WHERE cars.deleted_at IS NULL
+            ORDER BY cars.car_id ASC
+        "#,
+    )
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| {
+        eprintln!("Database error: {:?}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Database error: {}", e),
+        )
+    })?;
+
+    let mut csv_buffer = Vec::new();
+    {
+        let mut writer = csv::Writer::from_writer(&mut csv_buffer);
+        writer.write_record(&[
+            "Car ID",
+            "Name",
+            "Police Number",
+            "Active",
+            "Car Type ID",
+            "Car Type Name",
+            "Tracker ID",
+            "Tracker Name",
+        ]).map_err(|e| {
+            eprintln!("CSV write error: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("CSV error: {}", e))
+        })?;
+
+        for car in cars {
+            writer.write_record(&[
+                car.car_id.to_string(),
+                car.name,
+                car.police_number,
+                car.active.to_string(),
+                car.car_type_id.to_string(),
+                car.car_type_name,
+                car.tracker_id.map(|id| id.to_string()).unwrap_or_default(),
+                car.tracker_name.unwrap_or_default(),
+            ]).map_err(|e| {
+                eprintln!("CSV write error: {:?}", e);
+                (StatusCode::INTERNAL_SERVER_ERROR, format!("CSV error: {}", e))
+            })?;
+        }
+
+        writer.flush().map_err(|e| {
+            eprintln!("CSV flush error: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("CSV error: {}", e))
+        })?;
+    }
+
+    Ok((
+        [
+            ("Content-Type", "text/csv"),
+            ("Content-Disposition", "attachment; filename=\"cars.csv\""),
+        ],
+        csv_buffer,
+    ))
+}

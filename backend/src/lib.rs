@@ -64,6 +64,7 @@ pub fn create_app(
         .route("/", get(|| async { "Hello, World!" }))
         .route("/dashboard", get(dashboard_routes::get_dashboard_data))
         .route("/cars", get(car_routes::get_cars))
+        .route("/cars/export", get(car_routes::export_cars))
         .route("/cars/{car_id}", get(car_routes::get_car))
         .route("/cars", post(car_routes::create_car))
         .route("/cars/{car_id}", put(car_routes::update_car))
