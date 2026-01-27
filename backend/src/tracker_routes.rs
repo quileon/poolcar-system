@@ -29,6 +29,7 @@ pub async fn get_trackers(
                 trackers.name,
                 cars.car_id as car_id,
                 cars.name as car_name,
+                cars.police_number as car_police_number,
                 cars.car_type_id as car_type_id,
                 car_types.name as car_type_name
             FROM trackers
