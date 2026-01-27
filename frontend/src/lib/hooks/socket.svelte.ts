@@ -1,4 +1,4 @@
-import { createSubscriber } from 'svelte/reactivity';
+import { createSubscriber } from "svelte/reactivity";
 
 export class LiveData<T> {
 	#socket: WebSocket | null = null;
