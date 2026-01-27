@@ -81,6 +81,7 @@ pub fn create_app(
             delete(tracker_routes::delete_tracker),
         )
         .route("/cars/types", get(car_type_routes::get_car_types))
+        .route("/cars/types/export", get(car_type_routes::export_car_types))
         .route(
             "/cars/types/{car_type_id}",
             get(car_type_routes::get_car_type),
