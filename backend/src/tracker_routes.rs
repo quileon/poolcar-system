@@ -29,6 +29,7 @@ pub async fn get_trackers(
                 trackers.name,
                 cars.car_id as car_id,
                 cars.name as car_name,
+                cars.police_number as car_police_number,
                 cars.car_type_id as car_type_id,
                 car_types.name as car_type_name
             FROM trackers
@@ -70,6 +71,7 @@ pub async fn get_tracker(
                 trackers.name,
                 cars.car_id as car_id,
                 cars.name as car_name,
+                cars.police_number as car_police_number,
                 cars.car_type_id as car_type_id,
                 car_types.name as car_type_name
             FROM trackers
@@ -181,6 +183,7 @@ pub async fn export_trackers(
                 trackers.name,
                 cars.car_id as car_id,
                 cars.name as car_name,
+                cars.police_number as car_police_number,
                 cars.car_type_id as car_type_id,
                 car_types.name as car_type_name
             FROM trackers
@@ -209,6 +212,7 @@ pub async fn export_trackers(
                 "Name",
                 "Car ID",
                 "Car Name",
+                "Car Police Number",
                 "Car Type ID",
                 "Car Type Name",
             ])
@@ -227,6 +231,7 @@ pub async fn export_trackers(
                     tracker.name,
                     tracker.car_id.map(|id| id.to_string()).unwrap_or_default(),
                     tracker.car_name.unwrap_or_default(),
+                    tracker.car_police_number.unwrap_or_default(),
                     tracker
                         .car_type_id
                         .map(|id| id.to_string())

@@ -40,6 +40,22 @@ pub struct CarWithTracker {
 
 #[derive(Debug, FromRow, Serialize, TS)]
 #[ts(export)]
+pub struct CarExportDetails {
+    pub car_id: i32,
+    pub name: String,
+    pub police_number: String,
+    pub active: bool,
+    pub car_type_id: i32,
+    pub car_type_name: String,
+    pub tracker_id: Option<i32>,
+    pub tracker_name: Option<String>,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+    pub deleted_at: Option<NaiveDateTime>,
+}
+
+#[derive(Debug, FromRow, Serialize, TS)]
+#[ts(export)]
 pub struct GetCarsResponse {
     pub cars: Vec<CarWithTracker>,
     pub car_count: usize,
@@ -58,6 +74,16 @@ pub struct CarTypeWithCount {
     pub car_type_id: i32,
     pub name: String,
     pub car_count: i64,
+}
+
+#[derive(Debug, FromRow, Serialize, TS)]
+#[ts(export)]
+pub struct CarTypeExportDetails {
+    pub car_type_id: i32,
+    pub name: String,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+    pub deleted_at: Option<NaiveDateTime>,
 }
 
 #[derive(Debug, Serialize, TS)]
@@ -87,8 +113,24 @@ pub struct TrackerWithDetails {
     pub name: String,
     pub car_id: Option<i32>,
     pub car_name: Option<String>,
+    pub car_police_number: Option<String>,
     pub car_type_id: Option<i32>,
     pub car_type_name: Option<String>,
+}
+
+#[derive(Debug, FromRow, Serialize, TS)]
+#[ts(export)]
+pub struct TrackerExportDetails {
+    pub tracker_id: i32,
+    pub name: String,
+    pub car_id: Option<i32>,
+    pub car_name: Option<String>,
+    pub car_police_number: Option<String>,
+    pub car_type_id: Option<i32>,
+    pub car_type_name: Option<String>,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+    pub deleted_at: Option<NaiveDateTime>,
 }
 
 #[derive(Debug, FromRow, Deserialize, TS)]
