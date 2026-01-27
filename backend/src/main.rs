@@ -2,6 +2,7 @@ use anyhow::Context;
 use deadpool_redis::Runtime;
 use dotenvy;
 use poolcar_backend::create_app;
+use rand::{Rng, distr};
 use rumqttc::{MqttOptions, Transport};
 use sqlx::postgres::PgPoolOptions;
 use std::time::Duration;
@@ -36,8 +37,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Redis OK");
 
     // Setup MQTT options with TLS
+    let mut rng = rand::rng();
+    let random_suffix: String = (0..8)
+        .map(|_| rng.sample(distr::Alphanumeric) as char)
+        .collect();
     let mqtt_url = std::env::var("MQTT_URL").context("Failed to read MQTT_URL")?;
-    let mqtt_client = std::env::var("MQTT_CLIENT").context("Failed to read MQTT_CLIENT")?;
+    let mqtt_client = format!("{}-{}", std::env::var("MQTT_CLIENT").context("Failed to read MQTT_CLIENT")?, random_suffix);
     let mqtt_username = std::env::var("MQTT_USERNAME").context("Failed to read MQTT_USERNAME")?;
     let mqtt_password = std::env::var("MQTT_PASSWORD").context("Failed to read MQTT_PASSWORD")?;
 
