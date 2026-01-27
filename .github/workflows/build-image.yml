@@ -6,11 +6,13 @@ on:
     paths:
       - 'backend/**'
       - 'frontend/**'
+      - '.github/workflows/**'
   pull_request:
     branches: [ "main" ]
     paths:
       - 'backend/**'
       - 'frontend/**'
+      - '.github/workflows/**'
 
 jobs:
   build-backend:
@@ -22,7 +24,7 @@ jobs:
       
       - name: Get version
         id: version
-        run: echo "version=$(grep '^version =' backend/Cargo.toml | cut -d '\"' -f 2)" >> $GITHUB_OUTPUT
+        run: echo "version=$(grep '^version' backend/Cargo.toml | cut -d '\"' -f 2)" >> $GITHUB_OUTPUT
 
       - name: Docker buildx
         uses: docker/setup-buildx-action@v2
