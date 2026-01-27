@@ -1,0 +1,90 @@
+name: Build and Push Image
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+
+jobs:
+  build-backend:
+    if: contains(github.event.head_commit.modified, 'backend/') || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    environment: gitea
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Get version
+        id: version
+        run: echo "version=$(grep '^version =' backend/Cargo.toml | cut -d '\"' -f 2)" >> $GITHUB_OUTPUT
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: gitea.quileon.me/quileon/poolcar-system
+          tags: |
+            type=raw,value=${{ steps.version.outputs.version }}-backend
+            type=semver,pattern={{major}}-backend,value=${{ steps.version.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}}-backend,value=${{ steps.version.outputs.version }}
+            type=raw,value=latest-backend
+
+      - name: Login and Push
+        uses: docker/login-action@v3
+        with:
+          registry: gitea.quileon.me
+          username: ${{ vars.USERNAME }}
+          password: ${{ secrets.PASSWORD_TOKEN }}
+
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+
+  build-frontend:
+    if: contains(github.event.head_commit.modified, 'frontend/') || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    environment: gitea
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: echo "version=$(jq -r .version frontend/package.json)" >> $GITHUB_OUTPUT
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: gitea.quileon.me/quileon/poolcar-system
+          tags: |
+            type=raw,value=${{ steps.version.outputs.version }}-frontend
+            type=semver,pattern={{major}}-frontend,value=${{ steps.version.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}}-frontend,value=${{ steps.version.outputs.version }}
+            type=raw,value=latest-frontend
+
+      - name: Login and Push
+        uses: docker/login-action@v3
+        with:
+          registry: gitea.quileon.me
+          username: ${{ vars.USERNAME }}
+          password: ${{ secrets.PASSWORD_TOKEN }}
+
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            PUBLIC_API_BASE_URL=https://poolcar.quileon.me/api
