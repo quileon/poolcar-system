@@ -170,3 +170,96 @@ pub async fn delete_tracker(
 
     Ok(axum::Json(deleted_tracker))
 }
+
+pub async fn export_trackers(
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let trackers = sqlx::query_as::<Postgres, TrackerWithDetails>(
+        r#"
+            SELECT
+                trackers.tracker_id,
+                trackers.name,
+                cars.car_id as car_id,
+                cars.name as car_name,
+                cars.car_type_id as car_type_id,
+                car_types.name as car_type_name
+            FROM trackers
+            LEFT JOIN cars ON trackers.tracker_id = cars.tracker_id
+            LEFT JOIN car_types ON cars.car_type_id = car_types.car_type_id
+            WHERE trackers.deleted_at IS NULL
+            ORDER BY trackers.tracker_id ASC
+        "#,
+    )
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| {
+        eprintln!("Database error: {:?}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Database error: {}", e),
+        )
+    })?;
+
+    let mut csv_buffer = Vec::new();
+    {
+        let mut writer = csv::Writer::from_writer(&mut csv_buffer);
+        writer
+            .write_record(&[
+                "Tracker ID",
+                "Name",
+                "Car ID",
+                "Car Name",
+                "Car Type ID",
+                "Car Type Name",
+            ])
+            .map_err(|e| {
+                eprintln!("CSV write error: {:?}", e);
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("CSV error: {}", e),
+                )
+            })?;
+
+        for tracker in trackers {
+            writer
+                .write_record(&[
+                    tracker.tracker_id.to_string(),
+                    tracker.name,
+                    tracker.car_id.map(|id| id.to_string()).unwrap_or_default(),
+                    tracker.car_name.unwrap_or_default(),
+                    tracker
+                        .car_type_id
+                        .map(|id| id.to_string())
+                        .unwrap_or_default(),
+                    tracker.car_type_name.unwrap_or_default(),
+                ])
+                .map_err(|e| {
+                    eprintln!("CSV write error: {:?}", e);
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        format!("CSV error: {}", e),
+                    )
+                })?;
+        }
+
+        writer.flush().map_err(|e| {
+            eprintln!("CSV flush error: {:?}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("CSV error: {}", e),
+            )
+        })?;
+    }
+
+    Ok((
+        StatusCode::OK,
+        [
+            ("Content-Type", "text/csv"),
+            (
+                "Content-Disposition",
+                "attachment; filename=\"trackers.csv\"",
+            ),
+        ],
+        csv_buffer,
+    ))
+}

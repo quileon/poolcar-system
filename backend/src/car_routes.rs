@@ -217,39 +217,52 @@ pub async fn export_cars(
     let mut csv_buffer = Vec::new();
     {
         let mut writer = csv::Writer::from_writer(&mut csv_buffer);
-        writer.write_record(&[
-            "Car ID",
-            "Name",
-            "Police Number",
-            "Active",
-            "Car Type ID",
-            "Car Type Name",
-            "Tracker ID",
-            "Tracker Name",
-        ]).map_err(|e| {
-            eprintln!("CSV write error: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, format!("CSV error: {}", e))
-        })?;
+        writer
+            .write_record(&[
+                "Car ID",
+                "Name",
+                "Police Number",
+                "Active",
+                "Car Type ID",
+                "Car Type Name",
+                "Tracker ID",
+                "Tracker Name",
+            ])
+            .map_err(|e| {
+                eprintln!("CSV write error: {:?}", e);
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("CSV error: {}", e),
+                )
+            })?;
 
         for car in cars {
-            writer.write_record(&[
-                car.car_id.to_string(),
-                car.name,
-                car.police_number,
-                car.active.to_string(),
-                car.car_type_id.to_string(),
-                car.car_type_name,
-                car.tracker_id.map(|id| id.to_string()).unwrap_or_default(),
-                car.tracker_name.unwrap_or_default(),
-            ]).map_err(|e| {
-                eprintln!("CSV write error: {:?}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, format!("CSV error: {}", e))
-            })?;
+            writer
+                .write_record(&[
+                    car.car_id.to_string(),
+                    car.name,
+                    car.police_number,
+                    car.active.to_string(),
+                    car.car_type_id.to_string(),
+                    car.car_type_name,
+                    car.tracker_id.map(|id| id.to_string()).unwrap_or_default(),
+                    car.tracker_name.unwrap_or_default(),
+                ])
+                .map_err(|e| {
+                    eprintln!("CSV write error: {:?}", e);
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        format!("CSV error: {}", e),
+                    )
+                })?;
         }
 
         writer.flush().map_err(|e| {
             eprintln!("CSV flush error: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, format!("CSV error: {}", e))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("CSV error: {}", e),
+            )
         })?;
     }
 
