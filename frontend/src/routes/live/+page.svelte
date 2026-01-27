@@ -4,9 +4,8 @@
 	import chroma from "chroma-js";
 	import { LiveData } from "$lib/hooks/socket.svelte";
 	import type { TrackerPayloadWithId } from "$lib/bindings/TrackerPayloadWithId";
-	import { createQuery } from "@tanstack/svelte-query";
+	import { config } from "$lib/config";
 	import { getCarIcon, getTruckIcon, panToMarker, updateMarker } from "$lib/utils/map";
-	import type { GetTrackerResponse } from "$lib/bindings/GetTrackerResponse";
 	import { onMount } from "svelte";
 	import * as Select from "$lib/components/ui/select/index";
 	import { useSidebar } from "$lib/components/ui/sidebar/context.svelte";
@@ -15,23 +14,17 @@
 	import FocusIcon from "@lucide/svelte/icons/focus";
 	import * as ButtonGroup from "$lib/components/ui/button-group/index";
 	import Button from "$lib/components/ui/button/button.svelte";
+	import { useTrackersQuery } from "$lib/hooks/use-reference-queries";
 
 	const initialCoordinates = { lat: -6.382310833, lng: 107.1725405 };
-	const trackerData = new LiveData<TrackerPayloadWithId>("ws://localhost:3000/ws/live");
+	const trackerData = new LiveData<TrackerPayloadWithId>(`${config.wsBaseUrl}/live`);
 	const sidebar = useSidebar();
+	const colors = chroma.scale(["#fafa6e", "#2a4a58"]).mode("lch").colors(10);
+	const trackersQuery = useTrackersQuery();
 	let mapElement: HTMLElement;
 	let map: L.Map;
 	let L_module: typeof import("leaflet");
 	let trackerMarkerList: { [id: number]: L.Marker } = {};
-	const colors = chroma.scale(["#fafa6e", "#2a4a58"]).mode("lch").colors(10);
-	const trackersQuery = createQuery<GetTrackerResponse>(() => ({
-		queryKey: ["trackers"],
-		queryFn: async () => {
-			const response = await fetch("http://localhost:3000/trackers");
-			if (!response.ok) throw new Error("Failed to fetch trackers");
-			return response.json();
-		}
-	}));
 	let focusId = $state<string | undefined>(undefined);
 	let focusMap = $state<boolean>(false);
 	const focus = $derived({
