@@ -38,3 +38,12 @@ services:
     depends_on:
       - postgres
       - valkey
+
+  frontend:
+    image: gitea.quileon.me/quileon/poolcar-system:latest-frontend
+    container_name: poolcar-system-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT}:80"
+    depends_on:
+      - backend
