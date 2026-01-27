@@ -94,3 +94,17 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
             PUBLIC_API_BASE_URL=https://poolcar.quileon.me/api
+
+  deploy:
+      needs: [build-backend, build-frontend] 
+      if: |
+        always() && 
+        (needs.build-backend.result == 'success' || needs.build-backend.result == 'skipped') &&
+        (needs.build-frontend.result == 'success' || needs.build-frontend.result == 'skipped')
+      runs-on: ubuntu-latest
+      steps:
+        - name: Trigger Komodo Redeployment
+          run: |
+            curl -X POST https://komodo.quileon.me/listener/github/stack/6972df1fc056e4b0f54a2d66/deploy \
+            -H "Content-Type: application/json" \
+            -d '{"ref": "${{ github.ref }}", "before": "${{ github.event.before }}", "after": "${{ github.event.after }}"}'
