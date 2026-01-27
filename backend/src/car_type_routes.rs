@@ -1,5 +1,8 @@
 use crate::{
-    models::{CarType, CarTypeBody, CarTypeWithCount, GetCarTypesResponse, PaginationParams},
+    models::{
+        CarType, CarTypeBody, CarTypeExportDetails, CarTypeWithCount, GetCarTypesResponse,
+        PaginationParams,
+    },
     AppState,
 };
 use axum::{
@@ -168,12 +171,15 @@ pub async fn delete_car_type(
 pub async fn export_car_types(
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let car_types = sqlx::query_as::<Postgres, CarTypeWithCount>(
+    let car_types = sqlx::query_as::<Postgres, CarTypeExportDetails>(
         r#"
             SELECT
                 car_types.car_type_id,
                 car_types.name,
                 COUNT(cars.car_id) as car_count
+                car_types.created_at,
+                car_types.updated_at
+                car_types.deleted_at
             FROM car_types
             LEFT JOIN cars ON car_types.car_type_id = cars.car_type_id
             WHERE car_types.deleted_at IS NULL
@@ -195,7 +201,14 @@ pub async fn export_car_types(
     {
         let mut writer = csv::Writer::from_writer(&mut csv_buffer);
         writer
-            .write_record(&["Car Type ID", "Name", "Count"])
+            .write_record(&[
+                "Car Type ID",
+                "Name",
+                "Count",
+                "Created At",
+                "Updated At",
+                "Deleted At",
+            ])
             .map_err(|e| {
                 eprintln!("CSV write error: {:?}", e);
                 (
@@ -210,6 +223,12 @@ pub async fn export_car_types(
                     car_type.car_type_id.to_string(),
                     car_type.name,
                     car_type.car_count.to_string(),
+                    car_type.created_at.to_string(),
+                    car_type.updated_at.to_string(),
+                    car_type
+                        .deleted_at
+                        .map(|date| date.to_string())
+                        .unwrap_or_default(),
                 ])
                 .map_err(|e| {
                     eprintln!("CSV write error: {:?}", e);

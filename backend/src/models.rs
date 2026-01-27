@@ -81,6 +81,7 @@ pub struct CarTypeWithCount {
 pub struct CarTypeExportDetails {
     pub car_type_id: i32,
     pub name: String,
+    pub car_count: i64,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
     pub deleted_at: Option<NaiveDateTime>,
