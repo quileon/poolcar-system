@@ -64,11 +64,13 @@ pub fn create_app(
         .route("/", get(|| async { "Hello, World!" }))
         .route("/dashboard", get(dashboard_routes::get_dashboard_data))
         .route("/cars", get(car_routes::get_cars))
+        .route("/cars/export", get(car_routes::export_cars))
         .route("/cars/{car_id}", get(car_routes::get_car))
         .route("/cars", post(car_routes::create_car))
         .route("/cars/{car_id}", put(car_routes::update_car))
         .route("/cars/{car_id}", delete(car_routes::delete_car))
         .route("/trackers", get(tracker_routes::get_trackers))
+        .route("/trackers/export", get(tracker_routes::export_trackers))
         .route("/trackers/{tracker_id}", get(tracker_routes::get_tracker))
         .route("/trackers", post(tracker_routes::create_tracker))
         .route(
@@ -80,6 +82,7 @@ pub fn create_app(
             delete(tracker_routes::delete_tracker),
         )
         .route("/cars/types", get(car_type_routes::get_car_types))
+        .route("/cars/types/export", get(car_type_routes::export_car_types))
         .route(
             "/cars/types/{car_type_id}",
             get(car_type_routes::get_car_type),

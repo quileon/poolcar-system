@@ -164,3 +164,79 @@ pub async fn delete_car_type(
 
     Ok(Json(deleted_car_type))
 }
+
+pub async fn export_car_types(
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let car_types = sqlx::query_as::<Postgres, CarTypeWithCount>(
+        r#"
+            SELECT
+                car_types.car_type_id,
+                car_types.name,
+                COUNT(cars.car_id) as car_count
+            FROM car_types
+            LEFT JOIN cars ON car_types.car_type_id = cars.car_type_id
+            WHERE car_types.deleted_at IS NULL
+            GROUP BY car_types.car_type_id, car_types.name
+            ORDER BY car_types.car_type_id ASC
+        "#,
+    )
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| {
+        eprintln!("Database error: {:?}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Database error: {}", e),
+        )
+    })?;
+
+    let mut csv_buffer = Vec::new();
+    {
+        let mut writer = csv::Writer::from_writer(&mut csv_buffer);
+        writer
+            .write_record(&["Car Type ID", "Name", "Count"])
+            .map_err(|e| {
+                eprintln!("CSV write error: {:?}", e);
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("CSV error: {}", e),
+                )
+            })?;
+
+        for car_type in car_types {
+            writer
+                .write_record(&[
+                    car_type.car_type_id.to_string(),
+                    car_type.name,
+                    car_type.car_count.to_string(),
+                ])
+                .map_err(|e| {
+                    eprintln!("CSV write error: {:?}", e);
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        format!("CSV error: {}", e),
+                    )
+                })?;
+        }
+
+        writer.flush().map_err(|e| {
+            eprintln!("CSV flush error: {:?}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("CSV error: {}", e),
+            )
+        })?;
+    }
+
+    Ok((
+        [
+            ("Content-Type", "text/csv"),
+            (
+                "Content-Disposition",
+                "attachment; filename=\"car-type.csv\"",
+            ),
+        ],
+        csv_buffer,
+    ))
+}
