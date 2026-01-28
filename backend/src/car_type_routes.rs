@@ -253,7 +253,7 @@ pub async fn export_car_types(
             ("Content-Type", "text/csv"),
             (
                 "Content-Disposition",
-                "attachment; filename=\"car-type.csv\"",
+                "attachment; filename=\"car-types.csv\"",
             ),
         ],
         csv_buffer,
