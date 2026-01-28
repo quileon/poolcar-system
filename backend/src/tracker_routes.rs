@@ -193,7 +193,6 @@ pub async fn export_trackers(
             FROM trackers
             LEFT JOIN cars ON trackers.tracker_id = cars.tracker_id
             LEFT JOIN car_types ON cars.car_type_id = car_types.car_type_id
-            WHERE trackers.deleted_at IS NULL
             ORDER BY trackers.tracker_id ASC
         "#,
     )
