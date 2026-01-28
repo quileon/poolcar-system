@@ -176,13 +176,12 @@ pub async fn export_car_types(
             SELECT
                 car_types.car_type_id,
                 car_types.name,
-                COUNT(cars.car_id) as car_count
+                COUNT(cars.car_id) as car_count,
                 car_types.created_at,
-                car_types.updated_at
+                car_types.updated_at,
                 car_types.deleted_at
             FROM car_types
             LEFT JOIN cars ON car_types.car_type_id = cars.car_type_id
-            WHERE car_types.deleted_at IS NULL
             GROUP BY car_types.car_type_id, car_types.name
             ORDER BY car_types.car_type_id ASC
         "#,
@@ -253,7 +252,7 @@ pub async fn export_car_types(
             ("Content-Type", "text/csv"),
             (
                 "Content-Disposition",
-                "attachment; filename=\"car-type.csv\"",
+                "attachment; filename=\"car-types.csv\"",
             ),
         ],
         csv_buffer,

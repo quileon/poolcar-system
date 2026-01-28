@@ -9,6 +9,7 @@
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import { useTrackersQuery } from "$lib/hooks/use-reference-queries";
+	import { config } from "$lib/config";
 
 	const filters = [
 		{ label: "Active", value: "active" },
@@ -69,7 +70,15 @@
 				</Button>
 			</ButtonGroup.Root>
 			<ButtonGroup.Root>
-				<Button href="/trackers/create" size="default" variant="outline">Create Tracker</Button>
+				<Button
+					href={`${config.apiBaseUrl}/trackers/export`}
+					download="trackers.csv"
+					size="default"
+					variant="outline">Export</Button
+				>
+			</ButtonGroup.Root>
+			<ButtonGroup.Root>
+				<Button href="/trackers/" size="default" variant="outline">Assign Tracker</Button>
 			</ButtonGroup.Root>
 		</ButtonGroup.Root>
 	</div>
