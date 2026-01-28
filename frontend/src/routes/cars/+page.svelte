@@ -9,6 +9,7 @@
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import { useCarsQuery } from "$lib/hooks/use-reference-queries";
+	import { config } from "$lib/config";
 
 	const filters = [
 		{ label: "Active", value: "active" },
@@ -67,6 +68,14 @@
 				<Button variant="outline" aria-label="Send" size="icon">
 					<ArrowRightIcon />
 				</Button>
+			</ButtonGroup.Root>
+			<ButtonGroup.Root>
+				<Button
+					href={`${config.apiBaseUrl}/cars/export`}
+					download="cars.csv"
+					size="default"
+					variant="outline">Export</Button
+				>
 			</ButtonGroup.Root>
 			<ButtonGroup.Root>
 				<Button href="/cars/create" size="default" variant="outline">Create Car</Button>
