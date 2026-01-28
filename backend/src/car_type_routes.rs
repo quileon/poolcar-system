@@ -176,9 +176,9 @@ pub async fn export_car_types(
             SELECT
                 car_types.car_type_id,
                 car_types.name,
-                COUNT(cars.car_id) as car_count
+                COUNT(cars.car_id) as car_count,
                 car_types.created_at,
-                car_types.updated_at
+                car_types.updated_at,
                 car_types.deleted_at
             FROM car_types
             LEFT JOIN cars ON car_types.car_type_id = cars.car_type_id
