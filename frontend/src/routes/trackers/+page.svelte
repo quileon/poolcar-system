@@ -78,7 +78,7 @@
 				>
 			</ButtonGroup.Root>
 			<ButtonGroup.Root>
-				<Button href="/trackers/" size="default" variant="outline">Assign Tracker</Button>
+				<Button href="/trackers/create" size="default" variant="outline">Create Tracker</Button>
 			</ButtonGroup.Root>
 		</ButtonGroup.Root>
 	</div>
