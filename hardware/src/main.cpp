@@ -61,6 +61,14 @@ void setup()
     }
     Serial.println("Serial initialized!");
 
+    Serial.println("ENVIRONMENT");
+    Serial.println("-----------");
+    Serial.printf("Device ID    : %d\n", TRACKER_ID);
+    Serial.printf("APN          : %s\n", APN);
+    Serial.printf("APN User     : %s\n", APN_USER);
+    Serial.printf("APN Password : %s\n", APN_PASSWORD);
+    Serial.println("-----------");
+
 #if (defined(TINY_GSM_AUTOBAUD))
     {
         gsmSerial.begin(SERIAL_8N1, ESP32_RX_PIN, ESP32_TX_PIN);
