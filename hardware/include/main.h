@@ -14,17 +14,6 @@
 // Stream Debugger config
 // #define DUMP_AT_COMMANDS
 
-// GSM Configuration
-// -- 3 APN Settings
-constexpr char APN[] = "tri.co.id";
-constexpr char APN_USER[] = "3gprs";
-constexpr char APN_PASSWORD[] = "3gpr";
-
-// -- by.U APN Settings
-// constexpr char APN[] = "internet";
-// constexpr char APN_USER[] = "";
-// constexpr char APN_PASSWORD[] = "";
-
 constexpr short GSM_MAX_RETRIES = 3;
 
 // MQTT Configuration
@@ -73,6 +62,5 @@ constexpr int ESP32_COMMUNICATION_BAUD_RATE = 9600;
 
 // App Configuration
 constexpr timer_t PUBLISH_INTERVAL = 1000;
-constexpr int TRACKER_ID = 1;
 
 #endif // MAIN_H
