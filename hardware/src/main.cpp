@@ -162,7 +162,7 @@ void loop()
         payload["connection"]["sequence_id"] = sequence;
         payload["connection"]["iteration_id"] = iteration;
         payload["connection"]["strength"] = gsmWrapper.getSignalStrength();
-        payload["id"] = TRACKER_ID - "0";
+        payload["id"] = TRACKER_ID;
 
         const bool isValid = payload["location"]["valid"];
         String payloadString;
@@ -172,7 +172,7 @@ void loop()
             ? Serial.println("Publishing payload: " + payloadString)
             : Serial.println("Publishing unretained payload: " + payloadString);
 
-        const bool isSuccess = mqttClient.publishToDefaultTopic(TRACKER_ID, payloadString.c_str(), isValid);
+        const bool isSuccess = mqttClient.publishToDefaultTopic(String(TRACKER_ID).c_str(), payloadString.c_str(), isValid);
         if (isSuccess)
         {
             lastPublish = millis();

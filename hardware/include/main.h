@@ -73,6 +73,6 @@ constexpr int ESP32_COMMUNICATION_BAUD_RATE = 9600;
 
 // App Configuration
 constexpr timer_t PUBLISH_INTERVAL = 1000;
-constexpr char TRACKER_ID[] = "1";
+constexpr int TRACKER_ID = 1;
 
 #endif // MAIN_H
