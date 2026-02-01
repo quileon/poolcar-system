@@ -1,5 +1,5 @@
 <script lang="ts">
-	import "./layout.css";
+	import "../layout.css";
 	import favicon from "$lib/assets/favicon.svg";
 	import * as Sidebar from "$lib/components/ui/sidebar";
 	import AppSidebar from "$lib/components/app-sidebar.svelte";
@@ -19,7 +19,7 @@
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
 <Sidebar.Provider bind:open={sidebarOpen}>
-	<AppSidebar />
+	<AppSidebar variant="inset" />
 	<Sidebar.Inset>
 		<AppHeader {toggleSidebar} />
 		<Separator />

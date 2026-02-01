@@ -10,7 +10,7 @@
 	import HistoryIcon from "@lucide/svelte/icons/history";
 	import MapIcon from "@lucide/svelte/icons/map";
 	import { resolve } from "$app/paths";
-	import type { Component } from "svelte";
+	import type { Component, ComponentProps } from "svelte";
 	import type { Url } from "$lib/url";
 	const sidebar_items: {
 		title: string;
@@ -63,9 +63,11 @@
 			icon: MapIcon
 		}
 	];
+
+	let { ...restProps }: ComponentProps<typeof Sidebar.Root> = $props();
 </script>
 
-<Sidebar.Root>
+<Sidebar.Root collapsible="offcanvas" {...restProps}>
 	<Sidebar.Header />
 	<Sidebar.Content>
 		<Sidebar.Group>
