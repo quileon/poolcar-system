@@ -307,6 +307,74 @@ pub struct GetHistoriesResponse {
     pub history_count: usize,
 }
 
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct UserRole {
+    pub user_role_id: i32,
+    pub name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct UserRoleWithDetails {
+    pub user_role_id: i32,
+    pub name: String,
+    pub user_count: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct UserRoleBody {
+    pub name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct GetUserRolesResponse {
+    pub user_roles: Vec<UserRoleWithDetails>,
+    pub user_role_count: usize,
+}
+
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct User {
+    pub user_id: i32,
+    pub username: String,
+    pub email: String,
+    pub password: String,
+    pub full_name: String,
+    pub user_role_id: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct UserWithDetails {
+    pub user_id: i32,
+    pub username: String,
+    pub email: String,
+    pub password: String,
+    pub full_name: String,
+    pub user_role_id: i32,
+    pub user_role_name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct UserBody {
+    pub username: String,
+    pub email: String,
+    pub password: String,
+    pub full_name: String,
+    pub user_role_id: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct GetUsersResponse {
+    pub users: Vec<UserWithDetails>,
+    pub user_count: usize,
+}
+
 #[derive(Debug, Deserialize, TS)]
 #[ts(export)]
 pub struct PaginationParams {
