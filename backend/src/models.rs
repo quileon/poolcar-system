@@ -348,6 +348,14 @@ pub struct User {
 
 #[derive(Debug, Serialize, Deserialize, TS)]
 #[ts(export)]
+pub struct UserAuth {
+    pub username: String,
+    pub password: String,
+    pub user_role_id: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct UserWithDetails {
     pub user_id: i32,
     pub username: String,

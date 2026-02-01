@@ -1,4 +1,5 @@
 mod activity_routes;
+mod auth_routes;
 mod auth_utils;
 mod car_routes;
 mod car_type_routes;
@@ -151,6 +152,7 @@ pub fn create_app(
             "/live",
             get(live_tracking_routes::get_live_tracking_history),
         )
+        .route("/auth/login", post(auth_routes::login_handler))
         .route("/ws/chart", get(chart_websocket::chart_handler))
         .route("/chart", get(chart_routes::get_chart_history))
         .with_state(app_state)
