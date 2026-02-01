@@ -498,3 +498,16 @@ pub struct TrackerPayloadWithId {
     pub hdop: TrackerHdop,
     pub stats: TrackerStats,
 }
+
+#[derive(Debug, Deserialize, Serialize, TS)]
+#[ts(export)]
+pub struct LoginRequest {
+    pub username: String,
+    pub password: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, TS)]
+#[ts(export)]
+pub struct LoginResponse {
+    pub token: String,
+}

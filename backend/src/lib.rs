@@ -1,4 +1,5 @@
 mod activity_routes;
+mod auth_utils;
 mod car_routes;
 mod car_type_routes;
 mod chart_handler;
