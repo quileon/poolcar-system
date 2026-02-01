@@ -6,3 +6,9 @@ CREATE TABLE user_roles (
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMP NULL
 );
+
+INSERT INTO user_roles (name) VALUES
+    ('Admin'),
+    ('Security'),
+    ('Employee'),
+ON CONFLICT (name) DO NOTHING;
