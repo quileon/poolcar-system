@@ -17,8 +17,10 @@
 			<form class="p-6 md:p-8">
 				<Field.Group>
 					<Field.Set>
-						<Field.Legend>Log In</Field.Legend>
-						<Field.Description>Welcome back! Please insert your credentials.</Field.Description>
+						<div class="flex flex-col items-center gap-2 text-center">
+							<h1 class="text-2xl font-bold">Log In</h1>
+							<p class="text-balance text-muted-foreground">Please insert your credentials</p>
+						</div>
 
 						<Field.Group>
 							<Field.Field>
