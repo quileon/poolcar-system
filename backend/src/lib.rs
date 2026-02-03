@@ -16,6 +16,7 @@ mod models;
 mod mqtt_handlers;
 mod mqtt_payload_handler;
 mod tracker_routes;
+mod user_routes;
 
 use axum::{
     http::Method,
@@ -153,6 +154,10 @@ pub fn create_app(
             get(live_tracking_routes::get_live_tracking_history),
         )
         .route("/auth/login", post(auth_routes::login_handler))
+        .route("/users", get(user_routes::get_users))
+        .route("/users", post(user_routes::create_user))
+        .route("/users/{user_id}", put(user_routes::update_user))
+        .route("/users/{user_id}", delete(user_routes::delete_user))
         .route("/ws/chart", get(chart_websocket::chart_handler))
         .route("/chart", get(chart_routes::get_chart_history))
         .with_state(app_state)
