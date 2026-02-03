@@ -10,5 +10,5 @@ CREATE TABLE user_roles (
 INSERT INTO user_roles (name) VALUES
     ('Admin'),
     ('Security'),
-    ('Employee'),
+    ('Employee')
 ON CONFLICT (name) DO NOTHING;
