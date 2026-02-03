@@ -9,6 +9,7 @@ mod chart_websocket;
 mod contact_routes;
 mod contact_type_routes;
 mod dashboard_routes;
+mod error;
 mod history_routes;
 mod live_tracking_routes;
 mod live_tracking_websocket;
@@ -156,6 +157,7 @@ pub fn create_app(
         .route("/auth/login", post(auth_routes::login_handler))
         .route("/users", get(user_routes::get_users))
         .route("/users", post(user_routes::create_user))
+        .route("/users/{user_id}", get(user_routes::get_user))
         .route("/users/{user_id}", put(user_routes::update_user))
         .route("/users/{user_id}", delete(user_routes::delete_user))
         .route("/ws/chart", get(chart_websocket::chart_handler))
