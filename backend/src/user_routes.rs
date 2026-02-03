@@ -2,12 +2,13 @@ use std::sync::Arc;
 
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
     response::IntoResponse,
     Json,
 };
 
 use crate::{
+    auth_utils,
+    error::AppError,
     models::{PaginationParams, User, UserBody, UserWithDetails},
     AppState,
 };
@@ -15,7 +16,7 @@ use crate::{
 pub async fn get_users(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PaginationParams>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
+) -> Result<impl IntoResponse, AppError> {
     let page = params.page.unwrap_or(1);
     let limit = params.limit.unwrap_or(5);
 
@@ -30,7 +31,6 @@ pub async fn get_users(
                 users.user_id,
                 users.username,
                 users.email,
-                users.password,
                 users.full_name,
                 users.user_role_id,
                 user_roles.name AS user_role_name
@@ -44,21 +44,15 @@ pub async fn get_users(
         offset as i64
     )
     .fetch_all(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Database error: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Database error: {}", e),
-        )
-    })?;
+    .await?;
+
     Ok(axum::Json(users))
 }
 
 pub async fn get_user(
     State(state): State<Arc<AppState>>,
     Path(tracker_id): Path<i32>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
+) -> Result<impl IntoResponse, AppError> {
     let user = sqlx::query_as!(
         UserWithDetails,
         r#"
@@ -66,7 +60,6 @@ pub async fn get_user(
                 users.user_id,
                 users.username,
                 users.email,
-                users.password,
                 users.full_name,
                 users.user_role_id,
                 user_roles.name AS user_role_name
@@ -78,14 +71,7 @@ pub async fn get_user(
         tracker_id
     )
     .fetch_one(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Database error: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Database error: {}", e),
-        )
-    })?;
+    .await?;
 
     Ok(axum::Json(user))
 }
@@ -93,7 +79,10 @@ pub async fn get_user(
 pub async fn create_user(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<UserBody>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
+) -> Result<impl IntoResponse, AppError> {
+    let password = payload.password.ok_or(AppError::MissingField)?;
+    let hashed_password = auth_utils::hash_password(&password)?;
+
     let new_user = sqlx::query_as!(
         User,
         r#"
@@ -103,25 +92,17 @@ pub async fn create_user(
                 users.user_id,
                 users.username,
                 users.email,
-                users.password,
                 users.full_name,
                 users.user_role_id
         "#,
         payload.username,
         payload.email,
-        payload.password,
+        hashed_password,
         payload.full_name,
         payload.user_role_id
     )
     .fetch_one(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Database error: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Database error: {}", e),
-        )
-    })?;
+    .await?;
 
     Ok(Json(new_user))
 }
@@ -130,7 +111,12 @@ pub async fn update_user(
     State(state): State<Arc<AppState>>,
     Path(user_id): Path<i32>,
     Json(payload): Json<UserBody>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
+) -> Result<impl IntoResponse, AppError> {
+    let hashed_password = match &payload.password {
+        Some(pw) => Some(auth_utils::hash_password(pw)?),
+        None => None,
+    };
+
     let updated_user = sqlx::query_as!(
         User,
         r#"
@@ -138,7 +124,7 @@ pub async fn update_user(
             SET
                 username = $2,
                 email = $3,
-                password = $4,
+                password = COALESCE($4, password),
                 full_name = $5,
                 user_role_id = $6
             WHERE user_id = $1
@@ -146,26 +132,18 @@ pub async fn update_user(
                 users.user_id,
                 users.username,
                 users.email,
-                users.password,
                 users.full_name,
                 users.user_role_id
         "#,
         user_id,
         payload.username,
         payload.email,
-        payload.password,
+        hashed_password,
         payload.full_name,
         payload.user_role_id
     )
     .fetch_one(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Database error: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Database error: {}", e),
-        )
-    })?;
+    .await?;
 
     Ok(Json(updated_user))
 }
@@ -173,7 +151,7 @@ pub async fn update_user(
 pub async fn delete_user(
     State(state): State<Arc<AppState>>,
     Path(user_id): Path<i32>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
+) -> Result<impl IntoResponse, AppError> {
     let deleted_user = sqlx::query_as!(
         User,
         r#"
@@ -184,21 +162,13 @@ pub async fn delete_user(
                 users.user_id,
                 users.username,
                 users.email,
-                users.password,
                 users.full_name,
                 users.user_role_id
         "#,
         user_id
     )
     .fetch_one(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Database error: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Database error: {}", e),
-        )
-    })?;
+    .await?;
 
     Ok(Json(deleted_user))
 }

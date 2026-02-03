@@ -341,7 +341,6 @@ pub struct User {
     pub user_id: i32,
     pub username: String,
     pub email: String,
-    pub password: String,
     pub full_name: String,
     pub user_role_id: i32,
 }
@@ -360,7 +359,6 @@ pub struct UserWithDetails {
     pub user_id: i32,
     pub username: String,
     pub email: String,
-    pub password: String,
     pub full_name: String,
     pub user_role_id: i32,
     pub user_role_name: String,
@@ -370,8 +368,8 @@ pub struct UserWithDetails {
 #[ts(export)]
 pub struct UserBody {
     pub username: String,
+    pub password: Option<String>,
     pub email: String,
-    pub password: String,
     pub full_name: String,
     pub user_role_id: i32,
 }
