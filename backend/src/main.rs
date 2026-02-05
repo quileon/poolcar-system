@@ -1,7 +1,7 @@
 use anyhow::Context;
 use deadpool_redis::Runtime;
 use dotenvy;
-use poolcar_backend::create_app;
+use poolcar_backend::{config::Config, create_app};
 use rand::{distr, Rng};
 use rumqttc::{MqttOptions, Transport};
 use sqlx::postgres::PgPoolOptions;
@@ -10,49 +10,42 @@ use tokio::signal;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Load .env
     dotenvy::dotenv().ok();
 
-    // Setup database pool
-    let db_url = std::env::var("DATABASE_URL").context("Failed to read DATABASE_URL")?;
+    let config = Config::from_env()?;
+    println!("Configuration OK");
+
+    // Database
     let db_pool = PgPoolOptions::new()
-        .connect(&db_url)
+        .connect(&config.database_url)
         .await
-        .context("Failed to connect to Postgres")?;
+        .context("Failed to cretae Database pool")?;
     println!("Database OK");
 
-    // Run migrations
+    // Migrate
     sqlx::migrate!("./migrations")
         .run(&db_pool)
         .await
         .context("Failed to run migrations")?;
     println!("Migrations OK");
 
-    // Setup redis pool
-    let redis_url = std::env::var("REDIS_URL").context("Failed to read REDIS_URL")?;
-    let redis_cfg = deadpool_redis::Config::from_url(redis_url);
+    // Redis
+    let redis_cfg = deadpool_redis::Config::from_url(&config.redis_url);
     let redis_pool = redis_cfg
         .create_pool(Some(Runtime::Tokio1))
         .expect("Failed to create Redis pool");
     println!("Redis OK");
 
-    // Setup MQTT options with TLS
+    // MQTT
     let mut rng = rand::rng();
     let random_suffix: String = (0..8)
         .map(|_| rng.sample(distr::Alphanumeric) as char)
         .collect();
-    let mqtt_url = std::env::var("MQTT_URL").context("Failed to read MQTT_URL")?;
-    let mqtt_client = format!(
-        "{}-{}",
-        std::env::var("MQTT_CLIENT").context("Failed to read MQTT_CLIENT")?,
-        random_suffix
-    );
-    let mqtt_username = std::env::var("MQTT_USERNAME").context("Failed to read MQTT_USERNAME")?;
-    let mqtt_password = std::env::var("MQTT_PASSWORD").context("Failed to read MQTT_PASSWORD")?;
+    let mqtt_client = format!("{}-{}", config.mqtt_client, random_suffix);
 
-    let mut mqtt_options = MqttOptions::new(mqtt_client, mqtt_url, 8883);
+    let mut mqtt_options = MqttOptions::new(mqtt_client, &config.mqtt_url, 8883);
     mqtt_options.set_keep_alive(Duration::from_secs(5));
-    mqtt_options.set_credentials(mqtt_username, mqtt_password);
+    mqtt_options.set_credentials(&config.mqtt_username, &config.mqtt_password);
 
     let ca_cert = include_bytes!("../assets/emqxsl-ca.crt").to_vec();
     let transport = Transport::Tls(rumqttc::TlsConfiguration::Simple {
@@ -63,14 +56,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     mqtt_options.set_transport(transport);
     println!("MQTT OK");
 
-    // Port binding
     let listener = tokio::net::TcpListener::bind("0.0.0.0:7270")
         .await
-        .context(format!("Failed to bind to port 7270"))?;
-    println!("Listening on {}", listener.local_addr()?);
+        .context("Failed to bind to port 7270")?;
+    let listener_address = listener.local_addr()?;
 
     // Axum
-    let app = create_app(db_pool, redis_pool, Some(mqtt_options));
+    let app = create_app(db_pool, redis_pool, Some(mqtt_options), config);
+    println!("Axum started, listening on {}", listener_address);
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
         .await?;
