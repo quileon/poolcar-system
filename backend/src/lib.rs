@@ -14,6 +14,7 @@ mod error;
 mod history_routes;
 mod live_tracking_routes;
 mod live_tracking_websocket;
+mod middleware;
 pub mod models;
 mod mqtt_handlers;
 mod mqtt_payload_handler;
@@ -68,8 +69,11 @@ pub fn create_app(
     let chart_state = app_state.clone();
     tokio::spawn(async move { chart_handler::chart_handler(chart_state).await });
 
-    Router::new()
+    let public_routes = Router::new()
         .route("/", get(|| async { "Hello, World!" }))
+        .route("/auth/login", post(auth_routes::login_handler));
+
+    let protected_routes = Router::new()
         .route("/dashboard", get(dashboard_routes::get_dashboard_data))
         .route("/cars", get(car_routes::get_cars))
         .route("/cars/export", get(car_routes::export_cars))
@@ -158,7 +162,6 @@ pub fn create_app(
             "/live",
             get(live_tracking_routes::get_live_tracking_history),
         )
-        .route("/auth/login", post(auth_routes::login_handler))
         .route("/users", get(user_routes::get_users))
         .route("/users", post(user_routes::create_user))
         .route("/users/{user_id}", get(user_routes::get_user))
@@ -166,6 +169,14 @@ pub fn create_app(
         .route("/users/{user_id}", delete(user_routes::delete_user))
         .route("/ws/chart", get(chart_websocket::chart_handler))
         .route("/chart", get(chart_routes::get_chart_history))
+        .route_layer(axum::middleware::from_fn_with_state(
+            app_state.clone(),
+            middleware::auth_middleware,
+        ));
+
+    Router::new()
+        .merge(public_routes)
+        .merge(protected_routes)
         .with_state(app_state)
         .layer(cors)
 }
