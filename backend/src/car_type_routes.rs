@@ -1,8 +1,8 @@
 use crate::{
-    models::{
+    models::car_type::{
         CarType, CarTypeBody, CarTypeExportDetails, CarTypeWithCount, GetCarTypesResponse,
-        PaginationParams,
     },
+    types::PaginationParams,
     AppState,
 };
 use axum::{

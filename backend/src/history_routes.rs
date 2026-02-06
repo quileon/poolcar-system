@@ -1,5 +1,6 @@
 use crate::{
-    models::{GetHistoriesResponse, History, HistoryBody, HistoryWithDetails, PaginationParams},
+    models::history::{GetHistoriesResponse, History, HistoryBody, HistoryWithDetails},
+    types::PaginationParams,
     AppState,
 };
 use axum::{

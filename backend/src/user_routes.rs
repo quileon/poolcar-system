@@ -9,7 +9,8 @@ use axum::{
 use crate::{
     auth_utils,
     error::AppError,
-    models::{PaginationParams, User, UserBody, UserWithDetails},
+    models::user::{User, UserBody, UserWithDetails},
+    types::PaginationParams,
     AppState,
 };
 

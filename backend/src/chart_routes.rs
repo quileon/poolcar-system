@@ -1,4 +1,4 @@
-use crate::{models::TrackerPayloadWithId, AppState};
+use crate::{models::mqtt::MqttPayloadWithId, AppState};
 use axum::{extract::State, http::StatusCode, response::IntoResponse};
 use deadpool_redis::redis::AsyncTypedCommands;
 use serde::{Deserialize, Serialize};
@@ -7,7 +7,7 @@ use std::sync::Arc;
 #[derive(Debug, Deserialize, Serialize)]
 struct ChartHistoryPayload {
     tracker_id: i32,
-    payload: Vec<TrackerPayloadWithId>,
+    payload: Vec<MqttPayloadWithId>,
 }
 
 pub async fn get_chart_history(
@@ -54,10 +54,10 @@ pub async fn get_chart_history(
             })?;
 
         if !chart_history.is_empty() {
-            let mut payload: Vec<TrackerPayloadWithId> = Vec::new();
+            let mut payload: Vec<MqttPayloadWithId> = Vec::new();
 
             for payload_json in chart_history {
-                let parsed: TrackerPayloadWithId =
+                let parsed: MqttPayloadWithId =
                     serde_json::from_str(&payload_json).map_err(|e| {
                         eprintln!("Failed to parse tracker payload: {}", e);
                         (

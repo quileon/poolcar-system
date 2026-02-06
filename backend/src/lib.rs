@@ -18,9 +18,12 @@ mod middleware;
 pub mod models;
 mod mqtt_handlers;
 mod mqtt_payload_handler;
+mod state;
 mod tracker_routes;
+mod types;
 mod user_routes;
 
+use crate::state::AppState;
 use axum::{
     http::Method,
     routing::{delete, get, post, put},
@@ -29,13 +32,6 @@ use axum::{
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use tower_http::cors::{Any, CorsLayer};
-
-pub struct AppState {
-    pub db: sqlx::PgPool,
-    pub redis: deadpool_redis::Pool,
-    pub tx: broadcast::Sender<String>,
-    pub config: config::Config,
-}
 
 pub fn create_app(
     db_pool: sqlx::PgPool,

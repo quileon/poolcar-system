@@ -5,7 +5,11 @@ use std::sync::Arc;
 use crate::{
     auth_utils::{encode_jwt, verify_password},
     error::AppError,
-    models::{Claims, LoginRequest, LoginResponse, UserAuth},
+    models::{
+        login::{LoginRequest, LoginResponse},
+        user::UserAuth,
+    },
+    types::Claims,
     AppState,
 };
 

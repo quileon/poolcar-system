@@ -4,7 +4,7 @@ use argon2::{
 };
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
 
-use crate::{error::AppError, models::Claims};
+use crate::{error::AppError, types::Claims};
 
 /// Hash password using Argon2 algorithm.
 pub fn hash_password(password: &str) -> Result<String, argon2::password_hash::Error> {

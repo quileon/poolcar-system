@@ -1,5 +1,6 @@
 use crate::{
-    models::{Activity, ActivityBody, ActivityWithCount, GetActivitiesResponse, PaginationParams},
+    models::activity::{Activity, ActivityBody, ActivityWithCount, GetActivitiesResponse},
+    types::PaginationParams,
     AppState,
 };
 use axum::{

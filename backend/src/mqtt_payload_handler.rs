@@ -3,7 +3,7 @@ use deadpool_redis::redis::AsyncCommands;
 use std::sync::Arc;
 
 use crate::{
-    models::{TrackerPayload, TrackerPayloadWithId},
+    models::mqtt::{MqttPayload, MqttPayloadWithId},
     AppState,
 };
 
@@ -18,9 +18,9 @@ pub async fn save_latest_payload(
         .map_err(|e| anyhow::anyhow!("Failed to parse tracker_id: {}", e))?;
 
     // Parse payload to JSON
-    let tracker_payload = serde_json::from_slice::<TrackerPayload>(&payload)
+    let tracker_payload = serde_json::from_slice::<MqttPayload>(&payload)
         .map_err(|e| anyhow::anyhow!("Failed to parse payload: {}", e))?;
-    let tracker_payload_with_id = TrackerPayloadWithId {
+    let tracker_payload_with_id = MqttPayloadWithId {
         id: tracker_id,
         uptime: tracker_payload.uptime,
         connection: tracker_payload.connection,

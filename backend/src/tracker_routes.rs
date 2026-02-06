@@ -1,7 +1,7 @@
-use crate::models::{
-    GetTrackerResponse, PaginationParams, Tracker, TrackerBody, TrackerExportDetails,
-    TrackerWithDetails,
+use crate::models::tracker::{
+    GetTrackerResponse, Tracker, TrackerBody, TrackerExportDetails, TrackerWithDetails,
 };
+use crate::types::PaginationParams;
 use crate::AppState;
 use axum::{
     extract::{Path, Query, State},

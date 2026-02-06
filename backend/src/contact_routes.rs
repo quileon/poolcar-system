@@ -1,5 +1,6 @@
 use crate::{
-    models::{Contact, ContactBody, ContactWithDetails, GetContactsResponse, PaginationParams},
+    models::contact::{Contact, ContactBody, ContactWithDetails, GetContactsResponse},
+    types::PaginationParams,
     AppState,
 };
 use axum::{

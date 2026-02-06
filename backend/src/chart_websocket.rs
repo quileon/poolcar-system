@@ -1,4 +1,4 @@
-use crate::{models::TrackerPayloadWithId, AppState};
+use crate::{models::mqtt::MqttPayloadWithId, AppState};
 use axum::{
     extract::{
         ws::{Message, WebSocket},
@@ -13,7 +13,7 @@ use std::sync::Arc;
 #[derive(Debug, Deserialize, Serialize)]
 struct ChartPayload {
     tracker_id: i32,
-    payload: Option<TrackerPayloadWithId>,
+    payload: Option<MqttPayloadWithId>,
 }
 
 pub async fn chart_handler(ws: WebSocketUpgrade, State(state): State<Arc<AppState>>) -> Response {
@@ -109,8 +109,7 @@ async fn get_latest_chart_history(state: &Arc<AppState>) -> Result<Vec<ChartPayl
             .map_err(|e| format!("Failed to get tracker history from Redis: {}", e))?;
 
         let payload = match latest_chart_history {
-            Some(payload_json) => match serde_json::from_str::<TrackerPayloadWithId>(&payload_json)
-            {
+            Some(payload_json) => match serde_json::from_str::<MqttPayloadWithId>(&payload_json) {
                 Ok(parsed) => Some(parsed),
                 Err(e) => {
                     eprintln!(

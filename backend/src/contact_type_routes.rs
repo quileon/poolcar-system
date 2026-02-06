@@ -1,8 +1,8 @@
 use crate::{
-    models::{
+    models::contact_type::{
         ContactType, ContactTypeBody, ContactTypeWithCount, GetContactTypesResponse,
-        PaginationParams,
     },
+    types::PaginationParams,
     AppState,
 };
 use axum::{

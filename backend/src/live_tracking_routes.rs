@@ -1,9 +1,7 @@
-use std::sync::Arc;
-
+use crate::{models::mqtt::MqttPayloadWithId, AppState};
 use axum::{extract::State, http::StatusCode, response::IntoResponse};
 use deadpool_redis::redis::AsyncTypedCommands;
-
-use crate::{models::TrackerPayloadWithId, AppState};
+use std::sync::Arc;
 
 pub async fn get_live_tracking_history(
     State(state): State<Arc<AppState>>,
@@ -34,7 +32,7 @@ pub async fn get_live_tracking_history(
         )
     })?;
 
-    let mut tracker_payloads: Vec<TrackerPayloadWithId> = Vec::new();
+    let mut tracker_payloads: Vec<MqttPayloadWithId> = Vec::new();
 
     for tracker_id in tracker_ids {
         let tracker_payload = conn
@@ -49,14 +47,13 @@ pub async fn get_live_tracking_history(
             })?;
 
         if let Some(payload_json) = tracker_payload {
-            let payload: TrackerPayloadWithId =
-                serde_json::from_str(&payload_json).map_err(|e| {
-                    eprintln!("Failed to parse tracker payload: {}", e);
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        format!("Failed to parse tracker payload: {}", e),
-                    )
-                })?;
+            let payload: MqttPayloadWithId = serde_json::from_str(&payload_json).map_err(|e| {
+                eprintln!("Failed to parse tracker payload: {}", e);
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Failed to parse tracker payload: {}", e),
+                )
+            })?;
             tracker_payloads.push(payload);
         }
     }
