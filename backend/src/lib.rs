@@ -6,6 +6,7 @@ mod car_type_routes;
 mod chart_handler;
 mod chart_routes;
 mod chart_websocket;
+pub mod config;
 mod contact_routes;
 mod contact_type_routes;
 mod dashboard_routes;
@@ -13,7 +14,7 @@ mod error;
 mod history_routes;
 mod live_tracking_routes;
 mod live_tracking_websocket;
-mod models;
+pub mod models;
 mod mqtt_handlers;
 mod mqtt_payload_handler;
 mod tracker_routes;
@@ -32,12 +33,14 @@ pub struct AppState {
     pub db: sqlx::PgPool,
     pub redis: deadpool_redis::Pool,
     pub tx: broadcast::Sender<String>,
+    pub config: config::Config,
 }
 
 pub fn create_app(
     db_pool: sqlx::PgPool,
     redis_pool: deadpool_redis::Pool,
     mqtt_options: Option<rumqttc::MqttOptions>,
+    config: config::Config,
 ) -> Router {
     let (tx, _) = broadcast::channel::<String>(100);
 
@@ -45,6 +48,7 @@ pub fn create_app(
         db: db_pool,
         redis: redis_pool,
         tx,
+        config,
     });
 
     let cors = CorsLayer::new()

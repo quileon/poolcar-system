@@ -351,6 +351,7 @@ pub struct UserAuth {
     pub username: String,
     pub password: String,
     pub user_role_id: i32,
+    pub user_role_name: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, TS)]
@@ -516,4 +517,12 @@ pub struct LoginRequest {
 #[ts(export)]
 pub struct LoginResponse {
     pub token: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, TS)]
+#[ts(export)]
+pub struct Claims {
+    pub username: String,
+    pub role_name: String,
+    pub exp: usize,
 }
