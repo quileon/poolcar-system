@@ -1,34 +1,24 @@
-mod activity_routes;
-mod auth_routes;
 mod auth_utils;
-mod car_routes;
-mod car_type_routes;
 mod chart_handler;
-mod chart_routes;
-mod chart_websocket;
 pub mod config;
-mod contact_routes;
-mod contact_type_routes;
-mod dashboard_routes;
 mod error;
-mod history_routes;
-mod live_tracking_routes;
-mod live_tracking_websocket;
 mod middleware;
 pub mod models;
 mod mqtt_handlers;
 mod mqtt_payload_handler;
+mod routes;
 mod state;
-mod tracker_routes;
 mod types;
-mod user_routes;
+mod websocket;
 
-use crate::state::AppState;
-use axum::{
-    http::Method,
-    routing::{delete, get, post, put},
-    Router,
+use crate::{
+    routes::{
+        activity_routes, auth_routes, car_routes, chart_routes, contact_routes, dashboard_routes,
+        history_routes, live_tracking_routes, tracker_routes, user_routes,
+    },
+    state::AppState,
 };
+use axum::{http::Method, routing::get, Router};
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use tower_http::cors::{Any, CorsLayer};
@@ -67,104 +57,20 @@ pub fn create_app(
 
     let public_routes = Router::new()
         .route("/", get(|| async { "Hello, World!" }))
-        .route("/auth/login", post(auth_routes::login_handler));
+        .nest("/auth", auth_routes::routes())
+        .nest("/ws/chart", websocket::chart_websocket::routes())
+        .nest("/ws/live", websocket::live_tracking_websocket::routes());
 
     let protected_routes = Router::new()
-        .route("/dashboard", get(dashboard_routes::get_dashboard_data))
-        .route("/cars", get(car_routes::get_cars))
-        .route("/cars/export", get(car_routes::export_cars))
-        .route("/cars/{car_id}", get(car_routes::get_car))
-        .route("/cars", post(car_routes::create_car))
-        .route("/cars/{car_id}", put(car_routes::update_car))
-        .route("/cars/{car_id}", delete(car_routes::delete_car))
-        .route("/trackers", get(tracker_routes::get_trackers))
-        .route("/trackers/export", get(tracker_routes::export_trackers))
-        .route("/trackers/{tracker_id}", get(tracker_routes::get_tracker))
-        .route("/trackers", post(tracker_routes::create_tracker))
-        .route(
-            "/trackers/{tracker_id}",
-            put(tracker_routes::update_tracker),
-        )
-        .route(
-            "/trackers/{tracker_id}",
-            delete(tracker_routes::delete_tracker),
-        )
-        .route("/cars/types", get(car_type_routes::get_car_types))
-        .route("/cars/types/export", get(car_type_routes::export_car_types))
-        .route(
-            "/cars/types/{car_type_id}",
-            get(car_type_routes::get_car_type),
-        )
-        .route("/cars/types", post(car_type_routes::create_car_type))
-        .route(
-            "/cars/types/{car_type_id}",
-            put(car_type_routes::update_car_type),
-        )
-        .route(
-            "/cars/types/{car_type_id}",
-            delete(car_type_routes::delete_car_type),
-        )
-        .route("/contacts", get(contact_routes::get_contacts))
-        .route("/contacts", post(contact_routes::create_contact))
-        .route(
-            "/contacts/{contact_id}",
-            put(contact_routes::update_contact),
-        )
-        .route(
-            "/contacts/{contact_id}",
-            delete(contact_routes::delete_contact),
-        )
-        .route(
-            "/contacts/types",
-            get(contact_type_routes::get_contact_types),
-        )
-        .route(
-            "/contacts/types",
-            post(contact_type_routes::create_contact_type),
-        )
-        .route(
-            "/contacts/types/{contact_type_id}",
-            put(contact_type_routes::update_contact_type),
-        )
-        .route(
-            "/contacts/types/{contact_type_id}",
-            delete(contact_type_routes::delete_contact_type),
-        )
-        .route("/activities", get(activity_routes::get_activities))
-        .route("/activities", post(activity_routes::create_activity))
-        .route(
-            "/activities/{activity_id}",
-            put(activity_routes::update_activity),
-        )
-        .route(
-            "/activities/{activity_id}",
-            delete(activity_routes::delete_activity),
-        )
-        .route("/histories", get(history_routes::get_histories))
-        .route("/histories", post(history_routes::create_history))
-        .route(
-            "/histories/{history_id}",
-            put(history_routes::update_history),
-        )
-        .route(
-            "/histories/{history_id}",
-            delete(history_routes::delete_history),
-        )
-        .route(
-            "/ws/live",
-            get(live_tracking_websocket::live_tracking_handler),
-        )
-        .route(
-            "/live",
-            get(live_tracking_routes::get_live_tracking_history),
-        )
-        .route("/users", get(user_routes::get_users))
-        .route("/users", post(user_routes::create_user))
-        .route("/users/{user_id}", get(user_routes::get_user))
-        .route("/users/{user_id}", put(user_routes::update_user))
-        .route("/users/{user_id}", delete(user_routes::delete_user))
-        .route("/ws/chart", get(chart_websocket::chart_handler))
-        .route("/chart", get(chart_routes::get_chart_history))
+        .nest("/activities", activity_routes::routes())
+        .nest("/cars", car_routes::routes())
+        .nest("/chart", chart_routes::routes())
+        .nest("/contacts", contact_routes::routes())
+        .nest("/dashboard", dashboard_routes::routes())
+        .nest("/histories", history_routes::routes())
+        .nest("/live", live_tracking_routes::routes())
+        .nest("/trackers", tracker_routes::routes())
+        .nest("/users", user_routes::routes())
         .route_layer(axum::middleware::from_fn_with_state(
             app_state.clone(),
             middleware::auth_middleware,

@@ -9,7 +9,8 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
+    routing::{get, put},
+    Json, Router,
 };
 use sqlx::Postgres;
 use std::sync::Arc;
@@ -136,4 +137,13 @@ pub async fn delete_contact_type(
     })?;
 
     Ok(Json(delete_contact_type))
+}
+
+pub fn routes() -> Router<Arc<AppState>> {
+    Router::new()
+        .route("/", get(get_contact_types).post(create_contact_type))
+        .route(
+            "/{contact_type_id}",
+            put(update_contact_type).delete(delete_contact_type),
+        )
 }

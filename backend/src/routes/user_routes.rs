@@ -3,7 +3,8 @@ use std::sync::Arc;
 use axum::{
     extract::{Path, Query, State},
     response::IntoResponse,
-    Json,
+    routing::get,
+    Json, Router,
 };
 
 use crate::{
@@ -172,4 +173,13 @@ pub async fn delete_user(
     .await?;
 
     Ok(Json(deleted_user))
+}
+
+pub fn routes() -> Router<Arc<AppState>> {
+    Router::new()
+        .route("/", get(get_users).post(create_user))
+        .route(
+            "/{user_id}",
+            get(get_user).put(update_user).delete(delete_user),
+        )
 }

@@ -1,5 +1,9 @@
 use crate::{
-    models::contact::{Contact, ContactBody, ContactWithDetails, GetContactsResponse},
+    models::{
+        contact::{Contact, ContactBody, ContactWithDetails, GetContactsResponse},
+        contact_type,
+    },
+    routes::contact_type_routes,
     types::PaginationParams,
     AppState,
 };
@@ -7,7 +11,8 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
+    routing::{get, put},
+    Json, Router,
 };
 use sqlx::Postgres;
 use std::sync::Arc;
@@ -142,4 +147,11 @@ pub async fn delete_contact(
     })?;
 
     Ok(Json(deleted_contact))
+}
+
+pub fn routes() -> Router<Arc<AppState>> {
+    Router::new()
+        .route("/", get(get_contacts).post(create_contact))
+        .nest("/types", contact_type_routes::routes())
+        .route("/{contact_id}", put(update_contact).delete(delete_contact))
 }

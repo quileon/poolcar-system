@@ -7,7 +7,8 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
+    routing::{get, put},
+    Json, Router,
 };
 use sqlx::Postgres;
 use std::sync::Arc;
@@ -134,4 +135,13 @@ pub async fn delete_activity(
     })?;
 
     Ok(Json(deleted_activity))
+}
+
+pub fn routes() -> Router<Arc<AppState>> {
+    Router::new()
+        .route("/", get(get_activities).post(create_activity))
+        .route(
+            "/{activity_id}",
+            put(update_activity).delete(delete_activity),
+        )
 }

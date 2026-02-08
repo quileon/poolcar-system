@@ -1,18 +1,20 @@
-use crate::{
-    models::car::{Car, CarBody, CarExportDetails, CarWithTracker, GetCarsResponse},
-    types::PaginationParams,
-    AppState,
+use crate::models::tracker::{
+    GetTrackerResponse, Tracker, TrackerBody, TrackerExportDetails, TrackerWithDetails,
 };
+use crate::types::PaginationParams;
+use crate::AppState;
+use axum::Router;
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
+    routing::get,
     Json,
 };
 use sqlx::Postgres;
 use std::sync::Arc;
 
-pub async fn get_cars(
+pub async fn get_trackers(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PaginationParams>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
@@ -23,22 +25,21 @@ pub async fn get_cars(
     let limit = if limit < 1 { 1 } else { limit };
     let offset = (page - 1) * 5;
 
-    let cars = sqlx::query_as::<Postgres, CarWithTracker>(
+    let trackers = sqlx::query_as::<Postgres, TrackerWithDetails>(
         r#"
             SELECT
-                cars.car_id,
-                cars.name,
-                cars.police_number,
-                cars.active,
-                car_types.car_type_id,
-                car_types.name as car_type_name,
                 trackers.tracker_id,
-                trackers.name as tracker_name
-            FROM cars
+                trackers.name,
+                cars.car_id as car_id,
+                cars.name as car_name,
+                cars.police_number as car_police_number,
+                cars.car_type_id as car_type_id,
+                car_types.name as car_type_name
+            FROM trackers
+            LEFT JOIN cars ON trackers.tracker_id = cars.tracker_id
             LEFT JOIN car_types ON cars.car_type_id = car_types.car_type_id
-            LEFT JOIN trackers ON cars.tracker_id = trackers.tracker_id
-            WHERE cars.deleted_at IS NULL
-            ORDER BY cars.car_id ASC
+            WHERE trackers.deleted_at IS NULL
+            ORDER BY trackers.tracker_id ASC
             LIMIT $1 OFFSET $2
         "#,
     )
@@ -54,36 +55,35 @@ pub async fn get_cars(
         )
     })?;
 
-    let response = GetCarsResponse {
-        car_count: cars.len(),
-        cars,
+    let response = GetTrackerResponse {
+        tracker_count: trackers.len(),
+        trackers,
     };
 
     Ok(axum::Json(response))
 }
 
-pub async fn get_car(
+pub async fn get_tracker(
     State(state): State<Arc<AppState>>,
-    Path(car_id): Path<i32>,
+    Path(tracker_id): Path<i32>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let car = sqlx::query_as::<Postgres, CarWithTracker>(
+    let tracker = sqlx::query_as::<Postgres, TrackerWithDetails>(
         r#"
             SELECT
-                cars.car_id,
-                cars.name,
-                cars.police_number,
-                cars.active,
-                car_types.car_type_id,
-                car_types.name as car_type_name,
                 trackers.tracker_id,
-                trackers.name as tracker_name
-            FROM cars
+                trackers.name,
+                cars.car_id as car_id,
+                cars.name as car_name,
+                cars.police_number as car_police_number,
+                cars.car_type_id as car_type_id,
+                car_types.name as car_type_name
+            FROM trackers
+            LEFT JOIN cars ON trackers.tracker_id = cars.tracker_id
             LEFT JOIN car_types ON cars.car_type_id = car_types.car_type_id
-            LEFT JOIN trackers ON cars.tracker_id = trackers.tracker_id
-            WHERE cars.car_id = $1 AND cars.deleted_at IS NULL
+            WHERE trackers.tracker_id = $1 AND trackers.deleted_at IS NULL
         "#,
     )
-    .bind(car_id)
+    .bind(tracker_id)
     .fetch_one(&state.db)
     .await
     .map_err(|e| {
@@ -94,25 +94,21 @@ pub async fn get_car(
         )
     })?;
 
-    Ok(axum::Json(car))
+    Ok(axum::Json(tracker))
 }
 
-pub async fn create_car(
+pub async fn create_tracker(
     State(state): State<Arc<AppState>>,
-    Json(car): Json<CarBody>,
+    Json(payload): Json<TrackerBody>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let created_car = sqlx::query_as::<Postgres, Car>(
+    let new_tracker = sqlx::query_as::<Postgres, Tracker>(
         r#"
-            INSERT INTO cars (name, police_number, active, car_type_id, tracker_id)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING car_id, name, police_number, active, car_type_id, tracker_id
+            INSERT INTO trackers (name)
+            VALUES ($1)
+            RETURNING tracker_id, name
         "#,
     )
-    .bind(car.name)
-    .bind(car.police_number)
-    .bind(car.active)
-    .bind(car.car_type_id)
-    .bind(car.tracker_id)
+    .bind(payload.name)
     .fetch_one(&state.db)
     .await
     .map_err(|e| {
@@ -123,28 +119,24 @@ pub async fn create_car(
         )
     })?;
 
-    Ok(Json(created_car))
+    Ok(axum::Json(new_tracker))
 }
 
-pub async fn update_car(
+pub async fn update_tracker(
     State(state): State<Arc<AppState>>,
-    Path(car_id): Path<i32>,
-    Json(car): Json<CarBody>,
+    Path(tracker_id): Path<i32>,
+    Json(payload): Json<TrackerBody>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let updated_car = sqlx::query_as::<Postgres, Car>(
+    let updated_tracker = sqlx::query_as::<Postgres, Tracker>(
         r#"
-            UPDATE cars
-            SET name = $2, police_number = $3, active = $4, car_type_id = $5, tracker_id = $6
-            WHERE car_id = $1
-            RETURNING car_id, name, police_number, active, car_type_id, tracker_id
+            UPDATE trackers
+            SET name = $2
+            WHERE tracker_id = $1
+            RETURNING tracker_id, name
         "#,
     )
-    .bind(car_id)
-    .bind(car.name)
-    .bind(car.police_number)
-    .bind(car.active)
-    .bind(car.car_type_id)
-    .bind(car.tracker_id)
+    .bind(tracker_id)
+    .bind(payload.name)
     .fetch_one(&state.db)
     .await
     .map_err(|e| {
@@ -155,22 +147,22 @@ pub async fn update_car(
         )
     })?;
 
-    Ok(Json(updated_car))
+    Ok(axum::Json(updated_tracker))
 }
 
-pub async fn delete_car(
+pub async fn delete_tracker(
     State(state): State<Arc<AppState>>,
-    Path(car_id): Path<i32>,
+    Path(tracker_id): Path<i32>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let deleted_car = sqlx::query_as::<Postgres, Car>(
+    let deleted_tracker = sqlx::query_as::<Postgres, Tracker>(
         r#"
-            UPDATE cars
-            SET deleted_at = NOW(), tracker_id = NULL
-            WHERE car_id = $1
-            RETURNING car_id, name, police_number, active, car_type_id, tracker_id
+            UPDATE trackers
+            SET deleted_at = NOW()
+            WHERE tracker_id = $1
+            RETURNING tracker_id, name
         "#,
     )
-    .bind(car_id)
+    .bind(tracker_id)
     .fetch_one(&state.db)
     .await
     .map_err(|e| {
@@ -181,30 +173,29 @@ pub async fn delete_car(
         )
     })?;
 
-    Ok(Json(deleted_car))
+    Ok(axum::Json(deleted_tracker))
 }
 
-pub async fn export_cars(
+pub async fn export_trackers(
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let cars = sqlx::query_as::<Postgres, CarExportDetails>(
+    let trackers = sqlx::query_as::<Postgres, TrackerExportDetails>(
         r#"
             SELECT
-                cars.car_id,
-                cars.name,
-                cars.police_number,
-                cars.active,
-                car_types.car_type_id,
-                car_types.name as car_type_name,
                 trackers.tracker_id,
-                trackers.name as tracker_name,
-                cars.created_at,
-                cars.updated_at,
-                cars.deleted_at
-            FROM cars
+                trackers.name,
+                cars.car_id as car_id,
+                cars.name as car_name,
+                cars.police_number as car_police_number,
+                cars.car_type_id as car_type_id,
+                car_types.name as car_type_name,
+                trackers.created_at,
+                trackers.updated_at,
+                trackers.deleted_at
+            FROM trackers
+            LEFT JOIN cars ON trackers.tracker_id = cars.tracker_id
             LEFT JOIN car_types ON cars.car_type_id = car_types.car_type_id
-            LEFT JOIN trackers ON cars.tracker_id = trackers.tracker_id
-            ORDER BY cars.car_id ASC
+            ORDER BY trackers.tracker_id ASC
         "#,
     )
     .fetch_all(&state.db)
@@ -222,14 +213,13 @@ pub async fn export_cars(
         let mut writer = csv::Writer::from_writer(&mut csv_buffer);
         writer
             .write_record(&[
-                "Car ID",
+                "Tracker ID",
                 "Name",
-                "Police Number",
-                "Active",
+                "Car ID",
+                "Car Name",
+                "Car Police Number",
                 "Car Type ID",
                 "Car Type Name",
-                "Tracker ID",
-                "Tracker Name",
                 "Created At",
                 "Updated At",
                 "Deleted At",
@@ -242,20 +232,23 @@ pub async fn export_cars(
                 )
             })?;
 
-        for car in cars {
+        for tracker in trackers {
             writer
                 .write_record(&[
-                    car.car_id.to_string(),
-                    car.name,
-                    car.police_number,
-                    car.active.to_string(),
-                    car.car_type_id.to_string(),
-                    car.car_type_name,
-                    car.tracker_id.map(|id| id.to_string()).unwrap_or_default(),
-                    car.tracker_name.unwrap_or_default(),
-                    car.created_at.to_string(),
-                    car.updated_at.to_string(),
-                    car.deleted_at
+                    tracker.tracker_id.to_string(),
+                    tracker.name,
+                    tracker.car_id.map(|id| id.to_string()).unwrap_or_default(),
+                    tracker.car_name.unwrap_or_default(),
+                    tracker.car_police_number.unwrap_or_default(),
+                    tracker
+                        .car_type_id
+                        .map(|id| id.to_string())
+                        .unwrap_or_default(),
+                    tracker.car_type_name.unwrap_or_default(),
+                    tracker.created_at.to_string(),
+                    tracker.updated_at.to_string(),
+                    tracker
+                        .deleted_at
                         .map(|date| date.to_string())
                         .unwrap_or_default(),
                 ])
@@ -278,10 +271,24 @@ pub async fn export_cars(
     }
 
     Ok((
+        StatusCode::OK,
         [
             ("Content-Type", "text/csv"),
-            ("Content-Disposition", "attachment; filename=\"cars.csv\""),
+            (
+                "Content-Disposition",
+                "attachment; filename=\"trackers.csv\"",
+            ),
         ],
         csv_buffer,
     ))
+}
+
+pub fn routes() -> Router<Arc<AppState>> {
+    Router::new()
+        .route("/", get(get_trackers).post(create_tracker))
+        .route("/export", get(export_trackers))
+        .route(
+            "/{tracker_id}",
+            get(get_tracker).put(update_tracker).delete(delete_tracker),
+        )
 }

@@ -9,7 +9,8 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
+    routing::get,
+    Json, Router,
 };
 use sqlx::Postgres;
 use std::sync::Arc;
@@ -257,4 +258,15 @@ pub async fn export_car_types(
         ],
         csv_buffer,
     ))
+}
+pub fn routes() -> Router<Arc<AppState>> {
+    Router::new()
+        .route("/", get(get_car_types).post(create_car_type))
+        .route("/export", get(export_car_types))
+        .route(
+            "/{car_type_id}",
+            get(get_car_type)
+                .put(update_car_type)
+                .delete(delete_car_type),
+        )
 }

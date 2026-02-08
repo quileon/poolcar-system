@@ -1,4 +1,4 @@
-use axum::{extract::State, response::IntoResponse, Json};
+use axum::{extract::State, response::IntoResponse, routing::post, Json, Router};
 use chrono::{Duration, Utc};
 use std::sync::Arc;
 
@@ -51,4 +51,8 @@ pub async fn login_handler(
     let token = encode_jwt(claims, &state.config.jwt_secret)?;
 
     Ok(Json(LoginResponse { token }))
+}
+
+pub fn routes() -> Router<Arc<AppState>> {
+    Router::new().route("/login", post(login_handler))
 }

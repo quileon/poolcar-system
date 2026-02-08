@@ -5,6 +5,8 @@ use axum::{
         State, WebSocketUpgrade,
     },
     response::Response,
+    routing::get,
+    Router,
 };
 use std::sync::Arc;
 use tokio::sync::broadcast::error::RecvError;
@@ -69,4 +71,8 @@ async fn handle_live_tracking_connection(mut socket: WebSocket, state: Arc<AppSt
             }
         }
     }
+}
+
+pub fn routes() -> Router<Arc<AppState>> {
+    Router::new().route("/", get(live_tracking_handler))
 }

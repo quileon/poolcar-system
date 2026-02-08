@@ -5,6 +5,8 @@ use axum::{
         State, WebSocketUpgrade,
     },
     response::Response,
+    routing::get,
+    Router,
 };
 use deadpool_redis::redis::AsyncTypedCommands;
 use serde::{Deserialize, Serialize};
@@ -16,7 +18,7 @@ struct ChartPayload {
     payload: Option<MqttPayloadWithId>,
 }
 
-pub async fn chart_handler(ws: WebSocketUpgrade, State(state): State<Arc<AppState>>) -> Response {
+pub async fn websocket_chart(ws: WebSocketUpgrade, State(state): State<Arc<AppState>>) -> Response {
     ws.on_upgrade(|socket| handle_chart_connection(socket, state))
 }
 
@@ -129,4 +131,8 @@ async fn get_latest_chart_history(state: &Arc<AppState>) -> Result<Vec<ChartPayl
     }
 
     Ok(chart_payloads)
+}
+
+pub fn routes() -> Router<Arc<AppState>> {
+    Router::new().route("/", get(websocket_chart))
 }

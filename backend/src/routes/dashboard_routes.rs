@@ -1,5 +1,5 @@
 use crate::AppState;
-use axum::{extract::State, http::StatusCode, response::IntoResponse};
+use axum::{extract::State, http::StatusCode, response::IntoResponse, routing::get, Router};
 use serde::Serialize;
 use sqlx::{FromRow, Postgres};
 use std::sync::Arc;
@@ -109,4 +109,8 @@ pub async fn get_dashboard_data(
     };
 
     Ok(axum::Json(response))
+}
+
+pub fn routes() -> Router<Arc<AppState>> {
+    Router::new().route("/", get(get_dashboard_data))
 }

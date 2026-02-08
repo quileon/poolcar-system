@@ -1,5 +1,5 @@
 use crate::{models::mqtt::MqttPayloadWithId, AppState};
-use axum::{extract::State, http::StatusCode, response::IntoResponse};
+use axum::{extract::State, http::StatusCode, response::IntoResponse, routing::get, Router};
 use deadpool_redis::redis::AsyncTypedCommands;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -81,4 +81,8 @@ pub async fn get_chart_history(
     }
 
     Ok(axum::Json(chart_payloads))
+}
+
+pub fn routes() -> Router<Arc<AppState>> {
+    Router::new().route("/", get(get_chart_history))
 }

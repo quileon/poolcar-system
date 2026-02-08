@@ -7,7 +7,8 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
+    routing::{get, put},
+    Json, Router,
 };
 use sqlx::Postgres;
 use std::sync::Arc;
@@ -163,4 +164,10 @@ pub async fn delete_history(
     })?;
 
     Ok(Json(deleted_history))
+}
+
+pub fn routes() -> Router<Arc<AppState>> {
+    Router::new()
+        .route("/", get(get_histories).post(create_history))
+        .route("/{history_id}", put(update_history).delete(delete_history))
 }

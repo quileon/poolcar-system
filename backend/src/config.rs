@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 
 /// Configuration type
 /// Holds required configuration values.
+#[derive(Clone)]
 pub struct Config {
     pub database_url: String,
     pub redis_url: String,
