@@ -6,13 +6,12 @@
 	import AppHeader from "$lib/components/app-header.svelte";
 	import Separator from "$lib/components/ui/separator/separator.svelte";
 	import { QueryClient, QueryClientProvider } from "@tanstack/svelte-query";
+	import { authState } from "$lib/hooks/auth.svelte";
+
+	authState.guard();
 
 	let sidebarOpen = $state(true);
 	const queryClient = new QueryClient();
-
-	function toggleSidebar() {
-		sidebarOpen = !sidebarOpen;
-	}
 
 	let { children } = $props();
 </script>
@@ -21,7 +20,7 @@
 <Sidebar.Provider bind:open={sidebarOpen}>
 	<AppSidebar variant="inset" />
 	<Sidebar.Inset>
-		<AppHeader {toggleSidebar} />
+		<AppHeader />
 		<Separator />
 		<QueryClientProvider client={queryClient}>
 			<main class="flex flex-1 flex-col gap-8 p-8">

@@ -5,16 +5,29 @@
 	import * as Card from "$lib/components/ui/card/index";
 	import Input from "$lib/components/ui/input/input.svelte";
 	import placeholderImage from "$lib/assets/placeholder.svg";
+	import { useLoginMutation } from "$lib/hooks/use-mutations";
+	import * as Alert from "$lib/components/ui/alert/index";
+	import AlertCircleIcon from "@lucide/svelte/icons/alert-circle";
 
-	let usernumber = $state("");
+	let username = $state("");
 	let password = $state("");
 	let rememberMe = $state(false);
+
+	const loginMutation = useLoginMutation();
+
+	function handleSubmit(e: Event) {
+		e.preventDefault();
+		loginMutation.mutate({
+			username,
+			password
+		});
+	}
 </script>
 
 <div class="w-full max-w-sm md:max-w-3xl">
 	<Card.Root class="p-0">
 		<Card.Content class="grid p-0 md:grid-cols-2">
-			<form class="p-6 md:p-8">
+			<form class="p-6 md:p-8" onsubmit={handleSubmit}>
 				<Field.Group>
 					<Field.Set>
 						<div class="flex flex-col items-center gap-2 text-center">
@@ -24,10 +37,10 @@
 
 						<Field.Group>
 							<Field.Field>
-								<Field.Label for="usernumber">Identity Number</Field.Label>
+								<Field.Label for="username">Identity Number</Field.Label>
 								<Input
-									id="usernumber"
-									bind:value={usernumber}
+									id="username"
+									bind:value={username}
 									type="text"
 									placeholder="Insert your identity number"
 									required
@@ -61,6 +74,18 @@
 						<Button type="submit">Login</Button>
 					</Field.Field>
 				</Field.Group>
+
+				{#if loginMutation.isError}
+					<div class="mt-8 space-y-4">
+						<Alert.Root variant="destructive">
+							<AlertCircleIcon />
+							<Alert.Title>Error Login</Alert.Title>
+							<Alert.Description>
+								<p>{loginMutation.error.message}</p>
+							</Alert.Description>
+						</Alert.Root>
+					</div>
+				{/if}
 			</form>
 			<div class="relative hidden bg-muted md:block">
 				<img
