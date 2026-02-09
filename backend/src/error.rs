@@ -13,9 +13,6 @@ pub enum AppError {
     #[error("Internal server error")]
     HashError(#[from] argon2::password_hash::Error),
 
-    #[error("Page not found")]
-    PageNotFound,
-
     #[error("Missing field")]
     MissingField,
 
@@ -42,7 +39,6 @@ impl IntoResponse for AppError {
                 eprintln!("Hashing error {:?}", error_message);
                 StatusCode::INTERNAL_SERVER_ERROR
             }
-            AppError::PageNotFound => StatusCode::NOT_FOUND,
             AppError::MissingField => StatusCode::BAD_REQUEST,
             AppError::WrongCredentials => StatusCode::UNAUTHORIZED,
             AppError::InvalidToken => StatusCode::UNAUTHORIZED,

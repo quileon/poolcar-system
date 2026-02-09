@@ -1,8 +1,5 @@
 use crate::{
-    models::{
-        contact::{Contact, ContactBody, ContactWithDetails, GetContactsResponse},
-        contact_type,
-    },
+    models::contact::{Contact, ContactBody, ContactWithDetails, GetContactsResponse},
     routes::contact_type_routes,
     types::PaginationParams,
     AppState,
