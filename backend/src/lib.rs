@@ -1,13 +1,12 @@
 mod auth_utils;
-mod chart_handler;
 pub mod config;
 mod error;
+mod handlers;
 mod middleware;
 pub mod models;
-mod mqtt_handlers;
-mod mqtt_payload_handler;
 mod routes;
 mod state;
+mod tasks;
 mod types;
 mod websocket;
 
@@ -46,14 +45,12 @@ pub fn create_app(
     // Only spawn MQTT task if mqtt_options are provided (for testing)
     if let Some(mqtt_options) = mqtt_options {
         let mqtt_state = app_state.clone();
-        tokio::spawn(
-            async move { mqtt_handlers::handle_mqtt_loop(mqtt_state, mqtt_options).await },
-        );
+        tokio::spawn(async move { tasks::mqtt::mqtt_loop(mqtt_state, mqtt_options).await });
     }
 
     // Spawn chart handler background task
     let chart_state = app_state.clone();
-    tokio::spawn(async move { chart_handler::chart_handler(chart_state).await });
+    tokio::spawn(async move { tasks::chart::chart_loop(chart_state).await });
 
     let public_routes = Router::new()
         .route("/", get(|| async { "Hello, World!" }))

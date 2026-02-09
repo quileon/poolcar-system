@@ -3,7 +3,7 @@ use deadpool_redis::redis::{self, AsyncTypedCommands};
 use std::sync::Arc;
 use tokio::time;
 
-pub async fn chart_handler(state: Arc<AppState>) {
+pub async fn chart_loop(state: Arc<AppState>) {
     let mut interval = time::interval(time::Duration::from_mins(1));
 
     loop {
