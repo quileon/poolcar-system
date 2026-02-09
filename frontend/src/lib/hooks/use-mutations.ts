@@ -3,14 +3,14 @@ import { goto } from "$app/navigation";
 import { resolve } from "$app/paths";
 import { config } from "$lib/config";
 import { type LoginResponse } from "$lib/bindings/LoginResponse";
-import { authState } from "$lib/hooks/auth.svelte";
+import { authState, authFetch } from "$lib/hooks/auth.svelte";
 
 export function useCreateTrackerMutation() {
 	const queryClient = useQueryClient();
 
 	return createMutation(() => ({
 		mutationFn: async (data: { name: string }) => {
-			const response = await fetch(`${config.apiBaseUrl}/trackers`, {
+			const response = await authFetch(`${config.apiBaseUrl}/trackers`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json"
@@ -35,7 +35,7 @@ export function useEditTrackerMutation(getTrackerId: () => number) {
 	return createMutation(() => ({
 		mutationFn: async (data: { name: string }) => {
 			const trackerId = getTrackerId();
-			const response = await fetch(`${config.apiBaseUrl}/trackers/${trackerId}`, {
+			const response = await authFetch(`${config.apiBaseUrl}/trackers/${trackerId}`, {
 				method: "PUT",
 				headers: {
 					"Content-Type": "application/json"
@@ -60,7 +60,7 @@ export function useDeleteTrackerMutation(getTrackerId: () => number) {
 	return createMutation(() => ({
 		mutationFn: async () => {
 			const trackerId = getTrackerId();
-			const response = await fetch(`${config.apiBaseUrl}/trackers/${trackerId}`, {
+			const response = await authFetch(`${config.apiBaseUrl}/trackers/${trackerId}`, {
 				method: "DELETE"
 			});
 			if (!response.ok) throw new Error("Failed to delete tracker");
@@ -78,7 +78,7 @@ export function useCreateCarTypeMutation() {
 
 	return createMutation(() => ({
 		mutationFn: async (data: { name: string }) => {
-			const response = await fetch(`${config.apiBaseUrl}/cars/types`, {
+			const response = await authFetch(`${config.apiBaseUrl}/cars/types`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json"
@@ -104,7 +104,7 @@ export function useEditCarTypeMutation(getCarTypeId: () => number) {
 	return createMutation(() => ({
 		mutationFn: async (data: { name: string }) => {
 			const carTypeId = getCarTypeId();
-			const response = await fetch(`${config.apiBaseUrl}/cars/types/${carTypeId}`, {
+			const response = await authFetch(`${config.apiBaseUrl}/cars/types/${carTypeId}`, {
 				method: "PUT",
 				headers: {
 					"Content-Type": "application/json"
@@ -129,7 +129,7 @@ export function useDeleteCarTypeMutation(getCarTypeId: () => number) {
 	return createMutation(() => ({
 		mutationFn: async () => {
 			const carTypeId = getCarTypeId();
-			const response = await fetch(`${config.apiBaseUrl}/cars/types/${carTypeId}`, {
+			const response = await authFetch(`${config.apiBaseUrl}/cars/types/${carTypeId}`, {
 				method: "DELETE"
 			});
 			if (!response.ok) throw new Error("Failed to delete car type");
@@ -153,7 +153,7 @@ export function useCreateCarMutation() {
 			trackerId: number | null;
 			active: boolean;
 		}) => {
-			const response = await fetch(`${config.apiBaseUrl}/cars`, {
+			const response = await authFetch(`${config.apiBaseUrl}/cars`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json"
@@ -188,7 +188,7 @@ export function useEditCarMutation(getCarId: () => number) {
 			active: boolean;
 		}) => {
 			const carId = getCarId();
-			const response = await fetch(`${config.apiBaseUrl}/cars/${carId}`, {
+			const response = await authFetch(`${config.apiBaseUrl}/cars/${carId}`, {
 				method: "PUT",
 				headers: {
 					"Content-Type": "application/json"
@@ -217,7 +217,7 @@ export function useDeleteCarMutation(getCarId: () => number) {
 	return createMutation(() => ({
 		mutationFn: async () => {
 			const carId = getCarId();
-			const response = await fetch(`${config.apiBaseUrl}/cars/${carId}`, {
+			const response = await authFetch(`${config.apiBaseUrl}/cars/${carId}`, {
 				method: "DELETE"
 			});
 			if (!response.ok) {

@@ -43,3 +43,26 @@ class AuthState {
 }
 
 export const authState = new AuthState();
+
+/**
+ * Authenticated fetch wrapper.
+ * - Injects `Authorization: Bearer <token>` header into request.
+ * - On 401 responses, automatically logs out and redirects to login.
+ */
+export async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+	const headers = new Headers(init?.headers);
+
+	const token = authState.token;
+	if (token) {
+		headers.set("Authorization", `Bearer ${token}`);
+	}
+
+	const response = await fetch(input, { ...init, headers });
+
+	if (response.status === 401) {
+		authState.logout();
+		throw new Error("Unauthorized");
+	}
+
+	return response;
+}
