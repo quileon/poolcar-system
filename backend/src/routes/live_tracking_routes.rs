@@ -1,11 +1,11 @@
-use crate::{models::mqtt::MqttPayloadWithId, AppState};
-use axum::{extract::State, http::StatusCode, response::IntoResponse, routing::get, Router};
+use crate::{error::AppError, models::mqtt::MqttPayloadWithId, AppState};
+use axum::{extract::State, response::IntoResponse, routing::get, Router};
 use deadpool_redis::redis::AsyncTypedCommands;
 use std::sync::Arc;
 
-pub async fn get_live_tracking_history(
+pub async fn get_mqtt_payload_history(
     State(state): State<Arc<AppState>>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
+) -> Result<impl IntoResponse, AppError> {
     let tracker_ids: Vec<i32> = sqlx::query_scalar(
         r#"
             SELECT tracker_id
@@ -15,45 +15,16 @@ pub async fn get_live_tracking_history(
         "#,
     )
     .fetch_all(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Failed to fetch tracker IDs: {}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Failed to fetch tracker IDs: {}", e),
-        )
-    })?;
+    .await?;
 
-    let mut conn = state.redis.get().await.map_err(|e| {
-        eprintln!("Failed to get Redis connection: {}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Failed to get Redis connection: {}", e),
-        )
-    })?;
-
+    let mut conn = state.redis.get().await?;
     let mut tracker_payloads: Vec<MqttPayloadWithId> = Vec::new();
 
     for tracker_id in tracker_ids {
-        let tracker_payload = conn
-            .get(format!("tracker:{}:live", tracker_id))
-            .await
-            .map_err(|e| {
-                eprintln!("Failed to get tracker payload from Redis: {}", e);
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Failed to get tracker payload from Redis: {}", e),
-                )
-            })?;
+        let tracker_payload = conn.get(format!("tracker:{}:live", tracker_id)).await?;
 
         if let Some(payload_json) = tracker_payload {
-            let payload: MqttPayloadWithId = serde_json::from_str(&payload_json).map_err(|e| {
-                eprintln!("Failed to parse tracker payload: {}", e);
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Failed to parse tracker payload: {}", e),
-                )
-            })?;
+            let payload: MqttPayloadWithId = serde_json::from_str(&payload_json)?;
             tracker_payloads.push(payload);
         }
     }
@@ -62,5 +33,5 @@ pub async fn get_live_tracking_history(
 }
 
 pub fn routes() -> Router<Arc<AppState>> {
-    Router::new().route("/", get(get_live_tracking_history))
+    Router::new().route("/", get(get_mqtt_payload_history))
 }
