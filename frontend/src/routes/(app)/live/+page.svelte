@@ -1,11 +1,10 @@
 <script lang="ts">
-	import type L from "leaflet";
 	import "leaflet/dist/leaflet.css";
 	import chroma from "chroma-js";
 	import { LiveData } from "$lib/hooks/socket.svelte";
-	import type { TrackerPayloadWithId } from "$lib/bindings/TrackerPayloadWithId";
+	import { LeafletMap } from "$lib/hooks/leaflet-map.svelte";
+	import type { MqttPayloadWithId } from "$lib/bindings/MqttPayloadWithId";
 	import { config } from "$lib/config";
-	import { getCarIcon, getTruckIcon, panToMarker, updateMarker } from "$lib/utils/map";
 	import { onMount } from "svelte";
 	import * as Select from "$lib/components/ui/select/index";
 	import { useSidebar } from "$lib/components/ui/sidebar/context.svelte";
@@ -16,157 +15,104 @@
 	import Button from "$lib/components/ui/button/button.svelte";
 	import { useTrackersQuery } from "$lib/hooks/use-reference-queries";
 
-	const initialCoordinates = { lat: -6.382310833, lng: 107.1725405 };
-	const trackerData = new LiveData<TrackerPayloadWithId>(`${config.wsBaseUrl}/live`);
+	const GEOAPIFY_API_KEY = "e0f80f7132454023b038a039b4d8c962";
+	const initialCoordinates: [number, number] = [-6.382310833, 107.1725405];
+
+	const trackerData = new LiveData<MqttPayloadWithId>(`${config.wsBaseUrl}/live`);
+	const leaflet = new LeafletMap();
 	const sidebar = useSidebar();
 	const colors = chroma.scale(["#fafa6e", "#2a4a58"]).mode("lch").colors(10);
+
 	const trackersQuery = useTrackersQuery();
+
 	let mapElement: HTMLElement;
-	let map: L.Map;
-	let L_module: typeof import("leaflet");
-	let trackerMarkerList: { [id: number]: L.Marker } = {};
 	let focusId = $state<string | undefined>(undefined);
 	let focusMap = $state<boolean>(false);
-	const focus = $derived({
-		map: focusMap,
-		id: focusId ? parseInt(focusId, 10) : null
-	});
 
-	// Set focusMap to true when focusId changes
-	$effect(() => {
-		if (focusId !== undefined) {
-			focusMap = true;
-		}
-	});
-
-	// Pan to marker when focusMap becomes true
-	$effect(() => {
-		if (focusMap && focus.id && map && trackerMarkerList[focus.id]) {
-			const marker = trackerMarkerList[focus.id];
-			const position = marker.getLatLng();
-			map.panTo(position);
-		}
-	});
-
-	function enableFocus() {
-		focusMap = true;
-	}
+	const focusParsedId = $derived(focusId ? parseInt(focusId, 10) : null);
 
 	const trackerTrigger = $derived(
 		trackersQuery.data?.trackers.find((tracker) => tracker.tracker_id.toString() === focusId)
 			?.name ?? "Select Tracker to View"
 	);
 
-	// Map initialization - runs once on mount
+	// Auto-enable focus when a tracker is selected
+	$effect(() => {
+		if (focusId !== undefined) {
+			focusMap = true;
+		}
+	});
+
+	// Leaflet Initialization
 	onMount(() => {
-		import("leaflet").then((module) => {
-			const L = module.default;
-			L_module = L;
-
-			const homeIcon = L.icon({
-				iconUrl:
-					"https://api.geoapify.com/v2/icon/?type=circle&color=%230083ff&size=36&icon=home&iconType=awesome&contentSize=15&scaleFactor=2&apiKey=e0f80f7132454023b038a039b4d8c962",
-				iconSize: [42, 42],
-				iconAnchor: [21, 21],
-				popupAnchor: [0, -15]
-			});
-
-			// Map Initialization
-			map = L.map(mapElement, { preferCanvas: true }).setView(initialCoordinates, 13);
-
-			L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-				attribution:
-					'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-			}).addTo(map);
-			L.marker(initialCoordinates, { icon: homeIcon }).addTo(map);
-
-			setTimeout(() => {
-				map.invalidateSize();
-			}, 100);
-
-			map.on("dragstart", () => {
+		leaflet.init(mapElement, {
+			center: initialCoordinates,
+			zoom: 13,
+			onDragStart: () => {
 				focusMap = false;
-			});
+			}
 		});
 
-		// Cleanup on unmount
-		return () => {
-			if (map) {
-				map.remove();
-			}
-		};
+		return () => leaflet.destroy();
 	});
 
-	// Invalidate map size when sidebar state changes
+	// After Leaflet Initialization - Home Marker
 	$effect(() => {
-		// Track sidebar state to make this reactive
+		if (!leaflet.ready) return;
+
+		const homeIcon = leaflet.createIcon({
+			iconUrl: `https://api.geoapify.com/v2/icon/?type=circle&color=%230083ff&size=36&icon=home&iconType=awesome&contentSize=15&scaleFactor=2&apiKey=${GEOAPIFY_API_KEY}`,
+			iconSize: [42, 42],
+			iconAnchor: [21, 21],
+			popupAnchor: [0, -15]
+		});
+		leaflet.addStaticMarker(initialCoordinates[0], initialCoordinates[1], homeIcon);
+	});
+
+	// After Leaflet Initialization - Sidebar Resize Handling
+	$effect(() => {
+		// Track sidebar state to re-run on change
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		const sidebarState = sidebar.state;
+		const _sidebarState = sidebar.state;
 
-		if (map) {
-			setTimeout(() => {
-				map.invalidateSize();
-			}, 300);
+		if (leaflet.ready) {
+			setTimeout(() => leaflet.invalidateSize(), 300);
 		}
 	});
 
-	// WebSocket
+	// After Leaflet Initialization - WebSocket
 	$effect(() => {
-		// Clone `trackerData.current`
-		const currentData = { ...trackerData.current };
+		if (!leaflet.ready) return;
 
-		if (!currentData || !map || !L_module) {
-			console.warn("Exiting early: missing deps");
+		const currentData = trackerData.current;
+		if (!currentData?.location?.latitude || !currentData?.location?.longitude || !currentData?.id) {
 			return;
 		}
-		if (!currentData.location) {
-			console.warn("Exiting early: no location");
-			return;
-		}
-		if (
-			!currentData.location.longitude ||
-			!currentData.location.latitude ||
-			!currentData.id ||
-			!trackersQuery.data
-		) {
-			console.warn("Exiting early: missing location data or query", {
-				lng: currentData.location.longitude,
-				lat: currentData.location.latitude,
-				id: currentData.id,
-				queryData: !!trackersQuery.data
-			});
-			return;
-		}
+		if (!trackersQuery.data) return;
 
-		const tracker = trackerMarkerList[currentData.id];
-		const trackerDetails = trackersQuery.data.trackers.find((t) => t.tracker_id === currentData.id);
+		const id = currentData.id;
+		const latitude = currentData.location.latitude;
+		const longitude = currentData.location.longitude;
+		if (!id || !latitude || !longitude) return;
 
-		if (!trackerDetails) {
-			console.log("Exiting early: no tracker details");
-			return;
-		}
+		const trackerDetails = trackersQuery.data.trackers.find((t) => t.tracker_id === id);
+		if (!trackerDetails) return;
 
-		const icon =
-			trackerDetails.car_type_name === "Passenger"
-				? getCarIcon(L_module, colors, currentData.id)
-				: trackerDetails.car_type_name === "Truck"
-					? getTruckIcon(L_module, colors, currentData.id)
-					: getCarIcon(L_module, colors, currentData.id); // Default to car icon
+		const iconColor = colors[id % colors.length]?.replace("#", "%23");
+		const iconName = trackerDetails.car_type_name === "Truck" ? "truck" : "car";
+		const icon = leaflet.createIcon({
+			iconUrl: `https://api.geoapify.com/v2/icon/?type=material&color=${iconColor}&size=42&icon=${iconName}&iconType=awesome&contentSize=15&scaleFactor=2&apiKey=${GEOAPIFY_API_KEY}`,
+			iconSize: [31, 46],
+			iconAnchor: [15.5, 42],
+			popupAnchor: [0, -40]
+		});
 
-		if (tracker) {
-			// Update existing marker
-			if (focus.map && focus.id === currentData.id) {
-				panToMarker(map, tracker, currentData.location.latitude, currentData.location.longitude);
-			} else {
-				updateMarker(tracker, currentData.location.latitude, currentData.location.longitude);
-			}
+		const shouldPan = focusMap && focusParsedId === id;
+
+		if (shouldPan) {
+			leaflet.upsertMarkerAndPan(id, latitude, longitude, icon);
 		} else {
-			const marker = L_module.marker(
-				[currentData.location.latitude, currentData.location.longitude],
-				{ icon }
-			);
-			trackerMarkerList[currentData.id] = marker;
-			marker.addTo(map);
+			leaflet.upsertMarker(id, latitude, longitude, icon);
 		}
 	});
 </script>
@@ -181,7 +127,7 @@
 				<Select.Content>
 					<Select.Group>
 						<Select.Label>Trackers</Select.Label>
-						{#each trackersQuery.data?.trackers as tracker (tracker.tracker_id)}
+						{#each trackersQuery.data?.trackers ?? [] as tracker (tracker.tracker_id)}
 							<Select.Item value={tracker.tracker_id.toString()}>
 								{tracker.name}
 								{#if tracker.car_type_name}({tracker.car_name}){/if}
@@ -196,8 +142,17 @@
 				aria-label="Focus"
 				size="icon"
 				variant={focusMap ? "default" : "outline"}
-				disabled={!focus.id}
-				onclick={enableFocus}
+				disabled={!focusParsedId}
+				onclick={() => {
+					focusMap = true;
+					if (focusParsedId) {
+						const marker = leaflet.getMarker(focusParsedId);
+						if (marker) {
+							const pos = marker.getLatLng();
+							leaflet.panTo(pos.lat, pos.lng);
+						}
+					}
+				}}
 			>
 				<FocusIcon />
 			</Button>
