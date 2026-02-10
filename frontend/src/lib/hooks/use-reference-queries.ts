@@ -40,10 +40,10 @@ export function useCarsQuery() {
 }
 
 export function useMqttPayloadHistoriesQuery() {
-	return createQuery<GetMqttPayloadHistory>(() => ({
+	return createQuery<GetMqttPayloadHistory[]>(() => ({
 		queryKey: ["mqtt-payload-histories"],
 		queryFn: async () => {
-			const response = await authFetch(`${config.apiBaseUrl}/`);
+			const response = await authFetch(`${config.apiBaseUrl}/live`);
 			if (!response.ok) throw new Error("Failed to fetch MQTT payload histories");
 			return response.json();
 		}
