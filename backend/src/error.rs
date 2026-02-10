@@ -8,7 +8,16 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum AppError {
     #[error("Internal server error")]
-    Database(#[from] sqlx::Error),
+    DatabaseError(#[from] sqlx::Error),
+
+    #[error("Internal server error")]
+    RedisPoolError(#[from] deadpool_redis::PoolError),
+
+    #[error("Internal server error")]
+    RedisError(#[from] deadpool_redis::redis::RedisError),
+
+    #[error("Internal server error")]
+    ParseJsonError(#[from] serde_json::Error),
 
     #[error("Internal server error")]
     HashError(#[from] argon2::password_hash::Error),
@@ -31,8 +40,20 @@ impl IntoResponse for AppError {
         let message = self.to_string();
 
         let status = match &self {
-            AppError::Database(error_message) => {
+            AppError::DatabaseError(error_message) => {
                 eprintln!("Database error: {:?}", error_message);
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
+            AppError::RedisPoolError(error_message) => {
+                eprintln!("Redis error: {:?}", error_message);
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
+            AppError::RedisError(error_message) => {
+                eprintln!("Redis error: {:?}", error_message);
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
+            AppError::ParseJsonError(error_message) => {
+                eprintln!("JSON parsing error: {:?}", error_message);
                 StatusCode::INTERNAL_SERVER_ERROR
             }
             AppError::HashError(error_message) => {
