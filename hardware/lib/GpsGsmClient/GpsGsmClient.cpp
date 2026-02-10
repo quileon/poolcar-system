@@ -65,7 +65,7 @@ JsonDocument &GpsGsmClient::toJsonDocument()
         this->jsonDoc["datetime"]["day"] = day;
         this->jsonDoc["datetime"]["hour"] = hour;
         this->jsonDoc["datetime"]["minute"] = minute;
-        this->jsonDoc["datetime"]["seconnd"] = second;
+        this->jsonDoc["datetime"]["second"] = second;
         this->jsonDoc["datetime"]["centisecond"] = 0;
         this->jsonDoc["datetime"]["age"] = nullptr;
         this->jsonDoc["datetime"]["valid"] = true;
