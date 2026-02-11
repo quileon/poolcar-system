@@ -1,4 +1,5 @@
 use crate::{
+    error::AppError,
     models::contact_type::{
         ContactType, ContactTypeBody, ContactTypeWithCount, GetContactTypesResponse,
     },
@@ -7,18 +8,16 @@ use crate::{
 };
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
     response::IntoResponse,
     routing::{get, put},
     Json, Router,
 };
-use sqlx::Postgres;
 use std::sync::Arc;
 
 pub async fn get_contact_types(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PaginationParams>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
+) -> Result<impl IntoResponse, AppError> {
     let page = params.page.unwrap_or(1);
     let limit = params.limit.unwrap_or(5);
 
@@ -26,7 +25,8 @@ pub async fn get_contact_types(
     let limit = if limit < 1 { 1 } else { limit };
     let offset = (page - 1) * 5;
 
-    let contact_types = sqlx::query_as::<Postgres, ContactTypeWithCount>(
+    let contact_types = sqlx::query_as!(
+        ContactTypeWithCount,
         r#"
             SELECT
                 contact_types.contact_type_id,
@@ -39,18 +39,11 @@ pub async fn get_contact_types(
             ORDER BY contact_types.contact_type_id ASC
             LIMIT $1 OFFSET $2
         "#,
+        limit as i64,
+        offset as i64
     )
-    .bind(limit as i64)
-    .bind(offset as i64)
     .fetch_all(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Database error: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Database error: {}", e),
-        )
-    })?;
+    .await?;
 
     let response = GetContactTypesResponse {
         contact_type_count: contact_types.len(),
@@ -63,24 +56,18 @@ pub async fn get_contact_types(
 pub async fn create_contact_type(
     State(state): State<Arc<AppState>>,
     Json(contact_type): Json<ContactTypeBody>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let created_contact_type = sqlx::query_as::<Postgres, ContactType>(
+) -> Result<impl IntoResponse, AppError> {
+    let created_contact_type = sqlx::query_as!(
+        ContactType,
         r#"
             INSERT INTO contact_types (name)
             VALUES ($1)
             RETURNING contact_type_id, name
         "#,
+        contact_type.name
     )
-    .bind(contact_type.name)
     .fetch_one(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Database error: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Database error: {}", e),
-        )
-    })?;
+    .await?;
 
     Ok(Json(created_contact_type))
 }
@@ -89,26 +76,20 @@ pub async fn update_contact_type(
     State(state): State<Arc<AppState>>,
     Path(contact_type_id): Path<i32>,
     Json(contact_type): Json<ContactTypeBody>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let updated_contact_type = sqlx::query_as::<Postgres, ContactType>(
+) -> Result<impl IntoResponse, AppError> {
+    let updated_contact_type = sqlx::query_as!(
+        ContactType,
         r#"
             UPDATE contact_types
             SET name = $2
             WHERE contact_type_id = $1
             RETURNING contact_type_id, name
         "#,
+        contact_type_id,
+        contact_type.name
     )
-    .bind(contact_type_id)
-    .bind(contact_type.name)
     .fetch_one(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Database error: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Database error: {}", e),
-        )
-    })?;
+    .await?;
 
     Ok(Json(updated_contact_type))
 }
@@ -116,25 +97,19 @@ pub async fn update_contact_type(
 pub async fn delete_contact_type(
     State(state): State<Arc<AppState>>,
     Path(contact_type_id): Path<i32>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let delete_contact_type = sqlx::query_as::<Postgres, ContactType>(
+) -> Result<impl IntoResponse, AppError> {
+    let delete_contact_type = sqlx::query_as!(
+        ContactType,
         r#"
             UPDATE contact_types
             SET deleted_at = NOW()
             WHERE contact_type_id = $1
             RETURNING contact_type_id, name
         "#,
+        contact_type_id,
     )
-    .bind(contact_type_id)
     .fetch_one(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Database error: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Database error: {}", e),
-        )
-    })?;
+    .await?;
 
     Ok(Json(delete_contact_type))
 }

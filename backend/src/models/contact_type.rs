@@ -14,7 +14,7 @@ pub struct ContactType {
 pub struct ContactTypeWithCount {
     pub contact_type_id: i32,
     pub name: String,
-    pub contact_count: i64,
+    pub contact_count: Option<i64>,
 }
 
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
