@@ -1,15 +1,17 @@
 use crate::{
     error::AppError,
     models::contact_type::{
-        ContactType, ContactTypeBody, ContactTypeWithCount, GetContactTypesResponse,
+        ContactType, ContactTypeBody, ContactTypeExport, ContactTypeWithCount,
+        GetContactTypesResponse,
     },
     types::PaginationParams,
     AppState,
 };
 use axum::{
     extract::{Path, Query, State},
+    http::StatusCode,
     response::IntoResponse,
-    routing::{get, put},
+    routing::get,
     Json, Router,
 };
 use std::sync::Arc;
@@ -51,6 +53,98 @@ pub async fn get_contact_types(
     };
 
     Ok(Json(response))
+}
+
+pub async fn get_contact_type(
+    State(state): State<Arc<AppState>>,
+    Path(contact_type_id): Path<i32>,
+) -> Result<impl IntoResponse, AppError> {
+    let contact_type = sqlx::query_as!(
+        ContactTypeWithCount,
+        r#"
+            SELECT
+                contact_types.contact_type_id,
+                contact_types.name,
+                COUNT(contacts.contact_id) as contact_count
+            FROM contact_types
+            LEFT JOIN contacts ON contact_types.contact_type_id = contacts.contact_type_id
+            WHERE contact_types.deleted_at IS NULL
+            AND contact_types.contact_type_id = $1
+            GROUP BY contact_types.contact_type_id, contact_types.name
+            ORDER BY contact_types.contact_type_id ASC
+        "#,
+        contact_type_id
+    )
+    .fetch_one(&state.db)
+    .await?;
+
+    Ok(axum::Json(contact_type))
+}
+
+pub async fn export_contact_types(
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, AppError> {
+    let contact_types = sqlx::query_as!(
+        ContactTypeExport,
+        r#"
+            SELECT
+                contact_types.contact_type_id,
+                contact_types.name,
+                COUNT(contacts.contact_id) as contact_count,
+                contact_types.created_at,
+                contact_types.updated_at,
+                contact_types.deleted_at
+            FROM contact_types
+            LEFT JOIN contacts ON contact_types.contact_type_id = contacts.contact_type_id
+            GROUP BY contact_types.contact_type_id, contact_types.name
+            ORDER BY contact_types.contact_type_id ASC
+        "#,
+    )
+    .fetch_all(&state.db)
+    .await?;
+
+    let mut csv_buffer = Vec::new();
+    {
+        let mut writer = csv::Writer::from_writer(&mut csv_buffer);
+        writer.write_record(&[
+            "Contact Type ID",
+            "Name",
+            "Contact Count",
+            "Created At",
+            "Updated At",
+            "Deleted At",
+        ])?;
+
+        for contact_type in contact_types {
+            writer.write_record(&[
+                contact_type.contact_type_id.to_string(),
+                contact_type.name,
+                contact_type
+                    .contact_count
+                    .map(|count| count.to_string())
+                    .unwrap_or_default(),
+                contact_type.created_at.to_string(),
+                contact_type.updated_at.to_string(),
+                contact_type
+                    .deleted_at
+                    .map(|date| date.to_string())
+                    .unwrap_or_default(),
+            ])?;
+        }
+        writer.flush()?;
+    }
+
+    Ok((
+        StatusCode::OK,
+        [
+            ("Content-Type", "text/csv"),
+            (
+                "Content-Disposition",
+                "attachment; filename=\"contact_types.csv\"",
+            ),
+        ],
+        csv_buffer,
+    ))
 }
 
 pub async fn create_contact_type(
@@ -117,8 +211,11 @@ pub async fn delete_contact_type(
 pub fn routes() -> Router<Arc<AppState>> {
     Router::new()
         .route("/", get(get_contact_types).post(create_contact_type))
+        .route("/export", get(export_contact_types))
         .route(
             "/{contact_type_id}",
-            put(update_contact_type).delete(delete_contact_type),
+            get(get_contact_type)
+                .put(update_contact_type)
+                .delete(delete_contact_type),
         )
 }
