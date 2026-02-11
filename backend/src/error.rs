@@ -8,7 +8,7 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum AppError {
     #[error("Internal server error")]
-    DatabaseError(#[from] sqlx::Error),
+    DatabaseError(sqlx::Error),
 
     #[error("Internal server error")]
     RedisPoolError(#[from] deadpool_redis::PoolError),
@@ -17,10 +17,16 @@ pub enum AppError {
     RedisError(#[from] deadpool_redis::redis::RedisError),
 
     #[error("Internal server error")]
+    CsvError(#[from] csv::Error),
+
+    #[error("Internal server error")]
     ParseJsonError(#[from] serde_json::Error),
 
     #[error("Internal server error")]
     HashError(#[from] argon2::password_hash::Error),
+
+    #[error("Internal server error")]
+    StdIoError(#[from] std::io::Error),
 
     #[error("Missing field")]
     MissingField,
@@ -33,6 +39,18 @@ pub enum AppError {
 
     #[error("Internal server error")]
     EncodingError,
+
+    #[error("Not found")]
+    NotFound,
+}
+
+impl From<sqlx::Error> for AppError {
+    fn from(e: sqlx::Error) -> Self {
+        match e {
+            sqlx::Error::RowNotFound => AppError::NotFound,
+            other => AppError::DatabaseError(other),
+        }
+    }
 }
 
 impl IntoResponse for AppError {
@@ -52,6 +70,10 @@ impl IntoResponse for AppError {
                 eprintln!("Redis error: {:?}", error_message);
                 StatusCode::INTERNAL_SERVER_ERROR
             }
+            AppError::CsvError(error_message) => {
+                eprintln!("CSV error: {:?}", error_message);
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
             AppError::ParseJsonError(error_message) => {
                 eprintln!("JSON parsing error: {:?}", error_message);
                 StatusCode::INTERNAL_SERVER_ERROR
@@ -60,10 +82,15 @@ impl IntoResponse for AppError {
                 eprintln!("Hashing error {:?}", error_message);
                 StatusCode::INTERNAL_SERVER_ERROR
             }
+            AppError::StdIoError(error_message) => {
+                eprintln!("Standard input error {:?}", error_message);
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
             AppError::MissingField => StatusCode::BAD_REQUEST,
             AppError::WrongCredentials => StatusCode::UNAUTHORIZED,
             AppError::InvalidToken => StatusCode::UNAUTHORIZED,
             AppError::EncodingError => StatusCode::INTERNAL_SERVER_ERROR,
+            AppError::NotFound => StatusCode::NOT_FOUND,
         };
 
         (status, message).into_response()
