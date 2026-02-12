@@ -1,12 +1,13 @@
 use crate::{
     auth_utils,
     error::AppError,
-    models::user::{User, UserBody, UserWithDetails},
+    models::user::{User, UserBody, UserWithDetails, UsersExport},
     types::PaginationParams,
     AppState,
 };
 use axum::{
     extract::{Path, Query, State},
+    http::StatusCode,
     response::IntoResponse,
     routing::get,
     Json, Router,
@@ -173,9 +174,77 @@ pub async fn delete_user(
     Ok(Json(deleted_user))
 }
 
+pub async fn export_users(
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, AppError> {
+    let users = sqlx::query_as!(
+        UsersExport,
+        r#"
+            SELECT
+                users.user_id,
+                users.username,
+                users.email,
+                users.full_name,
+                users.user_role_id,
+                user_roles.name AS user_role_name,
+                users.created_at,
+                users.updated_at,
+                users.deleted_at
+            FROM users
+            LEFT JOIN user_roles ON users.user_role_id = user_roles.user_role_id
+            ORDER BY users.user_id ASC
+        "#,
+    )
+    .fetch_all(&state.db)
+    .await?;
+
+    let mut csv_buffer = Vec::new();
+    {
+        let mut writer = csv::Writer::from_writer(&mut csv_buffer);
+        writer.write_record(&[
+            "User ID",
+            "Username",
+            "Email",
+            "Full Name",
+            "User Role ID",
+            "User Role Name",
+            "Created At",
+            "Updated At",
+            "Deleted At",
+        ])?;
+
+        for user in users {
+            writer.write_record(&[
+                user.user_id.to_string(),
+                user.username,
+                user.email,
+                user.full_name,
+                user.user_role_id.to_string(),
+                user.user_role_name,
+                user.created_at.to_string(),
+                user.updated_at.to_string(),
+                user.deleted_at
+                    .map(|date| date.to_string())
+                    .unwrap_or_default(),
+            ])?;
+        }
+        writer.flush()?;
+    }
+
+    Ok((
+        StatusCode::OK,
+        [
+            ("Content-Type", "text/csv"),
+            ("Content-Disposition", "attachment; filename=\"users.csv\""),
+        ],
+        csv_buffer,
+    ))
+}
+
 pub fn routes() -> Router<Arc<AppState>> {
     Router::new()
         .route("/", get(get_users).post(create_user))
+        .route("/export", get(export_users))
         .route(
             "/{user_id}",
             get(get_user).put(update_user).delete(delete_user),
