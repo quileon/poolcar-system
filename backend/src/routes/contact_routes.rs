@@ -85,6 +85,73 @@ pub async fn get_contact(
     Ok(axum::Json(contact))
 }
 
+pub async fn create_contact(
+    State(state): State<Arc<AppState>>,
+    Json(contact): Json<ContactBody>,
+) -> Result<impl IntoResponse, AppError> {
+    let created_contact = sqlx::query_as!(
+        Contact,
+        r#"
+            INSERT INTO contacts (name, latitude, longitude, contact_type_id)
+            VALUES ($1, $2, $3, $4)
+            RETURNING contact_id, name, latitude, longitude, contact_type_id
+        "#,
+        contact.name,
+        contact.latitude,
+        contact.longitude,
+        contact.contact_type_id
+    )
+    .fetch_one(&state.db)
+    .await?;
+
+    Ok(Json(created_contact))
+}
+
+pub async fn update_contact(
+    State(state): State<Arc<AppState>>,
+    Path(contact_id): Path<i32>,
+    Json(contact): Json<ContactBody>,
+) -> Result<impl IntoResponse, AppError> {
+    let updated_contact = sqlx::query_as!(
+        Contact,
+        r#"
+            UPDATE contacts
+            SET name = $2, latitude = $3, longitude = $4, contact_type_id = $5
+            WHERE contact_id = $1
+            RETURNING contact_id, name, latitude, longitude, contact_type_id
+        "#,
+        contact_id,
+        contact.name,
+        contact.latitude,
+        contact.longitude,
+        contact.contact_type_id,
+    )
+    .fetch_one(&state.db)
+    .await?;
+
+    Ok(Json(updated_contact))
+}
+
+pub async fn delete_contact(
+    State(state): State<Arc<AppState>>,
+    Path(contact_id): Path<i32>,
+) -> Result<impl IntoResponse, AppError> {
+    let deleted_contact = sqlx::query_as!(
+        Contact,
+        r#"
+            UPDATE contacts
+            SET deleted_at = NOW()
+            WHERE contact_id = $1
+            RETURNING contact_id, name, latitude, longitude, contact_type_id
+        "#,
+        contact_id
+    )
+    .fetch_one(&state.db)
+    .await?;
+
+    Ok(Json(deleted_contact))
+}
+
 pub async fn export_contacts(
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -155,73 +222,6 @@ pub async fn export_contacts(
         ],
         csv_buffer,
     ))
-}
-
-pub async fn create_contact(
-    State(state): State<Arc<AppState>>,
-    Json(contact): Json<ContactBody>,
-) -> Result<impl IntoResponse, AppError> {
-    let created_contact = sqlx::query_as!(
-        Contact,
-        r#"
-            INSERT INTO contacts (name, latitude, longitude, contact_type_id)
-            VALUES ($1, $2, $3, $4)
-            RETURNING contact_id, name, latitude, longitude, contact_type_id
-        "#,
-        contact.name,
-        contact.latitude,
-        contact.longitude,
-        contact.contact_type_id
-    )
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(Json(created_contact))
-}
-
-pub async fn update_contact(
-    State(state): State<Arc<AppState>>,
-    Path(contact_id): Path<i32>,
-    Json(contact): Json<ContactBody>,
-) -> Result<impl IntoResponse, AppError> {
-    let updated_contact = sqlx::query_as!(
-        Contact,
-        r#"
-            UPDATE contacts
-            SET name = $2, latitude = $3, longitude = $4, contact_type_id = $5
-            WHERE contact_id = $1
-            RETURNING contact_id, name, latitude, longitude, contact_type_id
-        "#,
-        contact_id,
-        contact.name,
-        contact.latitude,
-        contact.longitude,
-        contact.contact_type_id,
-    )
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(Json(updated_contact))
-}
-
-pub async fn delete_contact(
-    State(state): State<Arc<AppState>>,
-    Path(contact_id): Path<i32>,
-) -> Result<impl IntoResponse, AppError> {
-    let deleted_contact = sqlx::query_as!(
-        Contact,
-        r#"
-            UPDATE contacts
-            SET deleted_at = NOW()
-            WHERE contact_id = $1
-            RETURNING contact_id, name, latitude, longitude, contact_type_id
-        "#,
-        contact_id
-    )
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(Json(deleted_contact))
 }
 
 pub fn routes() -> Router<Arc<AppState>> {

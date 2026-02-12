@@ -79,6 +79,67 @@ pub async fn get_activity(
     Ok(Json(activity))
 }
 
+pub async fn create_activity(
+    State(state): State<Arc<AppState>>,
+    Json(activity): Json<ActivityBody>,
+) -> Result<impl IntoResponse, AppError> {
+    let created_activity = sqlx::query_as!(
+        Activity,
+        r#"
+            INSERT INTO activities (name)
+            VALUES ($1)
+            RETURNING activity_id, name
+        "#,
+        activity.name
+    )
+    .fetch_one(&state.db)
+    .await?;
+
+    Ok(Json(created_activity))
+}
+
+pub async fn update_activity(
+    State(state): State<Arc<AppState>>,
+    Path(activity_id): Path<i32>,
+    Json(activity): Json<ActivityBody>,
+) -> Result<impl IntoResponse, AppError> {
+    let updated_activity = sqlx::query_as!(
+        Activity,
+        r#"
+            UPDATE activities
+            SET name = $2
+            WHERE activity_id = $1
+            RETURNING activity_id, name
+        "#,
+        activity_id,
+        activity.name
+    )
+    .fetch_one(&state.db)
+    .await?;
+
+    Ok(Json(updated_activity))
+}
+
+pub async fn delete_activity(
+    State(state): State<Arc<AppState>>,
+    Path(activity_id): Path<i32>,
+) -> Result<impl IntoResponse, AppError> {
+    let deleted_activity = sqlx::query_as!(
+        Activity,
+        r#"
+            UPDATE activities
+            SET deleted_at = NOW()
+            WHERE activity_id = $1
+            RETURNING activity_id, name
+        "#,
+        activity_id
+    )
+    .fetch_one(&state.db)
+    .await?;
+
+    Ok(Json(deleted_activity))
+}
+
 pub async fn export_activities(
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -144,67 +205,6 @@ pub async fn export_activities(
         ],
         csv_buffer,
     ))
-}
-
-pub async fn create_activity(
-    State(state): State<Arc<AppState>>,
-    Json(activity): Json<ActivityBody>,
-) -> Result<impl IntoResponse, AppError> {
-    let created_activity = sqlx::query_as!(
-        Activity,
-        r#"
-            INSERT INTO activities (name)
-            VALUES ($1)
-            RETURNING activity_id, name
-        "#,
-        activity.name
-    )
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(Json(created_activity))
-}
-
-pub async fn update_activity(
-    State(state): State<Arc<AppState>>,
-    Path(activity_id): Path<i32>,
-    Json(activity): Json<ActivityBody>,
-) -> Result<impl IntoResponse, AppError> {
-    let updated_activity = sqlx::query_as!(
-        Activity,
-        r#"
-            UPDATE activities
-            SET name = $2
-            WHERE activity_id = $1
-            RETURNING activity_id, name
-        "#,
-        activity_id,
-        activity.name
-    )
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(Json(updated_activity))
-}
-
-pub async fn delete_activity(
-    State(state): State<Arc<AppState>>,
-    Path(activity_id): Path<i32>,
-) -> Result<impl IntoResponse, AppError> {
-    let deleted_activity = sqlx::query_as!(
-        Activity,
-        r#"
-            UPDATE activities
-            SET deleted_at = NOW()
-            WHERE activity_id = $1
-            RETURNING activity_id, name
-        "#,
-        activity_id
-    )
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(Json(deleted_activity))
 }
 
 pub fn routes() -> Router<Arc<AppState>> {
