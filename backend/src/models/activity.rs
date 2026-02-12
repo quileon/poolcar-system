@@ -20,7 +20,7 @@ pub struct ActivityBody {
 pub struct ActivityWithCount {
     pub activity_id: i32,
     pub name: String,
-    pub activity_count: i64,
+    pub activity_count: Option<i64>,
 }
 
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]

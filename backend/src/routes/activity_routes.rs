@@ -1,22 +1,21 @@
 use crate::{
+    error::AppError,
     models::activity::{Activity, ActivityBody, ActivityWithCount, GetActivitiesResponse},
     types::PaginationParams,
     AppState,
 };
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
     response::IntoResponse,
     routing::{get, put},
     Json, Router,
 };
-use sqlx::Postgres;
 use std::sync::Arc;
 
 pub async fn get_activities(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PaginationParams>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
+) -> Result<impl IntoResponse, AppError> {
     let page = params.page.unwrap_or(1);
     let limit = params.limit.unwrap_or(5);
 
@@ -24,7 +23,8 @@ pub async fn get_activities(
     let limit = if limit < 1 { 1 } else { limit };
     let offset = (page - 1) * 5;
 
-    let activities = sqlx::query_as::<Postgres, ActivityWithCount>(
+    let activities = sqlx::query_as!(
+        ActivityWithCount,
         r#"
             SELECT
                 activities.activity_id,
@@ -37,18 +37,11 @@ pub async fn get_activities(
             ORDER BY activities.activity_id ASC
             LIMIT $1 OFFSET $2
         "#,
+        limit as i64,
+        offset as i64
     )
-    .bind(limit as i64)
-    .bind(offset as i64)
     .fetch_all(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Database error: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Database error: {}", e),
-        )
-    })?;
+    .await?;
 
     let response = GetActivitiesResponse {
         activity_count: activities.len(),
@@ -61,24 +54,18 @@ pub async fn get_activities(
 pub async fn create_activity(
     State(state): State<Arc<AppState>>,
     Json(activity): Json<ActivityBody>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let created_activity = sqlx::query_as::<Postgres, Activity>(
+) -> Result<impl IntoResponse, AppError> {
+    let created_activity = sqlx::query_as!(
+        Activity,
         r#"
             INSERT INTO activities (name)
             VALUES ($1)
             RETURNING activity_id, name
         "#,
+        activity.name
     )
-    .bind(activity.name)
     .fetch_one(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Database error: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Database error: {}", e),
-        )
-    })?;
+    .await?;
 
     Ok(Json(created_activity))
 }
@@ -87,26 +74,20 @@ pub async fn update_activity(
     State(state): State<Arc<AppState>>,
     Path(activity_id): Path<i32>,
     Json(activity): Json<ActivityBody>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let updated_activity = sqlx::query_as::<Postgres, Activity>(
+) -> Result<impl IntoResponse, AppError> {
+    let updated_activity = sqlx::query_as!(
+        Activity,
         r#"
             UPDATE activities
             SET name = $2
             WHERE activity_id = $1
             RETURNING activity_id, name
         "#,
+        activity_id,
+        activity.name
     )
-    .bind(activity_id)
-    .bind(activity.name)
     .fetch_one(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Database error: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Database error: {}", e),
-        )
-    })?;
+    .await?;
 
     Ok(Json(updated_activity))
 }
@@ -114,25 +95,19 @@ pub async fn update_activity(
 pub async fn delete_activity(
     State(state): State<Arc<AppState>>,
     Path(activity_id): Path<i32>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let deleted_activity = sqlx::query_as::<Postgres, Activity>(
+) -> Result<impl IntoResponse, AppError> {
+    let deleted_activity = sqlx::query_as!(
+        Activity,
         r#"
             UPDATE activities
             SET deleted_at = NOW()
             WHERE activity_id = $1
             RETURNING activity_id, name
         "#,
+        activity_id
     )
-    .bind(activity_id)
     .fetch_one(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Database error: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Database error: {}", e),
-        )
-    })?;
+    .await?;
 
     Ok(Json(deleted_activity))
 }
