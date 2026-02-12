@@ -1,5 +1,5 @@
-use crate::{models::mqtt::MqttPayloadWithId, AppState};
-use axum::{extract::State, http::StatusCode, response::IntoResponse, routing::get, Router};
+use crate::{error::AppError, models::mqtt::MqttPayloadWithId, AppState};
+use axum::{extract::State, response::IntoResponse, routing::get, Router};
 use deadpool_redis::redis::AsyncTypedCommands;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -12,8 +12,8 @@ struct ChartHistoryPayload {
 
 pub async fn get_chart_history(
     State(state): State<Arc<AppState>>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let tracker_ids: Vec<i32> = sqlx::query_scalar(
+) -> Result<impl IntoResponse, AppError> {
+    let tracker_ids = sqlx::query_scalar!(
         r#"
             SELECT tracker_id
             FROM trackers
@@ -22,49 +22,22 @@ pub async fn get_chart_history(
         "#,
     )
     .fetch_all(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Failed to fetch tracker IDs: {}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Failed to fetch tracker IDs: {}", e),
-        )
-    })?;
+    .await?;
 
-    let mut conn = state.redis.get().await.map_err(|e| {
-        eprintln!("Failed to get Redis connection: {}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Failed to get Redis connection: {}", e),
-        )
-    })?;
+    let mut conn = state.redis.get().await?;
 
     let mut chart_payloads: Vec<ChartHistoryPayload> = Vec::new();
 
     for tracker_id in tracker_ids {
         let chart_history = conn
             .lrange(format!("tracker:{}:history", tracker_id), 0, -1)
-            .await
-            .map_err(|e| {
-                eprintln!("Failed to get tracker history from Redis: {}", e);
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Failed to get tracker history from Redis: {}", e),
-                )
-            })?;
+            .await?;
 
         if !chart_history.is_empty() {
             let mut payload: Vec<MqttPayloadWithId> = Vec::new();
 
             for payload_json in chart_history {
-                let parsed: MqttPayloadWithId =
-                    serde_json::from_str(&payload_json).map_err(|e| {
-                        eprintln!("Failed to parse tracker payload: {}", e);
-                        (
-                            StatusCode::INTERNAL_SERVER_ERROR,
-                            format!("Failed to parse tracker payload: {}", e),
-                        )
-                    })?;
+                let parsed: MqttPayloadWithId = serde_json::from_str(&payload_json)?;
                 payload.push(parsed);
             }
 

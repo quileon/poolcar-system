@@ -1,4 +1,5 @@
 use crate::{
+    error::AppError,
     models::car::{Car, CarBody, CarExportDetails, CarWithTracker, GetCarsResponse},
     routes::car_type_routes,
     types::PaginationParams,
@@ -17,7 +18,7 @@ use std::sync::Arc;
 pub async fn get_cars(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PaginationParams>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
+) -> Result<impl IntoResponse, AppError> {
     let page = params.page.unwrap_or(1);
     let limit = params.limit.unwrap_or(5);
 
@@ -25,7 +26,8 @@ pub async fn get_cars(
     let limit = if limit < 1 { 1 } else { limit };
     let offset = (page - 1) * 5;
 
-    let cars = sqlx::query_as::<Postgres, CarWithTracker>(
+    let cars = sqlx::query_as!(
+        CarWithTracker,
         r#"
             SELECT
                 cars.car_id,
@@ -43,18 +45,11 @@ pub async fn get_cars(
             ORDER BY cars.car_id ASC
             LIMIT $1 OFFSET $2
         "#,
+        limit as i64,
+        offset as i64,
     )
-    .bind(limit as i64)
-    .bind(offset as i64)
     .fetch_all(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Database error: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Database error: {}", e),
-        )
-    })?;
+    .await?;
 
     let response = GetCarsResponse {
         car_count: cars.len(),
@@ -67,8 +62,9 @@ pub async fn get_cars(
 pub async fn get_car(
     State(state): State<Arc<AppState>>,
     Path(car_id): Path<i32>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let car = sqlx::query_as::<Postgres, CarWithTracker>(
+) -> Result<impl IntoResponse, AppError> {
+    let car = sqlx::query_as!(
+        CarWithTracker,
         r#"
             SELECT
                 cars.car_id,
@@ -84,17 +80,10 @@ pub async fn get_car(
             LEFT JOIN trackers ON cars.tracker_id = trackers.tracker_id
             WHERE cars.car_id = $1 AND cars.deleted_at IS NULL
         "#,
+        car_id
     )
-    .bind(car_id)
     .fetch_one(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Database error: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Database error: {}", e),
-        )
-    })?;
+    .await?;
 
     Ok(axum::Json(car))
 }
@@ -102,28 +91,22 @@ pub async fn get_car(
 pub async fn create_car(
     State(state): State<Arc<AppState>>,
     Json(car): Json<CarBody>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let created_car = sqlx::query_as::<Postgres, Car>(
+) -> Result<impl IntoResponse, AppError> {
+    let created_car = sqlx::query_as!(
+        Car,
         r#"
             INSERT INTO cars (name, police_number, active, car_type_id, tracker_id)
             VALUES ($1, $2, $3, $4, $5)
             RETURNING car_id, name, police_number, active, car_type_id, tracker_id
         "#,
+        car.name,
+        car.police_number,
+        car.active,
+        car.car_type_id,
+        car.tracker_id,
     )
-    .bind(car.name)
-    .bind(car.police_number)
-    .bind(car.active)
-    .bind(car.car_type_id)
-    .bind(car.tracker_id)
     .fetch_one(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Database error: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Database error: {}", e),
-        )
-    })?;
+    .await?;
 
     Ok(Json(created_car))
 }
@@ -163,33 +146,28 @@ pub async fn update_car(
 pub async fn delete_car(
     State(state): State<Arc<AppState>>,
     Path(car_id): Path<i32>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let deleted_car = sqlx::query_as::<Postgres, Car>(
+) -> Result<impl IntoResponse, AppError> {
+    let deleted_car = sqlx::query_as!(
+        Car,
         r#"
             UPDATE cars
             SET deleted_at = NOW(), tracker_id = NULL
             WHERE car_id = $1
             RETURNING car_id, name, police_number, active, car_type_id, tracker_id
         "#,
+        car_id
     )
-    .bind(car_id)
     .fetch_one(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Database error: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Database error: {}", e),
-        )
-    })?;
+    .await?;
 
     Ok(Json(deleted_car))
 }
 
 pub async fn export_cars(
     State(state): State<Arc<AppState>>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let cars = sqlx::query_as::<Postgres, CarExportDetails>(
+) -> Result<impl IntoResponse, AppError> {
+    let cars = sqlx::query_as!(
+        CarExportDetails,
         r#"
             SELECT
                 cars.car_id,
@@ -210,73 +188,44 @@ pub async fn export_cars(
         "#,
     )
     .fetch_all(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Database error: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Database error: {}", e),
-        )
-    })?;
+    .await?;
 
     let mut csv_buffer = Vec::new();
     {
         let mut writer = csv::Writer::from_writer(&mut csv_buffer);
-        writer
-            .write_record(&[
-                "Car ID",
-                "Name",
-                "Police Number",
-                "Active",
-                "Car Type ID",
-                "Car Type Name",
-                "Tracker ID",
-                "Tracker Name",
-                "Created At",
-                "Updated At",
-                "Deleted At",
-            ])
-            .map_err(|e| {
-                eprintln!("CSV write error: {:?}", e);
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("CSV error: {}", e),
-                )
-            })?;
+        writer.write_record(&[
+            "Car ID",
+            "Name",
+            "Police Number",
+            "Active",
+            "Car Type ID",
+            "Car Type Name",
+            "Tracker ID",
+            "Tracker Name",
+            "Created At",
+            "Updated At",
+            "Deleted At",
+        ])?;
 
         for car in cars {
-            writer
-                .write_record(&[
-                    car.car_id.to_string(),
-                    car.name,
-                    car.police_number,
-                    car.active.to_string(),
-                    car.car_type_id.to_string(),
-                    car.car_type_name,
-                    car.tracker_id.map(|id| id.to_string()).unwrap_or_default(),
-                    car.tracker_name.unwrap_or_default(),
-                    car.created_at.to_string(),
-                    car.updated_at.to_string(),
-                    car.deleted_at
-                        .map(|date| date.to_string())
-                        .unwrap_or_default(),
-                ])
-                .map_err(|e| {
-                    eprintln!("CSV write error: {:?}", e);
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        format!("CSV error: {}", e),
-                    )
-                })?;
+            writer.write_record(&[
+                car.car_id.to_string(),
+                car.name,
+                car.police_number,
+                car.active.to_string(),
+                car.car_type_id.to_string(),
+                car.car_type_name,
+                car.tracker_id.map(|id| id.to_string()).unwrap_or_default(),
+                car.tracker_name.unwrap_or_default(),
+                car.created_at.to_string(),
+                car.updated_at.to_string(),
+                car.deleted_at
+                    .map(|date| date.to_string())
+                    .unwrap_or_default(),
+            ])?;
         }
 
-        writer.flush().map_err(|e| {
-            eprintln!("CSV flush error: {:?}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("CSV error: {}", e),
-            )
-        })?;
+        writer.flush()?;
     }
 
     Ok((

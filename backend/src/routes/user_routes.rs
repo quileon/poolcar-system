@@ -1,12 +1,3 @@
-use std::sync::Arc;
-
-use axum::{
-    extract::{Path, Query, State},
-    response::IntoResponse,
-    routing::get,
-    Json, Router,
-};
-
 use crate::{
     auth_utils,
     error::AppError,
@@ -14,6 +5,13 @@ use crate::{
     types::PaginationParams,
     AppState,
 };
+use axum::{
+    extract::{Path, Query, State},
+    response::IntoResponse,
+    routing::get,
+    Json, Router,
+};
+use std::sync::Arc;
 
 pub async fn get_users(
     State(state): State<Arc<AppState>>,

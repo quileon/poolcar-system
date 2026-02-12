@@ -1,22 +1,21 @@
 use crate::{
+    error::AppError,
     models::history::{GetHistoriesResponse, History, HistoryBody, HistoryWithDetails},
     types::PaginationParams,
     AppState,
 };
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
     response::IntoResponse,
     routing::{get, put},
     Json, Router,
 };
-use sqlx::Postgres;
 use std::sync::Arc;
 
 pub async fn get_histories(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PaginationParams>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
+) -> Result<impl IntoResponse, AppError> {
     let page = params.page.unwrap_or(1);
     let limit = params.limit.unwrap_or(5);
 
@@ -24,7 +23,8 @@ pub async fn get_histories(
     let limit = if limit < 1 { 1 } else { limit };
     let offset = (page - 1) * 5;
 
-    let histories = sqlx::query_as::<Postgres, HistoryWithDetails>(
+    let histories = sqlx::query_as!(
+        HistoryWithDetails,
         r#"
             SELECT
                 histories.history_id,
@@ -50,18 +50,11 @@ pub async fn get_histories(
             ORDER BY histories.history_id ASC
             LIMIT $1 OFFSET $2
         "#,
+        limit as i64,
+        offset as i64,
     )
-    .bind(limit as i64)
-    .bind(offset as i64)
     .fetch_all(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Database error: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Database error: {}", e),
-        )
-    })?;
+    .await?;
 
     let response = GetHistoriesResponse {
         history_count: histories.len(),
@@ -74,32 +67,26 @@ pub async fn get_histories(
 pub async fn create_history(
     State(state): State<Arc<AppState>>,
     Json(history): Json<HistoryBody>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let created_history = sqlx::query_as::<Postgres, History>(
+) -> Result<impl IntoResponse, AppError> {
+    let created_history = sqlx::query_as!(
+        History,
         r#"
             INSERT INTO histories (car_id, contact_id, activity_id, tracker_id, finished_at, started_at, finished_latitude, finished_longitude, description)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING history_id, car_id, contact_id, activity_id, tracker_id, finished_at, started_at, finished_latitude, finished_longitude, description
         "#,
+        history.car_id,
+        history.contact_id,
+        history.activity_id,
+        history.tracker_id,
+        history.finished_at,
+        history.started_at,
+        history.finished_latitude,
+        history.finished_longitude,
+        history.description
     )
-    .bind(history.car_id)
-    .bind(history.contact_id)
-    .bind(history.activity_id)
-    .bind(history.tracker_id)
-    .bind(history.finished_at)
-    .bind(history.started_at)
-    .bind(history.finished_latitude)
-    .bind(history.finished_longitude)
-    .bind(history.description)
     .fetch_one(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Database error: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Database error: {}", e),
-        )
-    })?;
+    .await?;
 
     Ok(Json(created_history))
 }
@@ -108,34 +95,28 @@ pub async fn update_history(
     State(state): State<Arc<AppState>>,
     Path(history_id): Path<i32>,
     Json(history): Json<HistoryBody>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let updated_history = sqlx::query_as::<Postgres, History>(
+) -> Result<impl IntoResponse, AppError> {
+    let updated_history = sqlx::query_as!(
+        History,
         r#"
             UPDATE histories
             SET car_id = $2, contact_id = $3, activity_id = $4, tracker_id = $5, finished_at = $6, started_at = $7, finished_latitude = $8, finished_longitude = $9, description = $10
             WHERE history_id = $1
             RETURNING history_id, car_id, contact_id, activity_id, tracker_id, finished_at, started_at, finished_latitude, finished_longitude, description
         "#,
+        history_id,
+        history.car_id,
+        history.contact_id,
+        history.activity_id,
+        history.tracker_id,
+        history.finished_at,
+        history.started_at,
+        history.finished_latitude,
+        history.finished_longitude,
+        history.description
     )
-    .bind(history_id)
-    .bind(history.car_id)
-    .bind(history.contact_id)
-    .bind(history.activity_id)
-    .bind(history.tracker_id)
-    .bind(history.finished_at)
-    .bind(history.started_at)
-    .bind(history.finished_latitude)
-    .bind(history.finished_longitude)
-    .bind(history.description)
     .fetch_one(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Database error: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Database error: {}", e),
-        )
-    })?;
+    .await?;
 
     Ok(Json(updated_history))
 }
@@ -143,25 +124,19 @@ pub async fn update_history(
 pub async fn delete_history(
     State(state): State<Arc<AppState>>,
     Path(history_id): Path<i32>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let deleted_history = sqlx::query_as::<Postgres, History>(
+) -> Result<impl IntoResponse, AppError> {
+    let deleted_history = sqlx::query_as!(
+        History,
         r#"
             UPDATE histories
             SET deleted_at = NOW()
             WHERE history_id = $1
             RETURNING history_id, car_id, contact_id, activity_id, tracker_id, finished_at, started_at, finished_latitude, finished_longitude, description
         "#,
+        history_id
     )
-    .bind(history_id)
     .fetch_one(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Database error: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Database error: {}", e),
-        )
-    })?;
+    .await?;
 
     Ok(Json(deleted_history))
 }
