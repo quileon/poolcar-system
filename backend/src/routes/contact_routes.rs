@@ -1,14 +1,17 @@
 use crate::{
     error::AppError,
-    models::contact::{Contact, ContactBody, ContactWithDetails, GetContactsResponse},
+    models::contact::{
+        Contact, ContactBody, ContactExport, ContactWithDetails, GetContactsResponse,
+    },
     routes::contact_type_routes,
     types::PaginationParams,
     AppState,
 };
 use axum::{
     extract::{Path, Query, State},
+    http::StatusCode,
     response::IntoResponse,
-    routing::{get, put},
+    routing::get,
     Json, Router,
 };
 use std::sync::Arc;
@@ -52,6 +55,106 @@ pub async fn get_contacts(
     };
 
     Ok(axum::Json(response))
+}
+
+pub async fn get_contact(
+    State(state): State<Arc<AppState>>,
+    Path(contact_id): Path<i32>,
+) -> Result<impl IntoResponse, AppError> {
+    let contact = sqlx::query_as!(
+        ContactWithDetails,
+        r#"
+            SELECT
+                contacts.contact_id,
+                contacts.name,
+                contacts.latitude,
+                contacts.longitude,
+                contact_types.contact_type_id,
+                contact_types.name AS contact_type_name
+            FROM contacts
+            LEFT JOIN contact_types ON contacts.contact_type_id = contact_types.contact_type_id
+            WHERE contacts.deleted_at IS NULL
+            AND contacts.contact_id = $1
+            ORDER BY contacts.contact_id ASC
+        "#,
+        contact_id
+    )
+    .fetch_one(&state.db)
+    .await?;
+
+    Ok(axum::Json(contact))
+}
+
+pub async fn export_contacts(
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, AppError> {
+    let contacts = sqlx::query_as!(
+        ContactExport,
+        r#"
+            SELECT
+                contacts.contact_id,
+                contacts.name,
+                contacts.latitude,
+                contacts.longitude,
+                contact_types.contact_type_id,
+                contact_types.name as contact_type_name,
+                contact_types.created_at,
+                contact_types.updated_at,
+                contact_types.deleted_at
+            FROM contacts
+            LEFT JOIN contact_types ON contacts.contact_type_id = contact_types.contact_type_id
+            WHERE contacts.deleted_at IS NULL
+            ORDER BY contacts.contact_id ASC
+        "#,
+    )
+    .fetch_all(&state.db)
+    .await?;
+
+    let mut csv_buffer = Vec::new();
+    {
+        let mut writer = csv::Writer::from_writer(&mut csv_buffer);
+        writer.write_record(&[
+            "Contact ID",
+            "Name",
+            "Latitude",
+            "Longitude",
+            "Contact Type ID",
+            "Contact Type Name",
+            "Created At",
+            "Updated At",
+            "Deleted At",
+        ])?;
+
+        for contact in contacts {
+            writer.write_record(&[
+                contact.contact_id.to_string(),
+                contact.name,
+                contact.latitude.to_string(),
+                contact.longitude.to_string(),
+                contact.contact_type_id.to_string(),
+                contact.contact_type_name,
+                contact.created_at.to_string(),
+                contact.updated_at.to_string(),
+                contact
+                    .deleted_at
+                    .map(|date| date.to_string())
+                    .unwrap_or_default(),
+            ])?;
+        }
+        writer.flush()?;
+    }
+
+    Ok((
+        StatusCode::OK,
+        [
+            ("Content-Type", "text/csv"),
+            (
+                "Content-Disposition",
+                "attachment; filename=\"contacts.csv\"",
+            ),
+        ],
+        csv_buffer,
+    ))
 }
 
 pub async fn create_contact(
@@ -124,6 +227,10 @@ pub async fn delete_contact(
 pub fn routes() -> Router<Arc<AppState>> {
     Router::new()
         .route("/", get(get_contacts).post(create_contact))
+        .route("/export", get(export_contacts))
         .nest("/types", contact_type_routes::routes())
-        .route("/{contact_id}", put(update_contact).delete(delete_contact))
+        .route(
+            "/{contact_id}",
+            get(get_contact).put(update_contact).delete(delete_contact),
+        )
 }

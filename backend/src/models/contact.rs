@@ -1,3 +1,4 @@
+use chrono::NaiveDateTime;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
@@ -44,4 +45,19 @@ pub struct ContactWithDetails {
 pub struct GetContactsResponse {
     pub contacts: Vec<ContactWithDetails>,
     pub contact_count: usize,
+}
+#[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
+#[ts(export)]
+pub struct ContactExport {
+    pub contact_id: i32,
+    pub name: String,
+    #[ts(type = "number")]
+    pub latitude: Decimal,
+    #[ts(type = "number")]
+    pub longitude: Decimal,
+    pub contact_type_id: i32,
+    pub contact_type_name: String,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+    pub deleted_at: Option<NaiveDateTime>,
 }
