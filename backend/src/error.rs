@@ -42,6 +42,9 @@ pub enum AppError {
 
     #[error("Not found")]
     NotFound,
+
+    #[error("Internal server error")]
+    Internal(String),
 }
 
 impl From<sqlx::Error> for AppError {
@@ -91,6 +94,10 @@ impl IntoResponse for AppError {
             AppError::InvalidToken => StatusCode::UNAUTHORIZED,
             AppError::EncodingError => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::NotFound => StatusCode::NOT_FOUND,
+            AppError::Internal(error_message) => {
+                eprintln!("Internal error: {:?}", error_message);
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
         };
 
         (status, message).into_response()
