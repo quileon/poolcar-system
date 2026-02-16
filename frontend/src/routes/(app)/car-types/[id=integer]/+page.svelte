@@ -5,8 +5,11 @@
 	import Input from "$lib/components/ui/input/input.svelte";
 	import Button from "$lib/components/ui/button/button.svelte";
 	import AlertCircleIcon from "@lucide/svelte/icons/alert-circle";
-	import { useCarTypeQuery } from "$lib/hooks/use-query";
-	import { useDeleteCarTypeMutation, useEditCarTypeMutation } from "$lib/hooks/use-mutations";
+	import {
+		useCarTypeQuery,
+		useDeleteCarTypeMutation,
+		useEditCarTypeMutation
+	} from "$lib/hooks/user-car-type";
 
 	const carTypeId = $derived(parseInt(page.params.id!, 10));
 

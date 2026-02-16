@@ -4,7 +4,7 @@
 	import Button from "$lib/components/ui/button/button.svelte";
 	import * as Field from "$lib/components/ui/field/index";
 	import Input from "$lib/components/ui/input/input.svelte";
-	import { useCreateCarTypeMutation } from "$lib/hooks/use-mutations";
+	import { useCreateCarTypeMutation } from "$lib/hooks/user-car-type";
 
 	let carTypeName = $state("");
 

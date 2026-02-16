@@ -6,8 +6,9 @@
 	import Checkbox from "$lib/components/ui/checkbox/checkbox.svelte";
 	import * as Alert from "$lib/components/ui/alert/index";
 	import AlertCircleIcon from "@lucide/svelte/icons/alert-circle";
-	import { useCarTypesQuery, useTrackersQuery } from "$lib/hooks/use-reference-queries";
-	import { useCreateCarMutation } from "$lib/hooks/use-mutations";
+	import { useTrackersQuery } from "$lib/hooks/use-tracker";
+	import { useCarTypesQuery } from "$lib/hooks/user-car-type";
+	import { useCreateCarMutation } from "$lib/hooks/use-car";
 
 	let carName = $state("");
 	let policeNumber = $state("");

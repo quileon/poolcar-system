@@ -6,8 +6,11 @@
 	import Input from "$lib/components/ui/input/input.svelte";
 	import Button from "$lib/components/ui/button/button.svelte";
 	import AlertCircleIcon from "@lucide/svelte/icons/alert-circle";
-	import { useTrackerQuery } from "$lib/hooks/use-query";
-	import { useDeleteTrackerMutation, useEditTrackerMutation } from "$lib/hooks/use-mutations";
+	import {
+		useDeleteTrackerMutation,
+		useEditTrackerMutation,
+		useTrackerQuery
+	} from "$lib/hooks/use-tracker";
 
 	const trackerId = $derived(parseInt(page.params.id!, 10));
 

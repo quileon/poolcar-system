@@ -8,8 +8,8 @@
 	import Button from "$lib/components/ui/button/button.svelte";
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
-	import { useCarTypesQuery } from "$lib/hooks/use-reference-queries";
 	import { config } from "$lib/config";
+	import { useCarTypesQuery } from "$lib/hooks/user-car-type";
 
 	const filters = [
 		{ label: "Active", value: "active" },

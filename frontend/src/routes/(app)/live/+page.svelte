@@ -13,7 +13,8 @@
 	import FocusIcon from "@lucide/svelte/icons/focus";
 	import * as ButtonGroup from "$lib/components/ui/button-group/index";
 	import Button from "$lib/components/ui/button/button.svelte";
-	import { useMqttPayloadHistoriesQuery, useTrackersQuery } from "$lib/hooks/use-reference-queries";
+	import { useMqttPayloadHistoriesQuery } from "$lib/hooks/use-mqtt-payload-history";
+	import { useTrackersQuery } from "$lib/hooks/use-tracker";
 
 	const GEOAPIFY_API_KEY = "e0f80f7132454023b038a039b4d8c962";
 	const initialCoordinates: [number, number] = [-6.382310833, 107.1725405];

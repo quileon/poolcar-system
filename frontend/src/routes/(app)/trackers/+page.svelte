@@ -8,7 +8,7 @@
 	import Button from "$lib/components/ui/button/button.svelte";
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
-	import { useTrackersQuery } from "$lib/hooks/use-reference-queries";
+	import { useTrackersQuery } from "$lib/hooks/use-tracker";
 	import { config } from "$lib/config";
 
 	const filters = [
