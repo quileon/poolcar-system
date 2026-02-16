@@ -2,6 +2,7 @@ use crate::{
     auth_utils,
     error::AppError,
     models::user::{User, UserBody, UserWithDetails, UsersExport},
+    routes::user_role_routes,
     types::PaginationParams,
     AppState,
 };
@@ -245,6 +246,7 @@ pub fn routes() -> Router<Arc<AppState>> {
     Router::new()
         .route("/", get(get_users).post(create_user))
         .route("/export", get(export_users))
+        .nest("/roles", user_role_routes::routes())
         .route(
             "/{user_id}",
             get(get_user).put(update_user).delete(delete_user),

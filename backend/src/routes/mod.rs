@@ -8,4 +8,5 @@ pub mod contact_type_routes;
 pub mod history_routes;
 pub mod live_tracking_routes;
 pub mod tracker_routes;
+pub mod user_role_routes;
 pub mod user_routes;
