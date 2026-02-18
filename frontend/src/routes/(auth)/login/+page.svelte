@@ -5,7 +5,7 @@
 	import * as Card from "$lib/components/ui/card/index";
 	import Input from "$lib/components/ui/input/input.svelte";
 	import placeholderImage from "$lib/assets/placeholder.svg";
-	import { useLoginMutation } from "$lib/hooks/use-mutations";
+	import { useLoginMutation } from "$lib/hooks/use-login";
 	import * as Alert from "$lib/components/ui/alert/index";
 	import AlertCircleIcon from "@lucide/svelte/icons/alert-circle";
 

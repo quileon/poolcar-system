@@ -10,7 +10,7 @@ export function useLoginMutation() {
 
 	return createMutation(() => ({
 		mutationFn: async (data: { username: string; password: string }) => {
-			const response = await fetch(`${config.apiBaseUrl}/users`, {
+			const response = await fetch(`${config.apiBaseUrl}/auth/login`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json"
