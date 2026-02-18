@@ -1,15 +1,14 @@
 use crate::{
     error::AppError,
-    models::car_type::{
-        CarType, CarTypeBody, CarTypeExportDetails, CarTypeWithCount, GetCarTypesResponse,
-    },
+    models::car_type::{CarType, CarTypeBody, CarTypeDetails, GetCarTypesResponse},
     types::PaginationParams,
     AppState,
 };
 use axum::{
     extract::{Path, Query, State},
+    http::header::{CONTENT_DISPOSITION, CONTENT_TYPE},
     response::IntoResponse,
-    routing::get,
+    routing::{get, put},
     Json, Router,
 };
 use std::sync::Arc;
@@ -26,15 +25,17 @@ pub async fn get_car_types(
     let offset = (page - 1) * 5;
 
     let car_types = sqlx::query_as!(
-        CarTypeWithCount,
+        CarTypeDetails,
         r#"
             SELECT
                 car_types.car_type_id,
                 car_types.name,
-                COUNT(cars.car_id) as car_count
+                COUNT(cars.car_id) as car_count,
+                car_types.created_at,
+                car_types.updated_at,
+                car_types.deleted_at
             FROM car_types
             LEFT JOIN cars ON car_types.car_type_id = cars.car_type_id
-            WHERE car_types.deleted_at IS NULL
             GROUP BY car_types.car_type_id, car_types.name
             ORDER BY car_types.car_type_id ASC
             LIMIT $1 OFFSET $2
@@ -58,15 +59,18 @@ pub async fn get_car_type(
     Path(car_type_id): Path<i32>,
 ) -> Result<impl IntoResponse, AppError> {
     let car_type = sqlx::query_as!(
-        CarTypeWithCount,
+        CarTypeDetails,
         r#"
             SELECT
                 car_types.car_type_id,
                 car_types.name,
-                COUNT(cars.car_id) as car_count
+                COUNT(cars.car_id) as car_count,
+                car_types.created_at,
+                car_types.updated_at,
+                car_types.deleted_at
             FROM car_types
             LEFT JOIN cars ON car_types.car_type_id = cars.car_type_id
-            WHERE car_types.car_type_id = $1 AND car_types.deleted_at IS NULL
+            WHERE car_types.car_type_id = $1
             GROUP BY car_types.car_type_id, car_types.name
         "#,
         car_type_id
@@ -86,7 +90,7 @@ pub async fn create_car_type(
         r#"
             INSERT INTO car_types (name)
             VALUES ($1)
-            RETURNING car_type_id, name
+            RETURNING car_type_id, name, created_at, updated_at, deleted_at
         "#,
         car_type.name
     )
@@ -107,7 +111,7 @@ pub async fn update_car_type(
             UPDATE car_types
             SET name = $2
             WHERE car_type_id = $1
-            RETURNING car_type_id, name
+            RETURNING car_type_id, name, created_at, updated_at, deleted_at
         "#,
         car_type_id,
         car_type.name
@@ -128,7 +132,7 @@ pub async fn delete_car_type(
             UPDATE car_types
             SET deleted_at = NOW()
             WHERE car_type_id = $1
-            RETURNING car_type_id, name
+            RETURNING car_type_id, name, created_at, updated_at, deleted_at
         "#,
         car_type_id
     )
@@ -138,11 +142,31 @@ pub async fn delete_car_type(
     Ok(Json(deleted_car_type))
 }
 
+pub async fn restore_car_type(
+    State(state): State<Arc<AppState>>,
+    Path(car_type_id): Path<i32>,
+) -> Result<impl IntoResponse, AppError> {
+    let restore_car_type = sqlx::query_as!(
+        CarType,
+        r#"
+            UPDATE car_types
+            SET deleted_at = NULL
+            WHERE car_type_id = $1
+            RETURNING car_type_id, name, created_at, updated_at, deleted_at
+        "#,
+        car_type_id
+    )
+    .fetch_one(&state.db)
+    .await?;
+
+    Ok(Json(restore_car_type))
+}
+
 pub async fn export_car_types(
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, AppError> {
     let car_types = sqlx::query_as!(
-        CarTypeExportDetails,
+        CarTypeDetails,
         r#"
             SELECT
                 car_types.car_type_id,
@@ -166,27 +190,14 @@ pub async fn export_car_types(
         writer.write_record(&[
             "Car Type ID",
             "Name",
-            "Count",
+            "Car Count",
             "Created At",
             "Updated At",
             "Deleted At",
         ])?;
 
         for car_type in car_types {
-            writer.write_record(&[
-                car_type.car_type_id.to_string(),
-                car_type.name,
-                car_type
-                    .car_count
-                    .map(|count| count.to_string())
-                    .unwrap_or_default(),
-                car_type.created_at.to_string(),
-                car_type.updated_at.to_string(),
-                car_type
-                    .deleted_at
-                    .map(|date| date.to_string())
-                    .unwrap_or_default(),
-            ])?;
+            writer.serialize(car_type)?;
         }
 
         writer.flush()?;
@@ -194,9 +205,9 @@ pub async fn export_car_types(
 
     Ok((
         [
-            ("Content-Type", "text/csv"),
+            (CONTENT_TYPE, "text/csv"),
             (
-                "Content-Disposition",
+                CONTENT_DISPOSITION,
                 "attachment; filename=\"car-types.csv\"",
             ),
         ],
@@ -214,4 +225,5 @@ pub fn routes() -> Router<Arc<AppState>> {
                 .put(update_car_type)
                 .delete(delete_car_type),
         )
+        .route("/{car_type_id}/restore", put(restore_car_type))
 }
