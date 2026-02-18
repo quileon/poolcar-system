@@ -1,5 +1,5 @@
-import type { CarWithTracker } from "$lib/bindings/CarWithTracker";
 import type { GetCarsResponse } from "$lib/bindings/GetCarsResponse";
+import type { CarDetails } from "$lib/bindings/CarDetails";
 import { createMutation, createQuery, useQueryClient } from "@tanstack/svelte-query";
 import { authFetch } from "./auth.svelte";
 import { config } from "$lib/config";
@@ -18,7 +18,7 @@ export function useCarsQuery() {
 }
 
 export function useCarQuery(getCarId: () => number) {
-	return createQuery<CarWithTracker>(() => ({
+	return createQuery<CarDetails>(() => ({
 		queryKey: ["car", getCarId()],
 		queryFn: async () => {
 			const carId = getCarId();
@@ -56,8 +56,8 @@ export function useCreateCarMutation() {
 			if (!response.ok) throw new Error("Failed to create car");
 			return response.json();
 		},
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["cars", "car-types", "trackers"] });
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ["cars"] });
 			goto(resolve("/cars"));
 		}
 	}));
@@ -92,18 +92,18 @@ export function useEditCarMutation(getCarId: () => number) {
 			return response.json();
 		},
 		onSuccess: async () => {
-			await goto(resolve("/cars"));
 			await queryClient.invalidateQueries({ queryKey: ["cars"] });
+			await goto(resolve("/cars"));
 		}
 	}));
 }
 
 export function useDeleteCarMutation(getCarId: () => number) {
 	const queryClient = useQueryClient();
+	const carId = getCarId();
 
 	return createMutation(() => ({
 		mutationFn: async () => {
-			const carId = getCarId();
 			const response = await authFetch(`${config.apiBaseUrl}/cars/${carId}`, {
 				method: "DELETE"
 			});
@@ -113,8 +113,31 @@ export function useDeleteCarMutation(getCarId: () => number) {
 			return response.json();
 		},
 		onSuccess: async () => {
-			await goto(resolve("/cars"));
 			await queryClient.invalidateQueries({ queryKey: ["cars"] });
+			await queryClient.invalidateQueries({ queryKey: ["car", carId] });
+			await goto(resolve("/cars"));
+		}
+	}));
+}
+
+export function useRestoreCarMutation(getCarId: () => number) {
+	const queryClient = useQueryClient();
+	const carId = getCarId();
+
+	return createMutation(() => ({
+		mutationFn: async () => {
+			const response = await authFetch(`${config.apiBaseUrl}/cars/${carId}/restore`, {
+				method: "PUT"
+			});
+			if (!response.ok) {
+				throw new Error("Failed to restore car");
+			}
+			return response.json();
+		},
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ["cars"] });
+			await queryClient.invalidateQueries({ queryKey: ["car", carId] });
+			await goto(resolve("/cars"));
 		}
 	}));
 }

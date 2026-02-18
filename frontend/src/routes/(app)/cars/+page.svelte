@@ -97,7 +97,7 @@
 		</Table.Header>
 		<Table.Body>
 			{#each carsQuery.data.cars as car (car.car_id)}
-				<Table.Row>
+				<Table.Row class={car.deleted_at ? "text-red-700" : ""}>
 					<Table.Cell>{car.car_id}</Table.Cell>
 					<Table.Cell>{car.name}</Table.Cell>
 					<Table.Cell>{car.police_number}</Table.Cell>

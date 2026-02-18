@@ -7,7 +7,12 @@
 	import Button from "$lib/components/ui/button/button.svelte";
 	import AlertCircleIcon from "@lucide/svelte/icons/alert-circle";
 	import { resolve } from "$app/paths";
-	import { useCarQuery, useDeleteCarMutation, useEditCarMutation } from "$lib/hooks/use-car";
+	import {
+		useCarQuery,
+		useDeleteCarMutation,
+		useEditCarMutation,
+		useRestoreCarMutation
+	} from "$lib/hooks/use-car";
 	import { useCarTypesQuery } from "$lib/hooks/user-car-type";
 	import { useTrackersQuery } from "$lib/hooks/use-tracker";
 
@@ -21,6 +26,7 @@
 	// Mutations
 	const editCarMutation = useEditCarMutation(() => carId);
 	const deleteCarMutation = useDeleteCarMutation(() => carId);
+	const restoreCarMutation = useRestoreCarMutation(() => carId);
 
 	// Form state
 	let carName = $state("");
@@ -64,6 +70,11 @@
 	function handleDelete() {
 		if (confirm(`Are you sure you want to delete "${carName}"?`)) {
 			deleteCarMutation.mutate();
+		}
+	}
+	function handleRestore() {
+		if (confirm(`Are you sure you want to restore "${carName}"?`)) {
+			restoreCarMutation.mutate();
 		}
 	}
 </script>
@@ -157,12 +168,27 @@
 						href={resolve("/cars")}>Cancel</Button
 					>
 				</div>
-				<Button
-					type="button"
-					disabled={editCarMutation.isPending || carQuery.isPending || deleteCarMutation.isPending}
-					variant="destructive"
-					onclick={handleDelete}>Delete</Button
-				>
+				<div class="flex gap-3">
+					{#if !carQuery.data?.deleted_at}
+						<Button
+							type="button"
+							disabled={editCarMutation.isPending ||
+								carQuery.isPending ||
+								deleteCarMutation.isPending}
+							variant="destructive"
+							onclick={handleDelete}>Delete</Button
+						>
+					{:else}
+						<Button
+							type="button"
+							disabled={editCarMutation.isPending ||
+								carQuery.isPending ||
+								restoreCarMutation.isPending}
+							variant="destructive"
+							onclick={handleRestore}>Restore</Button
+						>
+					{/if}
+				</div>
 			</Field.Field>
 		</Field.Group>
 	</form>
@@ -193,6 +219,16 @@
 				<Alert.Title>Error</Alert.Title>
 				<Alert.Description>
 					<p>{deleteCarMutation.error.message}</p>
+				</Alert.Description>
+			</Alert.Root>
+		{/if}
+
+		{#if restoreCarMutation.isError}
+			<Alert.Root variant="destructive">
+				<AlertCircleIcon />
+				<Alert.Title>Error</Alert.Title>
+				<Alert.Description>
+					<p>{restoreCarMutation.error.message}</p>
 				</Alert.Description>
 			</Alert.Root>
 		{/if}
