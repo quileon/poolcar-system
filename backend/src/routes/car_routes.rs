@@ -7,6 +7,7 @@ use crate::{
 };
 use axum::{
     extract::{Path, Query, State},
+    http::header::{CONTENT_DISPOSITION, CONTENT_TYPE},
     response::IntoResponse,
     routing::{get, put},
     Json, Router,
@@ -43,10 +44,9 @@ pub async fn get_cars(
             LEFT JOIN car_types ON cars.car_type_id = car_types.car_type_id
             LEFT JOIN trackers ON cars.tracker_id = trackers.tracker_id
             ORDER BY cars.car_id ASC
-            LIMIT $1 OFFSET $2
         "#,
-        limit as i64,
-        offset as i64,
+        // limit as i64,
+        // offset as i64,
     )
     .fetch_all(&state.db)
     .await?;
@@ -238,8 +238,8 @@ pub async fn export_cars(
 
     Ok((
         [
-            ("Content-Type", "text/csv"),
-            ("Content-Disposition", "attachment; filename=\"cars.csv\""),
+            (CONTENT_TYPE, "text/csv"),
+            (CONTENT_DISPOSITION, "attachment; filename=\"cars.csv\""),
         ],
         csv_buffer,
     ))

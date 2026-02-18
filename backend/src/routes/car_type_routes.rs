@@ -38,10 +38,9 @@ pub async fn get_car_types(
             LEFT JOIN cars ON car_types.car_type_id = cars.car_type_id
             GROUP BY car_types.car_type_id, car_types.name
             ORDER BY car_types.car_type_id ASC
-            LIMIT $1 OFFSET $2
         "#,
-        limit as i64,
-        offset as i64
+        // limit as i64,
+        // offset as i64
     )
     .fetch_all(&state.db)
     .await?;
