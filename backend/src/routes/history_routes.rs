@@ -242,9 +242,7 @@ pub async fn export_histories(
         ])?;
 
         for history in histories {
-            writer
-                .serialize(history)
-                .map_err(|e| AppError::Internal(e.to_string()))?;
+            writer.serialize(history)?;
         }
         writer.flush()?;
     }
