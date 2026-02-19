@@ -66,6 +66,7 @@ export function useCreateCarMutation() {
 
 export function useEditCarMutation(getCarId: () => number) {
 	const queryClient = useQueryClient();
+	const carId = getCarId();
 
 	return createMutation(() => ({
 		mutationFn: async (data: {
@@ -75,7 +76,6 @@ export function useEditCarMutation(getCarId: () => number) {
 			trackerId: number | null;
 			active: boolean;
 		}) => {
-			const carId = getCarId();
 			const response = await authFetch(`${config.apiBaseUrl}/cars/${carId}`, {
 				method: "PUT",
 				headers: {
@@ -94,6 +94,7 @@ export function useEditCarMutation(getCarId: () => number) {
 		},
 		onSuccess: async () => {
 			await queryClient.invalidateQueries({ queryKey: ["cars"] });
+			await queryClient.invalidateQueries({ queryKey: ["car", carId] });
 			await goto(resolve("/cars"));
 		}
 	}));

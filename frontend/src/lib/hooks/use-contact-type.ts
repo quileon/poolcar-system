@@ -5,9 +5,10 @@ import { authFetch } from "./auth.svelte";
 import { config } from "$lib/config";
 import { goto } from "$app/navigation";
 import { resolve } from "$app/paths";
+import type { ContactTypeDetails } from "$lib/bindings/ContactTypeDetails";
 
 export function useContactTypesQuery() {
-	return createQuery<GetContactTypesResponse[]>(() => ({
+	return createQuery<GetContactTypesResponse>(() => ({
 		queryKey: ["contact-types"],
 		queryFn: async () => {
 			const response = await authFetch(`${config.apiBaseUrl}/contacts/types`);
@@ -18,10 +19,11 @@ export function useContactTypesQuery() {
 }
 
 export function useContactTypeQuery(getContactTypeId: () => number) {
-	return createQuery<ContactTypeWithCount>(() => ({
+	const contactTypeId = getContactTypeId();
+
+	return createQuery<ContactTypeDetails>(() => ({
 		queryKey: ["contact-type", getContactTypeId()],
 		queryFn: async () => {
-			const contactTypeId = getContactTypeId();
 			const response = await authFetch(`${config.apiBaseUrl}/contacts/types/${contactTypeId}`);
 			if (!response.ok) throw new Error("Failed to fetch contact type");
 			return response.json();
@@ -47,18 +49,18 @@ export function useCreateContactTypeMutation() {
 			return response.json();
 		},
 		onSuccess: async () => {
-			await goto(resolve("/contact-types"));
 			await queryClient.invalidateQueries({ queryKey: ["contact-types"] });
+			await goto(resolve("/contact-types"));
 		}
 	}));
 }
 
 export function useEditContactTypeMutation(getContactTypeId: () => number) {
 	const queryClient = useQueryClient();
+	const contactTypeId = getContactTypeId();
 
 	return createMutation(() => ({
 		mutationFn: async (data: { name: string }) => {
-			const contactTypeId = getContactTypeId();
 			const response = await authFetch(`${config.apiBaseUrl}/contacts/types/${contactTypeId}`, {
 				method: "PUT",
 				headers: {
@@ -72,18 +74,19 @@ export function useEditContactTypeMutation(getContactTypeId: () => number) {
 			return response.json();
 		},
 		onSuccess: async () => {
-			await goto(resolve("/contact-types"));
 			await queryClient.invalidateQueries({ queryKey: ["contact-types"] });
+			await queryClient.invalidateQueries({ queryKey: ["contact-type", contactTypeId] });
+			await goto(resolve("/contact-types"));
 		}
 	}));
 }
 
 export function useDeleteContactTypeMutation(getContactTypeId: () => number) {
 	const queryClient = useQueryClient();
+	const contactTypeId = getContactTypeId();
 
 	return createMutation(() => ({
 		mutationFn: async () => {
-			const contactTypeId = getContactTypeId();
 			const response = await authFetch(`${config.apiBaseUrl}/contacts/types/${contactTypeId}`, {
 				method: "DELETE"
 			});
@@ -91,8 +94,32 @@ export function useDeleteContactTypeMutation(getContactTypeId: () => number) {
 			return response.json();
 		},
 		onSuccess: async () => {
-			await goto(resolve("/contact-types"));
 			await queryClient.invalidateQueries({ queryKey: ["contact-types"] });
+			await queryClient.invalidateQueries({ queryKey: ["contact-type", contactTypeId] });
+			await goto(resolve("/contact-types"));
+		}
+	}));
+}
+
+export function useRestoreContactTypeMutation(getContactTypeId: () => number) {
+	const queryClient = useQueryClient();
+	const contactTypeId = getContactTypeId();
+
+	return createMutation(() => ({
+		mutationFn: async () => {
+			const response = await authFetch(
+				`${config.apiBaseUrl}/contacts/types/${contactTypeId}/restore`,
+				{
+					method: "PUT"
+				}
+			);
+			if (!response.ok) throw new Error("Failed to restore contact type");
+			return response.json();
+		},
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ["contact-types"] });
+			await queryClient.invalidateQueries({ queryKey: ["contact-type", contactTypeId] });
+			await goto(resolve("/contact-types"));
 		}
 	}));
 }

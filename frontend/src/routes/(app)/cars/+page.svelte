@@ -10,6 +10,7 @@
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import { useCarsQuery } from "$lib/hooks/use-car";
 	import { config } from "$lib/config";
+	import { resolve } from "$app/paths";
 
 	const filters = [
 		{ label: "Active", value: "active" },
@@ -78,7 +79,7 @@
 				>
 			</ButtonGroup.Root>
 			<ButtonGroup.Root>
-				<Button href="/cars/create" size="default" variant="outline">Create Car</Button>
+				<Button href={resolve("/cars/create")} size="default" variant="outline">Create Car</Button>
 			</ButtonGroup.Root>
 		</ButtonGroup.Root>
 	</div>
@@ -105,7 +106,7 @@
 					<Table.Cell>{car.car_type_name}</Table.Cell>
 					<Table.Cell>{car.tracker_name}</Table.Cell>
 					<Table.Cell>
-						<Button href={`/cars/${car.car_id}`} size="icon" variant="outline">
+						<Button href={resolve(`/cars/${car.car_id}`)} size="icon" variant="outline">
 							<PencilIcon />
 						</Button>
 					</Table.Cell>
