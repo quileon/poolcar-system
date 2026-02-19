@@ -18,10 +18,11 @@ export function useCarsQuery() {
 }
 
 export function useCarQuery(getCarId: () => number) {
+	const carId = getCarId();
+
 	return createQuery<CarDetails>(() => ({
 		queryKey: ["car", getCarId()],
 		queryFn: async () => {
-			const carId = getCarId();
 			const response = await authFetch(`${config.apiBaseUrl}/cars/${carId}`);
 			if (!response.ok) throw new Error("Failed to fetch car");
 			return response.json();
@@ -107,9 +108,7 @@ export function useDeleteCarMutation(getCarId: () => number) {
 			const response = await authFetch(`${config.apiBaseUrl}/cars/${carId}`, {
 				method: "DELETE"
 			});
-			if (!response.ok) {
-				throw new Error("Failed to delete car");
-			}
+			if (!response.ok) throw new Error("Failed to delete car");
 			return response.json();
 		},
 		onSuccess: async () => {
@@ -129,9 +128,7 @@ export function useRestoreCarMutation(getCarId: () => number) {
 			const response = await authFetch(`${config.apiBaseUrl}/cars/${carId}/restore`, {
 				method: "PUT"
 			});
-			if (!response.ok) {
-				throw new Error("Failed to restore car");
-			}
+			if (!response.ok) throw new Error("Failed to restore car");
 			return response.json();
 		},
 		onSuccess: async () => {

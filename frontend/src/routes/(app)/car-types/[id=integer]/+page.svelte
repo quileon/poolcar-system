@@ -8,8 +8,9 @@
 	import {
 		useCarTypeQuery,
 		useDeleteCarTypeMutation,
-		useEditCarTypeMutation
-	} from "$lib/hooks/user-car-type";
+		useEditCarTypeMutation,
+		useRestoreCarTypeMutation
+	} from "$lib/hooks/use-car-type";
 
 	const carTypeId = $derived(parseInt(page.params.id!, 10));
 
@@ -19,6 +20,7 @@
 	// Mutations
 	const editCarTypeMutation = useEditCarTypeMutation(() => carTypeId);
 	const deleteCarTypeMutation = useDeleteCarTypeMutation(() => carTypeId);
+	const restoreCarTypeMutation = useRestoreCarTypeMutation(() => carTypeId);
 
 	// Form state
 	let carTypeName = $state("");
@@ -34,10 +36,14 @@
 		event.preventDefault();
 		editCarTypeMutation.mutate({ name: carTypeName });
 	}
-
 	function handleDelete() {
 		if (confirm(`Are you sure you want to delete "${carTypeName}"?`)) {
 			deleteCarTypeMutation.mutate();
+		}
+	}
+	function handleRestore() {
+		if (confirm(`Are you sure you want to restore "${carTypeName}"?`)) {
+			restoreCarTypeMutation.mutate();
 		}
 	}
 </script>
@@ -81,14 +87,25 @@
 						href="/car-types">Cancel</Button
 					>
 				</div>
-				<Button
-					type="button"
-					disabled={editCarTypeMutation.isPending ||
-						carTypeQuery.isPending ||
-						deleteCarTypeMutation.isPending}
-					variant="destructive"
-					onclick={handleDelete}>Delete</Button
-				>
+				{#if !carTypeQuery.data?.deleted_at}
+					<Button
+						type="button"
+						disabled={editCarTypeMutation.isPending ||
+							carTypeQuery.isPending ||
+							deleteCarTypeMutation.isPending}
+						variant="destructive"
+						onclick={handleDelete}>Delete</Button
+					>
+				{:else}
+					<Button
+						type="button"
+						disabled={restoreCarTypeMutation.isPending ||
+							carTypeQuery.isPending ||
+							deleteCarTypeMutation.isPending}
+						variant="destructive"
+						onclick={handleRestore}>Restore</Button
+					>
+				{/if}
 			</Field.Field>
 		</Field.Group>
 	</form>
@@ -119,6 +136,16 @@
 				<Alert.Title>Error</Alert.Title>
 				<Alert.Description>
 					<p>{deleteCarTypeMutation.error.message}</p>
+				</Alert.Description>
+			</Alert.Root>
+		{/if}
+
+		{#if restoreCarTypeMutation.isError}
+			<Alert.Root variant="destructive">
+				<AlertCircleIcon />
+				<Alert.Title>Error</Alert.Title>
+				<Alert.Description>
+					<p>{restoreCarTypeMutation.error.message}</p>
 				</Alert.Description>
 			</Alert.Root>
 		{/if}

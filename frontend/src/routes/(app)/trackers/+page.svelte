@@ -89,15 +89,17 @@
 				<Table.Head>#</Table.Head>
 				<Table.Head>Name</Table.Head>
 				<Table.Head>Assigned Car</Table.Head>
+				<Table.Head>Assigned Car Police Number</Table.Head>
 				<Table.Head>Actions</Table.Head>
 			</Table.Row>
 		</Table.Header>
 		<Table.Body>
 			{#each trackersQuery.data.trackers as tracker (tracker.tracker_id)}
-				<Table.Row>
+				<Table.Row class={tracker.deleted_at ? "text-red-700" : ""}>
 					<Table.Cell>{tracker.tracker_id}</Table.Cell>
 					<Table.Cell>{tracker.name}</Table.Cell>
 					<Table.Cell>{tracker.car_name}</Table.Cell>
+					<Table.Cell>{tracker.car_police_number}</Table.Cell>
 					<Table.Cell>
 						<Button href={`/trackers/${tracker.tracker_id}`} size="icon" variant="outline">
 							<PencilIcon />

@@ -9,6 +9,7 @@
 	import {
 		useDeleteTrackerMutation,
 		useEditTrackerMutation,
+		useRestoreTrackerMutation,
 		useTrackerQuery
 	} from "$lib/hooks/use-tracker";
 
@@ -20,6 +21,7 @@
 	// Mutations
 	const editTrackerMutation = useEditTrackerMutation(() => trackerId);
 	const deleteTrackerMutation = useDeleteTrackerMutation(() => trackerId);
+	const restoreTrackerMutation = useRestoreTrackerMutation(() => trackerId);
 
 	// Form state
 	let trackerName = $state("");
@@ -39,6 +41,11 @@
 	function handleDelete() {
 		if (confirm(`Are you sure you want to delete "${trackerName}"?`)) {
 			deleteTrackerMutation.mutate();
+		}
+	}
+	function handleRestore() {
+		if (confirm(`Are you sure you want to restore "${trackerName}"?`)) {
+			restoreTrackerMutation.mutate();
 		}
 	}
 </script>
@@ -82,14 +89,25 @@
 						href={resolve("/trackers")}>Cancel</Button
 					>
 				</div>
-				<Button
-					type="button"
-					disabled={editTrackerMutation.isPending ||
-						trackerQuery.isPending ||
-						deleteTrackerMutation.isPending}
-					variant="destructive"
-					onclick={handleDelete}>Delete</Button
-				>
+				{#if !trackerQuery.data?.deleted_at}
+					<Button
+						type="button"
+						disabled={editTrackerMutation.isPending ||
+							trackerQuery.isPending ||
+							deleteTrackerMutation.isPending}
+						variant="destructive"
+						onclick={handleDelete}>Delete</Button
+					>
+				{:else}
+					<Button
+						type="button"
+						disabled={restoreTrackerMutation.isPending ||
+							trackerQuery.isPending ||
+							deleteTrackerMutation.isPending}
+						variant="destructive"
+						onclick={handleRestore}>Restore</Button
+					>
+				{/if}
 			</Field.Field>
 		</Field.Group>
 	</form>
@@ -120,6 +138,16 @@
 				<Alert.Title>Error</Alert.Title>
 				<Alert.Description>
 					<p>{deleteTrackerMutation.error.message}</p>
+				</Alert.Description>
+			</Alert.Root>
+		{/if}
+
+		{#if restoreTrackerMutation.isError}
+			<Alert.Root variant="destructive">
+				<AlertCircleIcon />
+				<Alert.Title>Error</Alert.Title>
+				<Alert.Description>
+					<p>{restoreTrackerMutation.error.message}</p>
 				</Alert.Description>
 			</Alert.Root>
 		{/if}

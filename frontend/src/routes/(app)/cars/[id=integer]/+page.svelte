@@ -13,7 +13,7 @@
 		useEditCarMutation,
 		useRestoreCarMutation
 	} from "$lib/hooks/use-car";
-	import { useCarTypesQuery } from "$lib/hooks/user-car-type";
+	import { useCarTypesQuery } from "$lib/hooks/use-car-type";
 	import { useTrackersQuery } from "$lib/hooks/use-tracker";
 
 	const carId = $derived(parseInt(page.params.id!, 10));
@@ -46,7 +46,6 @@
 		}
 	});
 
-	// Derived values for select triggers
 	const trackerTrigger = $derived(
 		trackersQuery.data?.trackers.find((tracker) => tracker.tracker_id.toString() === trackerId)
 			?.name ?? "Select Tracker"
@@ -56,7 +55,6 @@
 			?.name ?? "Select Car Type"
 	);
 
-	// Event handlers
 	function handleSubmit(event: Event) {
 		event.preventDefault();
 		editCarMutation.mutate({
@@ -168,27 +166,25 @@
 						href={resolve("/cars")}>Cancel</Button
 					>
 				</div>
-				<div class="flex gap-3">
-					{#if !carQuery.data?.deleted_at}
-						<Button
-							type="button"
-							disabled={editCarMutation.isPending ||
-								carQuery.isPending ||
-								deleteCarMutation.isPending}
-							variant="destructive"
-							onclick={handleDelete}>Delete</Button
-						>
-					{:else}
-						<Button
-							type="button"
-							disabled={editCarMutation.isPending ||
-								carQuery.isPending ||
-								restoreCarMutation.isPending}
-							variant="destructive"
-							onclick={handleRestore}>Restore</Button
-						>
-					{/if}
-				</div>
+				{#if !carQuery.data?.deleted_at}
+					<Button
+						type="button"
+						disabled={editCarMutation.isPending ||
+							carQuery.isPending ||
+							deleteCarMutation.isPending}
+						variant="destructive"
+						onclick={handleDelete}>Delete</Button
+					>
+				{:else}
+					<Button
+						type="button"
+						disabled={restoreCarMutation.isPending ||
+							carQuery.isPending ||
+							restoreCarMutation.isPending}
+						variant="destructive"
+						onclick={handleRestore}>Restore</Button
+					>
+				{/if}
 			</Field.Field>
 		</Field.Group>
 	</form>

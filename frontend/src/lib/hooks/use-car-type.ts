@@ -1,4 +1,4 @@
-import type { CarTypeWithCount } from "$lib/bindings/CarTypeWithCount";
+import type { CarTypeDetails } from "$lib/bindings/CarTypeDetails";
 import type { GetCarTypesResponse } from "$lib/bindings/GetCarTypesResponse";
 import { createMutation, createQuery, useQueryClient } from "@tanstack/svelte-query";
 import { authFetch } from "./auth.svelte";
@@ -18,10 +18,11 @@ export function useCarTypesQuery() {
 }
 
 export function useCarTypeQuery(getCarTypeId: () => number) {
-	return createQuery<CarTypeWithCount>(() => ({
+	const carTypeId = getCarTypeId();
+
+	return createQuery<CarTypeDetails>(() => ({
 		queryKey: ["car-type", getCarTypeId()],
 		queryFn: async () => {
-			const carTypeId = getCarTypeId();
 			const response = await authFetch(`${config.apiBaseUrl}/cars/types/${carTypeId}`);
 			if (!response.ok) throw new Error("Failed to fetch car type");
 			return response.json();
@@ -56,10 +57,10 @@ export function useCreateCarTypeMutation() {
 
 export function useEditCarTypeMutation(getCarTypeId: () => number) {
 	const queryClient = useQueryClient();
+	const carTypeId = getCarTypeId();
 
 	return createMutation(() => ({
 		mutationFn: async (data: { name: string }) => {
-			const carTypeId = getCarTypeId();
 			const response = await authFetch(`${config.apiBaseUrl}/cars/types/${carTypeId}`, {
 				method: "PUT",
 				headers: {
@@ -73,18 +74,19 @@ export function useEditCarTypeMutation(getCarTypeId: () => number) {
 			return response.json();
 		},
 		onSuccess: async () => {
-			await goto(resolve("/car-types"));
 			await queryClient.invalidateQueries({ queryKey: ["car-types"] });
+			await queryClient.invalidateQueries({ queryKey: ["car-type", carTypeId] });
+			await goto(resolve("/car-types"));
 		}
 	}));
 }
 
 export function useDeleteCarTypeMutation(getCarTypeId: () => number) {
 	const queryClient = useQueryClient();
+	const carTypeId = getCarTypeId();
 
 	return createMutation(() => ({
 		mutationFn: async () => {
-			const carTypeId = getCarTypeId();
 			const response = await authFetch(`${config.apiBaseUrl}/cars/types/${carTypeId}`, {
 				method: "DELETE"
 			});
@@ -92,8 +94,28 @@ export function useDeleteCarTypeMutation(getCarTypeId: () => number) {
 			return response.json();
 		},
 		onSuccess: async () => {
-			await goto(resolve("/car-types"));
 			await queryClient.invalidateQueries({ queryKey: ["car-types"] });
+			await queryClient.invalidateQueries({ queryKey: ["car-type", carTypeId] });
+			await goto(resolve("/car-types"));
+		}
+	}));
+}
+export function useRestoreCarTypeMutation(getCarTypeId: () => number) {
+	const queryClient = useQueryClient();
+	const carTypeId = getCarTypeId();
+
+	return createMutation(() => ({
+		mutationFn: async () => {
+			const response = await authFetch(`${config.apiBaseUrl}/cars/types/${carTypeId}/restore`, {
+				method: "PUT"
+			});
+			if (!response.ok) throw new Error("Failed to restore car type");
+			return response.json();
+		},
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ["car-types"] });
+			await queryClient.invalidateQueries({ queryKey: ["car-type", carTypeId] });
+			await goto(resolve("/car-types"));
 		}
 	}));
 }

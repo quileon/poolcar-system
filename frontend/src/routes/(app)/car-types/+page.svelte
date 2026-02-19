@@ -9,7 +9,7 @@
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import { config } from "$lib/config";
-	import { useCarTypesQuery } from "$lib/hooks/user-car-type";
+	import { useCarTypesQuery } from "$lib/hooks/use-car-type";
 
 	const filters = [
 		{ label: "Active", value: "active" },
@@ -94,7 +94,7 @@
 		</Table.Header>
 		<Table.Body>
 			{#each carTypesQuery.data.car_types as carType (carType.car_type_id)}
-				<Table.Row>
+				<Table.Row class={carType.deleted_at ? "text-red-700" : ""}>
 					<Table.Cell>{carType.car_type_id}</Table.Cell>
 					<Table.Cell>{carType.name}</Table.Cell>
 					<Table.Cell>{carType.car_count}</Table.Cell>
