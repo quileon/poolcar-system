@@ -48,7 +48,7 @@
 			icon: NotebookPenIcon
 		},
 		{
-			title: "Activity",
+			title: "Activities",
 			url: "/activity",
 			icon: HistoryIcon
 		},

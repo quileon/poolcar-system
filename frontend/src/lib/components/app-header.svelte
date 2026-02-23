@@ -17,8 +17,8 @@
 		{ title: "Trackers", href: "/trackers" },
 		{ title: "Contacts", href: "/contacts" },
 		{ title: "Contact Types", href: "/contact-types" },
-		{ title: "Activity", href: "/activity" },
-		{ title: "History", href: "/history" },
+		{ title: "Activities", href: "/activity" },
+		{ title: "Activity Types", href: "/activity-types" },
 		{ title: "Live Tracking", href: "/live" }
 	];
 
