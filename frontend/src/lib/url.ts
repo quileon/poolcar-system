@@ -5,8 +5,8 @@ export type Url =
 	| "/trackers"
 	| "/contacts"
 	| "/contact-types"
+	| "/activity-types"
 	| "/activity"
-	| "/history"
 	| "/live"
 	| "/user-roles"
 	| "/users";

@@ -50,12 +50,12 @@
 		{
 			title: "Activity",
 			url: "/activity",
-			icon: BookOpenIcon
+			icon: HistoryIcon
 		},
 		{
-			title: "History",
-			url: "/history",
-			icon: HistoryIcon
+			title: "Activity Types",
+			url: "/activity-types",
+			icon: BookOpenIcon
 		},
 		{
 			title: "Live Tracking",
