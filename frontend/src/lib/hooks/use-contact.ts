@@ -1,5 +1,4 @@
-import type { ContactBody } from "$lib/bindings/ContactBody";
-import type { ContactWithDetails } from "$lib/bindings/ContactWithDetails";
+import type { ContactDetails } from "$lib/bindings/ContactDetails";
 import type { GetContactsResponse } from "$lib/bindings/GetContactsResponse";
 import { createMutation, createQuery, useQueryClient } from "@tanstack/svelte-query";
 import { authFetch } from "./auth.svelte";
@@ -8,7 +7,7 @@ import { goto } from "$app/navigation";
 import { resolve } from "$app/paths";
 
 export function useContactsQuery() {
-	return createQuery<GetContactsResponse[]>(() => ({
+	return createQuery<GetContactsResponse>(() => ({
 		queryKey: ["contacts"],
 		queryFn: async () => {
 			const response = await authFetch(`${config.apiBaseUrl}/contacts`);
@@ -19,10 +18,11 @@ export function useContactsQuery() {
 }
 
 export function useContactQuery(getContactId: () => number) {
-	return createQuery<ContactWithDetails>(() => ({
+	const contactId = getContactId();
+
+	return createQuery<ContactDetails>(() => ({
 		queryKey: ["contact", getContactId()],
 		queryFn: async () => {
-			const contactId = getContactId();
 			const response = await authFetch(`${config.apiBaseUrl}/contacts/${contactId}`);
 			if (!response.ok) throw new Error("Failed to fetch contact");
 			return response.json();
@@ -56,14 +56,15 @@ export function useCreateContactMutation() {
 			return response.json();
 		},
 		onSuccess: async () => {
-			await goto(resolve("/contacts"));
 			await queryClient.invalidateQueries({ queryKey: ["contacts"] });
+			await goto(resolve("/contacts"));
 		}
 	}));
 }
 
 export function useEditContactMutation(getContactId: () => number) {
 	const queryClient = useQueryClient();
+	const contactId = getContactId();
 
 	return createMutation(() => ({
 		mutationFn: async (data: {
@@ -72,7 +73,6 @@ export function useEditContactMutation(getContactId: () => number) {
 			longitude: number;
 			contactTypeId: number;
 		}) => {
-			const contactId = getContactId();
 			const response = await authFetch(`${config.apiBaseUrl}/contacts/${contactId}`, {
 				method: "PUT",
 				headers: {
@@ -89,18 +89,19 @@ export function useEditContactMutation(getContactId: () => number) {
 			return response.json();
 		},
 		onSuccess: async () => {
-			await goto(resolve("/contacts"));
 			await queryClient.invalidateQueries({ queryKey: ["contacts"] });
+			await queryClient.invalidateQueries({ queryKey: ["contact", contactId] });
+			await goto(resolve("/contacts"));
 		}
 	}));
 }
 
 export function useDeleteContactMutation(getContactId: () => number) {
 	const queryClient = useQueryClient();
+	const contactId = getContactId();
 
 	return createMutation(() => ({
 		mutationFn: async () => {
-			const contactId = getContactId();
 			const response = await authFetch(`${config.apiBaseUrl}/contacts/${contactId}`, {
 				method: "DELETE"
 			});
@@ -108,8 +109,29 @@ export function useDeleteContactMutation(getContactId: () => number) {
 			return response.json();
 		},
 		onSuccess: async () => {
-			await goto(resolve("/contacts"));
 			await queryClient.invalidateQueries({ queryKey: ["contacts"] });
+			await queryClient.invalidateQueries({ queryKey: ["contact", contactId] });
+			await goto(resolve("/contacts"));
+		}
+	}));
+}
+
+export function useRestoreContactmutation(getContactId: () => number) {
+	const queryClient = useQueryClient();
+	const contactId = getContactId();
+
+	return createMutation(() => ({
+		mutationFn: async () => {
+			const response = await authFetch(`${config.apiBaseUrl}/contacts/${contactId}/restore`, {
+				method: "PUT"
+			});
+			if (!response.ok) throw new Error("Failed to restore contact");
+			return response.json();
+		},
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ["contacts"] });
+			await queryClient.invalidateQueries({ queryKey: ["contact", contactId] });
+			await goto(resolve("/contacts"));
 		}
 	}));
 }

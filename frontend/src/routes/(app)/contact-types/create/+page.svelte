@@ -25,7 +25,6 @@
 			<Field.Set>
 				<Field.Legend>Create Contact Type</Field.Legend>
 				<Field.Description>Contact Type defines the type type of Contact.</Field.Description>
-
 				<Field.Group>
 					<Field.Field>
 						<Field.Label for="name">Contact Name</Field.Label>
