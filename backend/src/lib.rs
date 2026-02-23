@@ -12,7 +12,7 @@ mod websocket;
 
 use crate::{
     routes::{
-        activity_routes, auth_routes, car_routes, chart_routes, contact_routes, history_routes,
+        activity_routes, auth_routes, car_routes, chart_routes, contact_routes,
         live_tracking_routes, tracker_routes, user_routes,
     },
     state::AppState,
@@ -59,11 +59,10 @@ pub fn create_app(
         .nest("/ws/live", websocket::live_tracking_websocket::routes());
 
     let protected_routes = Router::new()
-        .nest("/activities", activity_routes::routes())
         .nest("/cars", car_routes::routes())
         .nest("/chart", chart_routes::routes())
         .nest("/contacts", contact_routes::routes())
-        .nest("/histories", history_routes::routes())
+        .nest("/activities", activity_routes::routes())
         .nest("/live", live_tracking_routes::routes())
         .nest("/trackers", tracker_routes::routes())
         .nest("/users", user_routes::routes())

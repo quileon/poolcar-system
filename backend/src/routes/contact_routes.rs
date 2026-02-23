@@ -1,17 +1,15 @@
 use crate::{
     error::AppError,
-    models::contact::{
-        Contact, ContactBody, ContactExport, ContactWithDetails, GetContactsResponse,
-    },
+    models::contact::{Contact, ContactBody, ContactDetails, GetContactsResponse},
     routes::contact_type_routes,
     types::PaginationParams,
     AppState,
 };
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
+    http::header::{CONTENT_DISPOSITION, CONTENT_TYPE},
     response::IntoResponse,
-    routing::get,
+    routing::{get, put},
     Json, Router,
 };
 use std::sync::Arc;
@@ -28,7 +26,7 @@ pub async fn get_contacts(
     let offset = (page - 1) * 5;
 
     let contacts = sqlx::query_as!(
-        ContactWithDetails,
+        ContactDetails,
         r#"
             SELECT
                 contacts.contact_id,
@@ -36,15 +34,16 @@ pub async fn get_contacts(
                 contacts.latitude,
                 contacts.longitude,
                 contact_types.contact_type_id,
-                contact_types.name as contact_type_name
+                contact_types.name as contact_type_name,
+                contacts.created_at,
+                contacts.updated_at,
+                contacts.deleted_at
             FROM contacts
             LEFT JOIN contact_types ON contacts.contact_type_id = contact_types.contact_type_id
-            WHERE contacts.deleted_at IS NULL
             ORDER BY contacts.contact_id ASC
-            LIMIT $1 OFFSET $2
         "#,
-        limit as i64,
-        offset as i64
+        // limit as i64,
+        // offset as i64
     )
     .fetch_all(&state.db)
     .await?;
@@ -54,7 +53,7 @@ pub async fn get_contacts(
         contacts,
     };
 
-    Ok(axum::Json(response))
+    Ok(Json(response))
 }
 
 pub async fn get_contact(
@@ -62,7 +61,7 @@ pub async fn get_contact(
     Path(contact_id): Path<i32>,
 ) -> Result<impl IntoResponse, AppError> {
     let contact = sqlx::query_as!(
-        ContactWithDetails,
+        ContactDetails,
         r#"
             SELECT
                 contacts.contact_id,
@@ -70,10 +69,12 @@ pub async fn get_contact(
                 contacts.latitude,
                 contacts.longitude,
                 contact_types.contact_type_id,
-                contact_types.name AS contact_type_name
+                contact_types.name as contact_type_name,
+                contacts.created_at,
+                contacts.updated_at,
+                contacts.deleted_at
             FROM contacts
             LEFT JOIN contact_types ON contacts.contact_type_id = contact_types.contact_type_id
-            WHERE contacts.deleted_at IS NULL
             AND contacts.contact_id = $1
             ORDER BY contacts.contact_id ASC
         "#,
@@ -82,7 +83,7 @@ pub async fn get_contact(
     .fetch_one(&state.db)
     .await?;
 
-    Ok(axum::Json(contact))
+    Ok(Json(contact))
 }
 
 pub async fn create_contact(
@@ -94,7 +95,7 @@ pub async fn create_contact(
         r#"
             INSERT INTO contacts (name, latitude, longitude, contact_type_id)
             VALUES ($1, $2, $3, $4)
-            RETURNING contact_id, name, latitude, longitude, contact_type_id
+            RETURNING contact_id, name, latitude, longitude, contact_type_id, created_at, updated_at, deleted_at
         "#,
         contact.name,
         contact.latitude,
@@ -118,7 +119,7 @@ pub async fn update_contact(
             UPDATE contacts
             SET name = $2, latitude = $3, longitude = $4, contact_type_id = $5
             WHERE contact_id = $1
-            RETURNING contact_id, name, latitude, longitude, contact_type_id
+            RETURNING contact_id, name, latitude, longitude, contact_type_id, created_at, updated_at, deleted_at
         "#,
         contact_id,
         contact.name,
@@ -142,7 +143,7 @@ pub async fn delete_contact(
             UPDATE contacts
             SET deleted_at = NOW()
             WHERE contact_id = $1
-            RETURNING contact_id, name, latitude, longitude, contact_type_id
+            RETURNING contact_id, name, latitude, longitude, contact_type_id, created_at, updated_at, deleted_at
         "#,
         contact_id
     )
@@ -152,11 +153,31 @@ pub async fn delete_contact(
     Ok(Json(deleted_contact))
 }
 
+pub async fn restore_contact(
+    State(state): State<Arc<AppState>>,
+    Path(contact_id): Path<i32>,
+) -> Result<impl IntoResponse, AppError> {
+    let restored_contact = sqlx::query_as!(
+        Contact,
+        r#"
+            UPDATE contacts
+            SET deleted_at = NULL
+            WHERE contact_id = $1
+            RETURNING contact_id, name, latitude, longitude, contact_type_id, created_at, updated_at, deleted_at
+        "#,
+        contact_id
+    )
+    .fetch_one(&state.db)
+    .await?;
+
+    Ok(Json(restored_contact))
+}
+
 pub async fn export_contacts(
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, AppError> {
     let contacts = sqlx::query_as!(
-        ContactExport,
+        ContactDetails,
         r#"
             SELECT
                 contacts.contact_id,
@@ -193,32 +214,15 @@ pub async fn export_contacts(
         ])?;
 
         for contact in contacts {
-            writer.write_record(&[
-                contact.contact_id.to_string(),
-                contact.name,
-                contact.latitude.to_string(),
-                contact.longitude.to_string(),
-                contact.contact_type_id.to_string(),
-                contact.contact_type_name,
-                contact.created_at.to_string(),
-                contact.updated_at.to_string(),
-                contact
-                    .deleted_at
-                    .map(|date| date.to_string())
-                    .unwrap_or_default(),
-            ])?;
+            writer.serialize(contact)?;
         }
         writer.flush()?;
     }
 
     Ok((
-        StatusCode::OK,
         [
-            ("Content-Type", "text/csv"),
-            (
-                "Content-Disposition",
-                "attachment; filename=\"contacts.csv\"",
-            ),
+            (CONTENT_TYPE, "text/csv"),
+            (CONTENT_DISPOSITION, "attachment; filename=\"contacts.csv\""),
         ],
         csv_buffer,
     ))
@@ -233,4 +237,5 @@ pub fn routes() -> Router<Arc<AppState>> {
             "/{contact_id}",
             get(get_contact).put(update_contact).delete(delete_contact),
         )
+        .route("/{contact_id}/restore", put(restore_contact))
 }

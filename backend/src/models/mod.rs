@@ -1,9 +1,9 @@
 pub mod activity;
+pub mod activity_type;
 pub mod car;
 pub mod car_type;
 pub mod contact;
 pub mod contact_type;
-pub mod history;
 pub mod live_tracking;
 pub mod login;
 pub mod mqtt;
