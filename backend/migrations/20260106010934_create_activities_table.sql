@@ -1,9 +1,9 @@
 -- Add migration script here
-CREATE TABLE histories (
-    history_id SERIAL PRIMARY KEY,
+CREATE TABLE activities (
+    activity_id SERIAL PRIMARY KEY,
     car_id INTEGER NULL REFERENCES cars(car_id),
     contact_id INTEGER NOT NULL REFERENCES contacts(contact_id),
-    activity_id INTEGER NOT NULL REFERENCES activities(activity_id),
+    activity_type_id INTEGER NOT NULL REFERENCES activity_types(activity_type_id),
     tracker_id INTEGER NULL REFERENCES trackers(tracker_id),
     started_at TIMESTAMP NULL DEFAULT NOW(),
     finished_at TIMESTAMP NULL,
@@ -15,8 +15,8 @@ CREATE TABLE histories (
     deleted_at TIMESTAMP NULL
 );
 
-CREATE INDEX idx_histories_car_id ON histories(car_id);
-CREATE INDEX idx_histories_contact_id ON histories(contact_id);
-CREATE INDEX idx_histories_activity_id ON histories(activity_id);
-CREATE INDEX idx_histories_tracker_id ON histories(tracker_id);
-CREATE INDEX idx_histories_finished_at ON histories(finished_at);
+CREATE INDEX idx_activities_car_id ON activities(car_id);
+CREATE INDEX idx_activities_contact_id ON activities(contact_id);
+CREATE INDEX idx_activities_activity_type_id ON activities(activity_type_id);
+CREATE INDEX idx_activities_tracker_id ON activities(tracker_id);
+CREATE INDEX idx_activities_finished_at ON activities(finished_at);
