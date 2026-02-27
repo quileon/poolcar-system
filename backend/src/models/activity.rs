@@ -14,9 +14,9 @@ pub struct Activity {
     pub tracker_id: Option<i32>,
     pub started_at: Option<NaiveDateTime>,
     pub finished_at: Option<NaiveDateTime>,
-    #[ts(type = "number")]
+    #[ts(type = "number | null")]
     pub finished_latitude: Option<Decimal>,
-    #[ts(type = "number")]
+    #[ts(type = "number | null")]
     pub finished_longitude: Option<Decimal>,
     pub description: Option<String>,
     pub created_at: NaiveDateTime,
@@ -33,9 +33,9 @@ pub struct ActivityBody {
     pub tracker_id: Option<i32>,
     pub started_at: Option<NaiveDateTime>,
     pub finished_at: Option<NaiveDateTime>,
-    #[ts(type = "number")]
+    #[ts(type = "number | null")]
     pub finished_latitude: Option<Decimal>,
-    #[ts(type = "number")]
+    #[ts(type = "number | null")]
     pub finished_longitude: Option<Decimal>,
     pub description: Option<String>,
 }
@@ -46,6 +46,7 @@ pub struct ActivityDetails {
     pub activity_id: i32,
     pub car_id: Option<i32>,
     pub car_name: Option<String>,
+    pub car_police_number: Option<String>,
     pub contact_id: i32,
     pub contact_name: String,
     pub activity_type_id: i32,
@@ -54,9 +55,9 @@ pub struct ActivityDetails {
     pub tracker_name: Option<String>,
     pub started_at: Option<NaiveDateTime>,
     pub finished_at: Option<NaiveDateTime>,
-    #[ts(type = "number")]
+    #[ts(type = "number | null")]
     pub finished_latitude: Option<Decimal>,
-    #[ts(type = "number")]
+    #[ts(type = "number | null")]
     pub finished_longitude: Option<Decimal>,
     pub description: Option<String>,
     pub created_at: NaiveDateTime,
