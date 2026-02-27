@@ -1,4 +1,3 @@
-import type { ContactTypeWithCount } from "$lib/bindings/ContactTypeWithCount";
 import type { GetContactTypesResponse } from "$lib/bindings/GetContactTypesResponse";
 import { createMutation, createQuery, useQueryClient } from "@tanstack/svelte-query";
 import { authFetch } from "./auth.svelte";

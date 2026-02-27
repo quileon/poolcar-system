@@ -65,7 +65,6 @@
 	function handleRestore() {
 		if (confirm(`Are you sure you want to restore "${name}"?`)) {
 			restoreContactMutation.mutate();
-			console.log(contactTypeId, typeof contactTypeId);
 		}
 	}
 </script>

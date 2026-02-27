@@ -6,7 +6,7 @@ export type Url =
 	| "/contacts"
 	| "/contact-types"
 	| "/activity-types"
-	| "/activity"
+	| "/activities"
 	| "/live"
 	| "/user-roles"
 	| "/users";

@@ -54,7 +54,7 @@
 		{#if createContactTypeMutation.isError}
 			<Alert.Root variant="destructive">
 				<AlertCircleIcon />
-				<Alert.Title>Error Creating Contact</Alert.Title>
+				<Alert.Title>Error Creating Contact Type</Alert.Title>
 				<Alert.Description>
 					<p>{createContactTypeMutation.error.message}</p>
 				</Alert.Description>

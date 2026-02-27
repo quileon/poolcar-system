@@ -49,7 +49,7 @@
 		},
 		{
 			title: "Activities",
-			url: "/activity",
+			url: "/activities",
 			icon: HistoryIcon
 		},
 		{

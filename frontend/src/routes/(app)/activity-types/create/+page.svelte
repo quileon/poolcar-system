@@ -5,7 +5,7 @@
 	import * as Alert from "$lib/components/ui/alert/index";
 	import AlertCircleIcon from "@lucide/svelte/icons/alert-circle";
 	import { resolve } from "$app/paths";
-	import { useCreateActivityTypeMutation } from "$lib/hooks/use-activity-types";
+	import { useCreateActivityTypeMutation } from "$lib/hooks/use-activity-type";
 
 	let name = $state("");
 

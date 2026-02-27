@@ -11,7 +11,7 @@
 		useDeleteActivityTypeMutation,
 		useEditActivityTypeMutation,
 		useRestoreActivityTypeMutation
-	} from "$lib/hooks/use-activity-types";
+	} from "$lib/hooks/use-activity-type";
 
 	const activityTypeId = $derived(parseInt(page.params.id!, 10));
 

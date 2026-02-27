@@ -10,7 +10,7 @@
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import { config } from "$lib/config";
 	import { resolve } from "$app/paths";
-	import { useActivityTypesQuery } from "$lib/hooks/use-activity-types";
+	import { useActivityTypesQuery } from "$lib/hooks/use-activity-type";
 
 	const filters = [
 		{ label: "Active", value: "active" },
