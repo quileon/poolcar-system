@@ -813,6 +813,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "haversine-rs"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a938f96298bab2f2315301ac84f6574c1f29a84d95956944cb4d380e6c0ff71e"
+
+[[package]]
 name = "heck"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1492,6 +1498,7 @@ dependencies = [
  "csv",
  "deadpool-redis",
  "dotenvy",
+ "haversine-rs",
  "jsonwebtoken",
  "rand 0.9.2",
  "reqwest",
