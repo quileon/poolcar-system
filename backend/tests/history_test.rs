@@ -1,6 +1,6 @@
 use anyhow::Context;
 use chrono::NaiveDateTime;
-use poolcar_backend::create_app;
+use poolcar_backend::{config::Config, create_app};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, PgPool};
@@ -58,7 +58,7 @@ async fn spawn_app(db_pool: PgPool) -> (String, JoinHandle<()>) {
         .create_pool(Some(deadpool_redis::Runtime::Tokio1))
         .expect("Failed to create Redis pool");
 
-    let app = create_app(db_pool, redis_pool, None);
+    let app = create_app(db_pool, redis_pool, None, Config::from_env().unwrap());
 
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let port = listener.local_addr().unwrap().port();

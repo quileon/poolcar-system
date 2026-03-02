@@ -1,6 +1,5 @@
 <script lang="ts">
-	import PanelLeft from "@lucide/svelte/icons/panel-left";
-	import Button from "$lib/components/ui/button/button.svelte";
+	import * as Sidebar from "$lib/components/ui/sidebar";
 	import * as Breadcrumb from "$lib/components/ui/breadcrumb";
 	import { page } from "$app/state";
 	import type { Url } from "$lib/url";
@@ -18,14 +17,10 @@
 		{ title: "Trackers", href: "/trackers" },
 		{ title: "Contacts", href: "/contacts" },
 		{ title: "Contact Types", href: "/contact-types" },
-		{ title: "Activity", href: "/activity" },
-		{ title: "History", href: "/history" },
+		{ title: "Activities", href: "/activities" },
+		{ title: "Activity Types", href: "/activity-types" },
 		{ title: "Live Tracking", href: "/live" }
 	];
-
-	let { toggleSidebar } = $props<{
-		toggleSidebar: () => void;
-	}>();
 
 	// Generate breadcrumbs from current route (reactive)
 	const currentBreadcrumb = $derived.by(() => {
@@ -67,9 +62,7 @@
 </script>
 
 <header class="sticky z-10 flex items-center gap-4 px-4 py-2">
-	<Button variant="ghost" size="icon" aria-label="Toggle Sidebar" onclick={toggleSidebar}>
-		<PanelLeft />
-	</Button>
+	<Sidebar.Trigger class="-ms-1" />
 	<Breadcrumb.Root>
 		<Breadcrumb.List>
 			<Breadcrumb.Item>
