@@ -8,7 +8,7 @@ pub async fn chart_loop(state: Arc<AppState>) {
 
     loop {
         interval.tick().await;
-        println!("Saving chart data to redis");
+        tracing::debug!("Started saving MQTT payload for chart data");
 
         let tracker_ids: Vec<i32> = match sqlx::query_scalar(
             r#"
@@ -76,5 +76,6 @@ pub async fn chart_loop(state: Arc<AppState>) {
                 }
             }
         }
+        tracing::debug!("Finished saving MQTT payload for chart data");
     }
 }

@@ -4,6 +4,7 @@ mod error;
 mod handlers;
 mod middleware;
 pub mod models;
+mod redis;
 mod routes;
 mod state;
 mod tasks;
@@ -20,7 +21,10 @@ use crate::{
 use axum::{http::Method, routing::get, Router};
 use std::sync::Arc;
 use tokio::sync::broadcast;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::{
+    cors::{Any, CorsLayer},
+    trace::TraceLayer,
+};
 
 pub fn create_app(
     db_pool: sqlx::PgPool,
@@ -74,6 +78,7 @@ pub fn create_app(
     Router::new()
         .merge(public_routes)
         .merge(protected_routes)
-        .with_state(app_state)
+        .layer(TraceLayer::new_for_http())
         .layer(cors)
+        .with_state(app_state)
 }

@@ -12,29 +12,37 @@ use tokio::signal;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenvy::dotenv().ok();
 
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
+        )
+        .compact()
+        .init();
+
     let config = Config::from_env()?;
-    println!("Configuration OK");
+    tracing::info!("Environment configuration loaded");
 
     // Database
     let db_pool = PgPoolOptions::new()
         .connect(&config.database_url)
         .await
         .context("Failed to cretae Database pool")?;
-    println!("Database OK");
+    tracing::info!("Database connection established");
 
     // Migrate
     sqlx::migrate!("./migrations")
         .run(&db_pool)
         .await
         .context("Failed to run migrations")?;
-    println!("Migrations OK");
+    tracing::info!("Migrations completed");
 
     // Redis
     let redis_cfg = deadpool_redis::Config::from_url(&config.redis_url);
     let redis_pool = redis_cfg
         .create_pool(Some(Runtime::Tokio1))
         .expect("Failed to create Redis pool");
-    println!("Redis OK");
+    tracing::info!("Redis connection established");
 
     // MQTT
     let mut rng = rand::rng();
@@ -54,7 +62,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         client_auth: None,
     });
     mqtt_options.set_transport(transport);
-    println!("MQTT OK");
+    tracing::info!("MQTT client configured");
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:7270")
         .await
@@ -63,7 +71,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Axum
     let app = create_app(db_pool, redis_pool, Some(mqtt_options), config);
-    println!("Axum started, listening on {}", listener_address);
+    tracing::info!("Axum started on {}", listener_address);
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
         .await?;
@@ -90,7 +98,11 @@ async fn shutdown_signal() {
     let terminate = std::future::pending::<()>();
 
     tokio::select! {
-        _ = ctrl_c => {},
-        _ = terminate => {},
+        _ = ctrl_c => {
+            tracing::info!("Shutdown signal received (Ctrl+C)");
+        },
+        _ = terminate => {
+            tracing::info!("Shutdown signal received (SIGTERM)");
+        },
     }
 }

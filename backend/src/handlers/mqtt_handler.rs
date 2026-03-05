@@ -1,51 +1,85 @@
 use axum::body::Bytes;
 use deadpool_redis::redis::AsyncCommands;
+use haversine_rs::point::Point;
+use rust_decimal::{prelude::ToPrimitive, Decimal};
 use std::sync::Arc;
 
-use crate::{models::mqtt::MqttPayloadWithId, AppState};
+use crate::{
+    error::MqttError,
+    models::mqtt::MqttPayloadWithId,
+    redis::{complete_redis_activities, get_all_redis_activities},
+    AppState,
+};
 
-pub async fn mqtt_handler(state: Arc<AppState>, payload: Bytes) -> anyhow::Result<()> {
-    // Parse payload to JSON
-    let tracker_payload_with_id: MqttPayloadWithId = match serde_json::from_slice(&payload) {
-        Ok(p) => p,
-        Err(e) => {
-            return Err(anyhow::anyhow!(
-                "Failed to parse MQTT payload to JSON: {}",
-                e
-            ))
-        }
-    };
+/// MQTT payload handler
+///
+/// Handles MQTT payload sended by tracker.
+/// Payload that has valid location will be saved into live redis and broadcasted to WebSockets.
+///
+/// Each payload also get compared with all active activities.
+/// If the distance between tracker location and activity destination (contact) is lower than 100 meter, the activity will be completed.
+pub async fn mqtt_handler(state: Arc<AppState>, payload: Bytes) -> Result<(), MqttError> {
+    let tracker_payload: MqttPayloadWithId = serde_json::from_slice(&payload)?;
+    if tracker_payload.location.latitude.is_none() || tracker_payload.location.longitude.is_none() {
+        return Ok(());
+    }
+    let tracker_payload_string = serde_json::to_string(&tracker_payload)?;
 
-    // Get Redis connection
-    let mut conn = state
-        .redis
-        .get()
-        .await
-        .map_err(|e| anyhow::anyhow!("Failed to get Redis connection: {}", e))?;
+    let mut conn = state.redis.get().await?;
 
-    let tracker_payload_string = match serde_json::to_string(&tracker_payload_with_id) {
-        Ok(s) => s,
-        Err(e) => {
-            return Err(anyhow::anyhow!(
-                "Failed to serialize MQTT payload to string: {}",
-                e
-            ))
-        }
-    };
-
-    // Save to Redis (live)
+    // Redis (latest data)
     conn.set::<_, _, ()>(
-        format!("tracker:{}:live", tracker_payload_with_id.id),
+        format!("tracker:{}:live", tracker_payload.id),
         &tracker_payload_string,
     )
-    .await
-    .map_err(|e| anyhow::anyhow!("Failed to save to Redis (live): {}", e))?;
+    .await?;
+    tracing::debug!("MQTT payload is saved into Redis");
 
-    // Broadcast to websocket clients
-    state
-        .tx
-        .send(tracker_payload_string)
-        .map_err(|e| anyhow::anyhow!("Failed to broadcast payload: {}", e))?;
+    match state.tx.send(tracker_payload_string) {
+        Ok(_) => tracing::debug!("MQTT payload is broadcasted to WebSockets"),
+        Err(e) => tracing::warn!("Failed to broadcast MQTT payload to WebSockets: {}", e),
+    }
+
+    let activities = get_all_redis_activities(&state.redis).await?;
+    for activity in activities {
+        let contact_latitude = match activity.contact_latitude.to_f64() {
+            Some(lat) => lat,
+            None => continue,
+        };
+        let contact_longitude = match activity.contact_longitude.to_f64() {
+            Some(long) => long,
+            None => continue,
+        };
+        let tracker_latitude = tracker_payload.location.latitude.unwrap_or(0.0);
+        let tracker_longitude = tracker_payload.location.longitude.unwrap_or(0.0);
+
+        let p1 = Point::new(contact_latitude, contact_longitude);
+        let p2 = Point::new(tracker_latitude, tracker_longitude);
+
+        let distance = haversine_rs::distance(p1, p2, haversine_rs::units::Unit::Meters);
+        tracing::trace!(
+            "Distance to activity {}: {}",
+            activity.activity_id,
+            distance
+        );
+        if distance < 500.0 {
+            tracing::debug!(
+                "Completing activity {} with distance {}",
+                activity.activity_id,
+                distance
+            );
+            complete_redis_activities(
+                &state.db,
+                &state.redis,
+                activity.activity_id,
+                Decimal::from_f64_retain(tracker_latitude).unwrap_or(Decimal::ZERO),
+                Decimal::from_f64_retain(tracker_longitude).unwrap_or(Decimal::ZERO),
+            )
+            .await?;
+
+            break;
+        }
+    }
 
     Ok(())
 }

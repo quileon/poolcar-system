@@ -1,6 +1,7 @@
 use crate::{
     error::AppError,
     models::activity::{Activity, ActivityBody, ActivityDetails, GetActivitiesResponse},
+    redis::reload_redis_activities,
     routes::activity_type_routes,
     types::PaginationParams,
     AppState,
@@ -34,6 +35,8 @@ pub async fn get_activities(
                 cars.name AS "car_name?",
                 cars.police_number AS "car_police_number?",
                 activities.contact_id,
+                contacts.latitude AS contact_latitude,
+                contacts.longitude AS contact_longitude,
                 contacts.name AS contact_name,
                 activities.activity_type_id,
                 activity_types.name AS activity_type_name,
@@ -80,6 +83,8 @@ pub async fn get_activity(
                 cars.police_number AS "car_police_number?",
                 activities.contact_id,
                 contacts.name AS contact_name,
+                contacts.latitude AS contact_latitude,
+                contacts.longitude AS contact_longitude,
                 activities.activity_type_id,
                 activity_types.name AS activity_type_name,
                 activities.tracker_id,
@@ -131,6 +136,10 @@ pub async fn create_activity(
     .fetch_one(&state.db)
     .await?;
 
+    reload_redis_activities(&state.db, &state.redis)
+        .await
+        .map_err(|_| AppError::Internal("Success, but failed to reload activities cache".into()))?;
+
     Ok(Json(created_activity))
 }
 
@@ -161,6 +170,10 @@ pub async fn update_activity(
     .fetch_one(&state.db)
     .await?;
 
+    reload_redis_activities(&state.db, &state.redis)
+        .await
+        .map_err(|_| AppError::Internal("Success, but failed to reload activities cache".into()))?;
+
     Ok(Json(updated_history))
 }
 
@@ -180,6 +193,10 @@ pub async fn delete_activity(
     )
     .fetch_one(&state.db)
     .await?;
+
+    reload_redis_activities(&state.db, &state.redis)
+        .await
+        .map_err(|_| AppError::Internal("Success, but failed to reload activities cache".into()))?;
 
     Ok(Json(deleted_activity))
 }
@@ -201,6 +218,10 @@ pub async fn restore_activity(
     .fetch_one(&state.db)
     .await?;
 
+    reload_redis_activities(&state.db, &state.redis)
+        .await
+        .map_err(|_| AppError::Internal("Success, but failed to reload activities cache".into()))?;
+
     Ok(Json(restored_activity))
 }
 
@@ -217,6 +238,8 @@ pub async fn export_activities(
                 cars.police_number AS car_police_number,
                 activities.contact_id,
                 contacts.name AS contact_name,
+                contacts.latitude AS contact_latitude,
+                contacts.longitude AS contact_longitude,
                 activities.activity_type_id,
                 activity_types.name AS activity_type_name,
                 activities.tracker_id,

@@ -103,3 +103,22 @@ impl IntoResponse for AppError {
         (status, message).into_response()
     }
 }
+
+/// Error types for MQTT handler tasks.
+#[derive(Error, Debug)]
+pub enum MqttError {
+    #[error("Database error")]
+    DatabaseError(#[from] sqlx::Error),
+
+    #[error("Redis pool error")]
+    RedisPoolError(#[from] deadpool_redis::PoolError),
+
+    #[error("Redis error")]
+    RedisError(#[from] deadpool_redis::redis::RedisError),
+
+    #[error("Failed to parse MQTT payload to JSON")]
+    ParseJsonError(#[from] serde_json::Error),
+
+    #[error("Location is not valid")]
+    InvalidLocation,
+}
