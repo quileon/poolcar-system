@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use crate::{
     error::MqttError,
-    models::mqtt::MqttPayloadWithId,
+    models::{live_tracking::ActivityMarker, mqtt::MqttPayloadWithId},
     redis::{complete_redis_activities, get_all_redis_activities},
     AppState,
 };
@@ -76,6 +76,21 @@ pub async fn mqtt_handler(state: Arc<AppState>, payload: Bytes) -> Result<(), Mq
                 Decimal::from_f64_retain(tracker_longitude).unwrap_or(Decimal::ZERO),
             )
             .await?;
+
+            let deleted_marker = serde_json::to_string(&ActivityMarker {
+                id: activity.activity_id as u8,
+                action: "DELETE".into(),
+                latitude: None,
+                longitude: None,
+            })?;
+
+            match state.tx.send(deleted_marker) {
+                Ok(_) => tracing::debug!("Completed activity is broadcasted to WebSockets"),
+                Err(e) => tracing::warn!(
+                    "Failed to broadcast completed activity to WebSockets: {}",
+                    e
+                ),
+            }
 
             break;
         }
