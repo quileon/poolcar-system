@@ -58,9 +58,11 @@ pub fn create_app(
 
     let public_routes = Router::new()
         .route("/", get(|| async { "Hello, World!" }))
-        .nest("/auth", auth_routes::routes())
-        .nest("/ws/chart", websocket::chart_websocket::routes())
-        .nest("/ws/live", websocket::live_tracking_websocket::routes());
+        .nest("/auth", auth_routes::routes());
+
+    let websocket_routes = Router::new()
+        .nest("/chart", websocket::chart_websocket::routes())
+        .nest("/live", websocket::live_tracking_websocket::routes());
 
     let protected_routes = Router::new()
         .nest("/cars", car_routes::routes())
@@ -76,8 +78,9 @@ pub fn create_app(
         ));
 
     Router::new()
-        .merge(public_routes)
-        .merge(protected_routes)
+        .nest("/api", public_routes)
+        .nest("/api", protected_routes)
+        .nest("/ws", websocket_routes)
         .layer(TraceLayer::new_for_http())
         .layer(cors)
         .with_state(app_state)
