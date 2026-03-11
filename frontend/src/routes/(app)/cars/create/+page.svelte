@@ -94,6 +94,7 @@
 						<Select.Root type="single" bind:value={trackerId}>
 							<Select.Trigger id="tracker_id">{trackerTrigger}</Select.Trigger>
 							<Select.Content>
+								<Select.Item value="">None</Select.Item>
 								{#if trackersQuery.data?.trackers}
 									{#each trackersQuery.data.trackers as tracker (tracker.tracker_id)}
 										<Select.Item
