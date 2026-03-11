@@ -1,5 +1,4 @@
 import type L from "leaflet";
-import { SvelteMap } from "svelte/reactivity";
 
 type MarkerEntry = {
 	marker: L.Marker;
@@ -15,7 +14,6 @@ type LeafletMapOptions = {
 export class LeafletMap {
 	#map: L.Map | null = $state(null);
 	#L: typeof import("leaflet") | null = null;
-	#markers: Map<number, MarkerEntry> = new SvelteMap();
 	#ready: boolean = $state(false);
 
 	get ready() {
