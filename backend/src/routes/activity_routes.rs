@@ -23,12 +23,7 @@ pub async fn get_activities(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PaginationParams>,
 ) -> Result<Json<GetActivitiesResponse>, AppError> {
-    let page = params.page.unwrap_or(1);
-    let limit = params.limit.unwrap_or(5);
-
-    let page = if page < 1 { 1 } else { page };
-    let limit = if limit < 1 { 1 } else { limit };
-    let offset = (page - 1) * 5;
+    let status = params.status.unwrap_or("active".into());
 
     let activities = sqlx::query_as!(
         ActivityDetails,
@@ -59,8 +54,16 @@ pub async fn get_activities(
             LEFT JOIN contacts ON contacts.contact_id = activities.contact_id
             LEFT JOIN activity_types ON activity_types.activity_type_id = activities.activity_type_id
             LEFT JOIN trackers ON trackers.tracker_id = activities.tracker_id
+            WHERE
+                CASE
+                    WHEN $1 = 'active' THEN activities.deleted_at IS NULL
+                    WHEN $1 = 'deleted' THEN activities.deleted_at IS NOT NULL
+                    WHEN $1 = 'all' THEN TRUE
+                    ELSE activities.deleted_at IS NULL
+                END
             ORDER BY activities.activity_id ASC
         "#,
+        status,
     )
     .fetch_all(&state.db)
     .await?;
@@ -171,6 +174,7 @@ pub async fn create_activity(
     let new_marker = serde_json::to_string(&ActivityMarker {
         id: created_activity.activity_id as u8,
         action: "POST".into(),
+        name: Some(contact.name),
         latitude: Some(contact.latitude),
         longitude: Some(contact.longitude),
     })?;
@@ -218,6 +222,7 @@ pub async fn update_activity(
         serde_json::to_string(&ActivityMarker {
             id: activity_id as u8,
             action: "DELETE".into(),
+            name: None,
             latitude: None,
             longitude: None,
         })?
@@ -245,6 +250,7 @@ pub async fn update_activity(
         serde_json::to_string(&ActivityMarker {
             id: activity_id as u8,
             action: "PUT".into(),
+            name: Some(contact.name),
             latitude: Some(contact.latitude),
             longitude: Some(contact.longitude),
         })?
@@ -286,6 +292,7 @@ pub async fn delete_activity(
     let deleted_marker = serde_json::to_string(&ActivityMarker {
         id: activity_id as u8,
         action: "DELETE".into(),
+        name: None,
         latitude: None,
         longitude: None,
     })?;
@@ -323,11 +330,33 @@ pub async fn restore_activity(
         return Ok(Json(restored_activity));
     }
 
+    let contact = sqlx::query_as!(
+        Contact,
+        r#"
+            SELECT
+                c.contact_id,
+                c.name,
+                c.latitude,
+                c.longitude,
+                c.contact_type_id,
+                c.created_at,
+                c.updated_at,
+                c.deleted_at
+            FROM contacts c
+            JOIN activities a ON a.contact_id = c.contact_id
+            WHERE a.activity_id = $1
+        "#,
+        activity_id
+    )
+    .fetch_one(&state.db)
+    .await?;
+
     let restored_marker = serde_json::to_string(&ActivityMarker {
         id: activity_id as u8,
         action: "POST".into(),
-        latitude: None,
-        longitude: None,
+        name: Some(contact.name),
+        latitude: Some(contact.latitude),
+        longitude: Some(contact.longitude),
     })?;
 
     match state.tx.send(restored_marker) {

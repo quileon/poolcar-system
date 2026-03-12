@@ -7,6 +7,7 @@ use ts_rs::TS;
 pub struct PaginationParams {
     pub page: Option<u32>,
     pub limit: Option<u32>,
+    pub status: Option<String>,
 }
 
 #[derive(Clone, Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
