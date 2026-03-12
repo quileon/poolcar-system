@@ -19,12 +19,7 @@ pub async fn get_activity_types(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PaginationParams>,
 ) -> Result<Json<GetActivityTypesResponse>, AppError> {
-    let page = params.page.unwrap_or(1);
-    let limit = params.limit.unwrap_or(5);
-
-    let page = if page < 1 { 1 } else { page };
-    let limit = if limit < 1 { 1 } else { limit };
-    let offset = (page - 1) * 5;
+    let status = params.status.unwrap_or("active".into());
 
     let activity_types = sqlx::query_as!(
         ActivityTypeDetails,
@@ -38,11 +33,17 @@ pub async fn get_activity_types(
                 activity_types.deleted_at
             FROM activity_types
             LEFT JOIN activities ON activity_types.activity_type_id = activities.activity_type_id
+            WHERE
+                CASE
+                    WHEN $1 = 'active' THEN activity_types.deleted_at IS NULL
+                    WHEN $1 = 'deleted' THEN activity_types.deleted_at IS NOT NULL
+                    WHEN $1 = 'all' THEN TRUE
+                    ELSE activity_types.deleted_at IS NULL
+                END
             GROUP BY activity_types.activity_type_id, activity_types.name
             ORDER BY activity_types.activity_type_id ASC
         "#,
-        // limit as i64,
-        // offset as i64
+        status
     )
     .fetch_all(&state.db)
     .await?;

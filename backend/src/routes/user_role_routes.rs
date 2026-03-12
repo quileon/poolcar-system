@@ -19,12 +19,7 @@ pub async fn get_user_roles(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PaginationParams>,
 ) -> Result<Json<GetUserRolesResponse>, AppError> {
-    let page = params.page.unwrap_or(1);
-    let limit = params.limit.unwrap_or(5);
-
-    let page = if page < 1 { 1 } else { page };
-    let limit = if limit < 1 { 1 } else { limit };
-    let offset = (page - 1) * 5;
+    let status = params.status.unwrap_or("active".into());
 
     let user_roles = sqlx::query_as!(
         UserRoleWithDetails,
@@ -35,13 +30,17 @@ pub async fn get_user_roles(
                 COUNT(users.user_id) as user_count
             FROM user_roles
             LEFT JOIN users ON users.user_role_id = user_roles.user_role_id
-            WHERE user_roles.deleted_at IS NULL
+            WHERE
+                CASE
+                    WHEN $1 = 'active' THEN user_roles.deleted_at IS NULL
+                    WHEN $1 = 'deleted' THEN user_roles.deleted_at IS NOT NULL
+                    WHEN $1 = 'all' THEN TRUE
+                    ELSE user_roles.deleted_at IS NULL
+                END
             GROUP BY user_roles.user_role_id, user_roles.name
             ORDER BY user_roles.user_role_id ASC
-            LIMIT $1 OFFSET $2
         "#,
-        limit as i64,
-        offset as i64
+        status
     )
     .fetch_all(&state.db)
     .await?;

@@ -21,7 +21,7 @@ use crate::{
 pub async fn mqtt_handler(state: Arc<AppState>, payload: Bytes) -> Result<(), MqttError> {
     let tracker_payload: MqttPayloadWithId = serde_json::from_slice(&payload)?;
     if tracker_payload.location.latitude.is_none() || tracker_payload.location.longitude.is_none() {
-        return Ok(());
+        return Err(MqttError::InvalidLocation);
     }
     let tracker_payload_string = serde_json::to_string(&tracker_payload)?;
 

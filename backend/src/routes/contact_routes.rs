@@ -18,12 +18,7 @@ pub async fn get_contacts(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PaginationParams>,
 ) -> Result<impl IntoResponse, AppError> {
-    let page = params.page.unwrap_or(1);
-    let limit = params.limit.unwrap_or(5);
-
-    let page = if page < 1 { 1 } else { page };
-    let limit = if limit < 1 { 1 } else { limit };
-    let offset = (page - 1) * 5;
+    let status = params.status.unwrap_or("active".into());
 
     let contacts = sqlx::query_as!(
         ContactDetails,
@@ -40,10 +35,16 @@ pub async fn get_contacts(
                 contacts.deleted_at
             FROM contacts
             LEFT JOIN contact_types ON contacts.contact_type_id = contact_types.contact_type_id
+            WHERE
+                CASE
+                    WHEN $1 = 'active' THEN contacts.deleted_at IS NULL
+                    WHEN $1 = 'deleted' THEN contacts.deleted_at IS NOT NULL
+                    WHEN $1 = 'all' THEN TRUE
+                    ELSE contacts.deleted_at IS NULL
+                END
             ORDER BY contacts.contact_id ASC
         "#,
-        // limit as i64,
-        // offset as i64
+        status
     )
     .fetch_all(&state.db)
     .await?;

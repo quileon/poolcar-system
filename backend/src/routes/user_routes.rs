@@ -19,12 +19,7 @@ pub async fn get_users(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PaginationParams>,
 ) -> Result<impl IntoResponse, AppError> {
-    let page = params.page.unwrap_or(1);
-    let limit = params.limit.unwrap_or(5);
-
-    let page = if page < 1 { 1 } else { page };
-    let limit = if limit < 1 { 1 } else { limit };
-    let offset = (page - 1) * 5;
+    let status = params.status.unwrap_or("active".into());
 
     let users = sqlx::query_as!(
         UserWithDetails,
@@ -38,12 +33,16 @@ pub async fn get_users(
                 user_roles.name AS user_role_name
             FROM users
             LEFT JOIN user_roles ON users.user_role_id = user_roles.user_role_id
-            WHERE users.deleted_at IS NULL
+            WHERE
+                CASE
+                    WHEN $1 = 'active' THEN users.deleted_at IS NULL
+                    WHEN $1 = 'deleted' THEN users.deleted_at IS NOT NULL
+                    WHEN $1 = 'all' THEN TRUE
+                    ELSE users.deleted_at IS NULL
+                END
             ORDER BY users.user_id ASC
-            LIMIT $1 OFFSET $2
         "#,
-        limit as i64,
-        offset as i64
+        status
     )
     .fetch_all(&state.db)
     .await?;

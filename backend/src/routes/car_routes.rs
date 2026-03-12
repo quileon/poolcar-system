@@ -18,12 +18,7 @@ pub async fn get_cars(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PaginationParams>,
 ) -> Result<impl IntoResponse, AppError> {
-    let page = params.page.unwrap_or(1);
-    let limit = params.limit.unwrap_or(5);
-
-    let page = if page < 1 { 1 } else { page };
-    let limit = if limit < 1 { 1 } else { limit };
-    let offset = (page - 1) * 5;
+    let status = params.status.unwrap_or("active".into());
 
     let cars = sqlx::query_as!(
         CarDetails,
@@ -43,10 +38,16 @@ pub async fn get_cars(
             FROM cars
             LEFT JOIN car_types ON cars.car_type_id = car_types.car_type_id
             LEFT JOIN trackers ON cars.tracker_id = trackers.tracker_id
+            WHERE
+                CASE
+                    WHEN $1 = 'active' THEN cars.deleted_at IS NULL
+                    WHEN $1 = 'deleted' THEN cars.deleted_at IS NOT NULL
+                    WHEN $1 = 'all' THEN TRUE
+                    ELSE cars.deleted_at IS NULL
+                END
             ORDER BY cars.car_id ASC
         "#,
-        // limit as i64,
-        // offset as i64,
+        status
     )
     .fetch_all(&state.db)
     .await?;

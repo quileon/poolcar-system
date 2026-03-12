@@ -17,12 +17,7 @@ pub async fn get_trackers(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PaginationParams>,
 ) -> Result<impl IntoResponse, AppError> {
-    let page = params.page.unwrap_or(1);
-    let limit = params.limit.unwrap_or(5);
-
-    let page = if page < 1 { 1 } else { page };
-    let limit = if limit < 1 { 1 } else { limit };
-    let offset = (page - 1) * 5;
+    let status = params.status.unwrap_or("active".into());
 
     let trackers = sqlx::query_as!(
         TrackerDetails,
@@ -41,10 +36,16 @@ pub async fn get_trackers(
             FROM trackers
             LEFT JOIN cars ON trackers.tracker_id = cars.tracker_id
             LEFT JOIN car_types ON cars.car_type_id = car_types.car_type_id
+            WHERE
+                CASE
+                    WHEN $1 = 'active' THEN trackers.deleted_at IS NULL
+                    WHEN $1 = 'deleted' THEN trackers.deleted_at IS NOT NULL
+                    WHEN $1 = 'all' THEN TRUE
+                    ELSE trackers.deleted_at IS NULL
+                END
             ORDER BY trackers.tracker_id ASC
         "#,
-        // limit as i64,
-        // offset as i64
+        status
     )
     .fetch_all(&state.db)
     .await?;
