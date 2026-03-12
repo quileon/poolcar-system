@@ -67,20 +67,35 @@ pub async fn complete_redis_activities(
     db: &sqlx::PgPool,
     redis: &deadpool_redis::Pool,
     activity_id: i32,
+    tracker_id: u8,
     finished_latitude: Decimal,
     finished_longitude: Decimal,
 ) -> Result<(), MqttError> {
+    let car = sqlx::query!(
+        r#"
+            SELECT car_id FROM cars
+            WHERE tracker_id = $1 AND deleted_at IS NULL
+        "#,
+        tracker_id as i32
+    )
+    .fetch_optional(db)
+    .await?;
+
+    let car_id = car.map(|c| c.car_id);
+
     sqlx::query_as!(
         Activity,
         r#"
             UPDATE activities
-            SET finished_at = NOW(), finished_latitude = $2, finished_longitude = $3
+            SET finished_at = NOW(), finished_latitude = $2, finished_longitude = $3, tracker_id = $4, car_id = $5
             WHERE activity_id = $1
             RETURNING *
         "#,
         activity_id,
         finished_latitude,
-        finished_longitude
+        finished_longitude,
+        tracker_id as i32,
+        car_id
     )
     .fetch_one(db)
     .await?;

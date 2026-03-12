@@ -72,6 +72,7 @@ pub async fn mqtt_handler(state: Arc<AppState>, payload: Bytes) -> Result<(), Mq
                 &state.db,
                 &state.redis,
                 activity.activity_id,
+                tracker_payload.id,
                 Decimal::from_f64_retain(tracker_latitude).unwrap_or(Decimal::ZERO),
                 Decimal::from_f64_retain(tracker_longitude).unwrap_or(Decimal::ZERO),
             )
