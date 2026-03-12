@@ -6,15 +6,25 @@ import { resolve } from "$app/paths";
 import type { GetActivitiesResponse } from "$lib/bindings/GetActivitiesResponse";
 import type { ActivityDetails } from "$lib/bindings/ActivityDetails";
 
-export function useActivitiesQuery() {
-	return createQuery<GetActivitiesResponse>(() => ({
-		queryKey: ["activities"],
-		queryFn: async () => {
-			const response = await authFetch(`${config.apiBaseUrl}/activities`);
-			if (!response.ok) throw new Error("Failed to fetch activities");
-			return response.json();
+export function useActivitiesQuery(getStatus: () => string | null) {
+	return createQuery<GetActivitiesResponse>(() => {
+		const status = getStatus();
+		const searchParams = new URLSearchParams();
+		if (status) {
+			searchParams.set("status", status);
 		}
-	}));
+
+		return {
+			queryKey: ["activities", status],
+			queryFn: async () => {
+				const response = await authFetch(
+					`${config.apiBaseUrl}/activities?${searchParams.toString()}`
+				);
+				if (!response.ok) throw new Error("Failed to fetch activities");
+				return response.json();
+			}
+		};
+	});
 }
 
 export function useActivityQuery(getActivityId: () => number) {

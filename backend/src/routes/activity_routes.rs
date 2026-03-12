@@ -1,6 +1,11 @@
 use crate::{
     error::AppError,
-    models::activity::{Activity, ActivityBody, ActivityDetails, GetActivitiesResponse},
+    models::{
+        activity::{Activity, ActivityBody, ActivityDetails, GetActivitiesResponse},
+        contact::Contact,
+        live_tracking::ActivityMarker,
+    },
+    redis::reload_redis_activities,
     routes::activity_type_routes,
     types::PaginationParams,
     AppState,
@@ -18,12 +23,7 @@ pub async fn get_activities(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PaginationParams>,
 ) -> Result<Json<GetActivitiesResponse>, AppError> {
-    let page = params.page.unwrap_or(1);
-    let limit = params.limit.unwrap_or(5);
-
-    let page = if page < 1 { 1 } else { page };
-    let limit = if limit < 1 { 1 } else { limit };
-    let offset = (page - 1) * 5;
+    let status = params.status.unwrap_or("active".into());
 
     let activities = sqlx::query_as!(
         ActivityDetails,
@@ -34,6 +34,8 @@ pub async fn get_activities(
                 cars.name AS "car_name?",
                 cars.police_number AS "car_police_number?",
                 activities.contact_id,
+                contacts.latitude AS contact_latitude,
+                contacts.longitude AS contact_longitude,
                 contacts.name AS contact_name,
                 activities.activity_type_id,
                 activity_types.name AS activity_type_name,
@@ -52,8 +54,16 @@ pub async fn get_activities(
             LEFT JOIN contacts ON contacts.contact_id = activities.contact_id
             LEFT JOIN activity_types ON activity_types.activity_type_id = activities.activity_type_id
             LEFT JOIN trackers ON trackers.tracker_id = activities.tracker_id
+            WHERE
+                CASE
+                    WHEN $1 = 'active' THEN activities.deleted_at IS NULL
+                    WHEN $1 = 'deleted' THEN activities.deleted_at IS NOT NULL
+                    WHEN $1 = 'all' THEN TRUE
+                    ELSE activities.deleted_at IS NULL
+                END
             ORDER BY activities.activity_id ASC
         "#,
+        status,
     )
     .fetch_all(&state.db)
     .await?;
@@ -80,6 +90,8 @@ pub async fn get_activity(
                 cars.police_number AS "car_police_number?",
                 activities.contact_id,
                 contacts.name AS contact_name,
+                contacts.latitude AS contact_latitude,
+                contacts.longitude AS contact_longitude,
                 activities.activity_type_id,
                 activity_types.name AS activity_type_name,
                 activities.tracker_id,
@@ -131,6 +143,47 @@ pub async fn create_activity(
     .fetch_one(&state.db)
     .await?;
 
+    reload_redis_activities(&state.db, &state.redis)
+        .await
+        .map_err(|_| AppError::Internal("Success, but failed to reload activities cache".into()))?;
+
+    if activity.finished_at.is_some() {
+        return Ok(Json(created_activity));
+    }
+
+    let contact = sqlx::query_as!(
+        Contact,
+        r#"
+            SELECT
+                contact_id,
+                name,
+                latitude,
+                longitude,
+                contact_type_id,
+                created_at,
+                updated_at,
+                deleted_at
+            FROM contacts
+            WHERE contact_id = $1
+        "#,
+        activity.contact_id
+    )
+    .fetch_one(&state.db)
+    .await?;
+
+    let new_marker = serde_json::to_string(&ActivityMarker {
+        id: created_activity.activity_id as u8,
+        action: "POST".into(),
+        name: Some(contact.name),
+        latitude: Some(contact.latitude),
+        longitude: Some(contact.longitude),
+    })?;
+
+    match state.tx.send(new_marker) {
+        Ok(_) => tracing::debug!("New activity is broadcasted to WebSockets"),
+        Err(e) => tracing::warn!("Failed to broadcast new activity to WebSockets: {}", e),
+    }
+
     Ok(Json(created_activity))
 }
 
@@ -139,7 +192,7 @@ pub async fn update_activity(
     Path(activity_id): Path<i32>,
     Json(activity): Json<ActivityBody>,
 ) -> Result<Json<Activity>, AppError> {
-    let updated_history = sqlx::query_as!(
+    let updated_activity = sqlx::query_as!(
         Activity,
         r#"
             UPDATE activities
@@ -161,7 +214,54 @@ pub async fn update_activity(
     .fetch_one(&state.db)
     .await?;
 
-    Ok(Json(updated_history))
+    reload_redis_activities(&state.db, &state.redis)
+        .await
+        .map_err(|_| AppError::Internal("Success, but failed to reload activities cache".into()))?;
+
+    let updated_marker = if updated_activity.finished_at.is_some() {
+        serde_json::to_string(&ActivityMarker {
+            id: activity_id as u8,
+            action: "DELETE".into(),
+            name: None,
+            latitude: None,
+            longitude: None,
+        })?
+    } else {
+        let contact = sqlx::query_as!(
+            Contact,
+            r#"
+            SELECT
+                contact_id,
+                name,
+                latitude,
+                longitude,
+                contact_type_id,
+                created_at,
+                updated_at,
+                deleted_at
+            FROM contacts
+            WHERE contact_id = $1
+        "#,
+            activity.contact_id
+        )
+        .fetch_one(&state.db)
+        .await?;
+
+        serde_json::to_string(&ActivityMarker {
+            id: activity_id as u8,
+            action: "PUT".into(),
+            name: Some(contact.name),
+            latitude: Some(contact.latitude),
+            longitude: Some(contact.longitude),
+        })?
+    };
+
+    match state.tx.send(updated_marker) {
+        Ok(_) => tracing::debug!("Updated activity is broadcasted to WebSockets"),
+        Err(e) => tracing::warn!("Failed to broadcast updated activity to WebSockets: {}", e),
+    }
+
+    Ok(Json(updated_activity))
 }
 
 pub async fn delete_activity(
@@ -180,6 +280,27 @@ pub async fn delete_activity(
     )
     .fetch_one(&state.db)
     .await?;
+
+    reload_redis_activities(&state.db, &state.redis)
+        .await
+        .map_err(|_| AppError::Internal("Success, but failed to reload activities cache".into()))?;
+
+    if deleted_activity.finished_at.is_some() {
+        return Ok(Json(deleted_activity));
+    }
+
+    let deleted_marker = serde_json::to_string(&ActivityMarker {
+        id: activity_id as u8,
+        action: "DELETE".into(),
+        name: None,
+        latitude: None,
+        longitude: None,
+    })?;
+
+    match state.tx.send(deleted_marker) {
+        Ok(_) => tracing::debug!("Deleted activity is broadcasted to WebSockets"),
+        Err(e) => tracing::warn!("Failed to broadcast deleted activity to WebSockets: {}", e),
+    }
 
     Ok(Json(deleted_activity))
 }
@@ -201,6 +322,48 @@ pub async fn restore_activity(
     .fetch_one(&state.db)
     .await?;
 
+    reload_redis_activities(&state.db, &state.redis)
+        .await
+        .map_err(|_| AppError::Internal("Success, but failed to reload activities cache".into()))?;
+
+    if restored_activity.finished_at.is_some() {
+        return Ok(Json(restored_activity));
+    }
+
+    let contact = sqlx::query_as!(
+        Contact,
+        r#"
+            SELECT
+                c.contact_id,
+                c.name,
+                c.latitude,
+                c.longitude,
+                c.contact_type_id,
+                c.created_at,
+                c.updated_at,
+                c.deleted_at
+            FROM contacts c
+            JOIN activities a ON a.contact_id = c.contact_id
+            WHERE a.activity_id = $1
+        "#,
+        activity_id
+    )
+    .fetch_one(&state.db)
+    .await?;
+
+    let restored_marker = serde_json::to_string(&ActivityMarker {
+        id: activity_id as u8,
+        action: "POST".into(),
+        name: Some(contact.name),
+        latitude: Some(contact.latitude),
+        longitude: Some(contact.longitude),
+    })?;
+
+    match state.tx.send(restored_marker) {
+        Ok(_) => tracing::debug!("Restored activity is broadcasted to WebSockets"),
+        Err(e) => tracing::warn!("Failed to broadcast restored activity to WebSockets: {}", e),
+    }
+
     Ok(Json(restored_activity))
 }
 
@@ -217,6 +380,8 @@ pub async fn export_activities(
                 cars.police_number AS car_police_number,
                 activities.contact_id,
                 contacts.name AS contact_name,
+                contacts.latitude AS contact_latitude,
+                contacts.longitude AS contact_longitude,
                 activities.activity_type_id,
                 activity_types.name AS activity_type_name,
                 activities.tracker_id,
@@ -275,7 +440,7 @@ pub async fn export_activities(
             (CONTENT_TYPE, "text/csv"),
             (
                 CONTENT_DISPOSITION,
-                "attachment; filename=\"histories.csv\"",
+                "attachment; filename=\"activities.csv\"",
             ),
         ],
         csv_buffer,

@@ -1,3 +1,4 @@
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
 use ts_rs::TS;
@@ -21,4 +22,17 @@ pub struct GetMqttPayloadHistory {
     pub satellites: PayloadSatellites,
     pub hdop: PayloadHdop,
     pub stats: PayloadStats,
+}
+
+#[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
+#[ts(export)]
+pub struct ActivityMarker {
+    pub id: u8,
+    #[ts(type = "\"POST\" | \"PUT\" | \"DELETE\"")]
+    pub action: String,
+    pub name: Option<String>,
+    #[ts(type = "number | null")]
+    pub latitude: Option<Decimal>,
+    #[ts(type = "number | null")]
+    pub longitude: Option<Decimal>,
 }

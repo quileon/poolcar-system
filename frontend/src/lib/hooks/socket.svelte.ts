@@ -15,7 +15,7 @@ export class LiveData<T> {
 			this.#socket = new WebSocket(this.#url);
 
 			this.#socket.onopen = () => {
-				this.#error = null; // Clear error on successful connection
+				this.#error = null;
 				update();
 			};
 
@@ -33,7 +33,7 @@ export class LiveData<T> {
 
 			this.#socket.onmessage = (event) => {
 				try {
-					this.#latestData = JSON.parse(event.data);
+					this.#latestData = JSON.parse(event.data) as T;
 					update();
 				} catch (e) {
 					console.error("Failed to parse WS message", e);
@@ -46,7 +46,6 @@ export class LiveData<T> {
 		});
 	}
 
-	// The getter the UI will use
 	get current() {
 		this.#subscribe();
 		return this.#latestData;

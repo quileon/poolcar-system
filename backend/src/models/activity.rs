@@ -49,6 +49,10 @@ pub struct ActivityDetails {
     pub car_police_number: Option<String>,
     pub contact_id: i32,
     pub contact_name: String,
+    #[ts(type = "number")]
+    pub contact_latitude: Decimal,
+    #[ts(type = "number")]
+    pub contact_longitude: Decimal,
     pub activity_type_id: i32,
     pub activity_type_name: String,
     pub tracker_id: Option<i32>,

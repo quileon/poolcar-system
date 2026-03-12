@@ -18,7 +18,13 @@ pub async fn live_tracking_handler(
     ws.on_upgrade(|socket| handle_live_tracking_connection(socket, state))
 }
 
+/// Handles WebSocket connection for frontend Live Tracking Page
+///
+/// Creates two tasks that runs simultenaously.
+/// The former waits for MQTT payload from broadcast channel then send it to websocket client.
+/// The latter listen for message from websocket client.
 async fn handle_live_tracking_connection(mut socket: WebSocket, state: Arc<AppState>) {
+    tracing::debug!("WebSocket client connected");
     let mut rx = state.tx.subscribe();
 
     loop {
@@ -27,18 +33,17 @@ async fn handle_live_tracking_connection(mut socket: WebSocket, state: Arc<AppSt
             result = rx.recv() => {
                 match result {
                     Ok(msg) => {
-                        // Send message to websocket client
                         if socket.send(Message::Text(msg.into())).await.is_err() {
-                            eprintln!("Websocket client disconnected (send failed)");
+                            tracing::error!("Sending message failed, websocket client disconnected");
                             break;
                         }
                     }
                     Err(RecvError::Lagged(skipped)) => {
-                        eprintln!("Websocket receiver lagged, skipped {} message(s)", skipped);
+                        tracing::debug!("Websocket client lagged, skipped {} message(s)", skipped);
                         continue;
                     }
                     Err(RecvError::Closed) => {
-                        eprintln!("Broadcast channel closed unexpectedly");
+                        tracing::error!("Broadcast channel closed unexpectedly");
                         break;
                     }
                 }
@@ -47,7 +52,7 @@ async fn handle_live_tracking_connection(mut socket: WebSocket, state: Arc<AppSt
             result = socket.recv() => {
                 match result {
                     Some(Ok(Message::Close(_))) => {
-                        eprintln!("Websocket client sent close frame");
+                        tracing::info!("Websocket client disconnected gracefully");
                         break;
                     }
                     Some(Ok(Message::Ping(data))) => {
@@ -60,11 +65,11 @@ async fn handle_live_tracking_connection(mut socket: WebSocket, state: Arc<AppSt
                         continue;
                     }
                     Some(Err(_)) => {
-                        eprintln!("Websocket client error");
+                        tracing::debug!("Websocket client error, disconnecting");
                         break;
                     }
                     None => {
-                        eprintln!("Websocket client disconnected");
+                        tracing::info!("Websocket client disconnected");
                         break;
                     }
                 }
