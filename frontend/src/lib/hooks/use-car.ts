@@ -6,15 +6,23 @@ import { config } from "$lib/config";
 import { goto } from "$app/navigation";
 import { resolve } from "$app/paths";
 
-export function useCarsQuery() {
-	return createQuery<GetCarsResponse>(() => ({
-		queryKey: ["cars"],
-		queryFn: async () => {
-			const response = await authFetch(`${config.apiBaseUrl}/cars`);
-			if (!response.ok) throw new Error("Failed to fetch cars");
-			return response.json();
+export function useCarsQuery(getStatus: () => string | null) {
+	return createQuery<GetCarsResponse>(() => {
+		const status = getStatus();
+		const searchParams = new URLSearchParams();
+		if (status) {
+			searchParams.set("status", status);
 		}
-	}));
+
+		return {
+			queryKey: ["cars", status],
+			queryFn: async () => {
+				const response = await authFetch(`${config.apiBaseUrl}/cars?${searchParams.toString()}`);
+				if (!response.ok) throw new Error("Failed to fetch cars");
+				return response.json();
+			}
+		};
+	});
 }
 
 export function useCarQuery(getCarId: () => number) {

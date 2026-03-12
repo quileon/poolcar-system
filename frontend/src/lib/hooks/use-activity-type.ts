@@ -6,15 +6,25 @@ import { resolve } from "$app/paths";
 import type { GetActivityTypesResponse } from "$lib/bindings/GetActivityTypesResponse";
 import type { ActivityTypeDetails } from "$lib/bindings/ActivityTypeDetails";
 
-export function useActivityTypesQuery() {
-	return createQuery<GetActivityTypesResponse>(() => ({
-		queryKey: ["activity-types"],
-		queryFn: async () => {
-			const response = await authFetch(`${config.apiBaseUrl}/activities/types`);
-			if (!response.ok) throw new Error("Failed to fetch activity types");
-			return response.json();
+export function useActivityTypesQuery(getStatus: () => string | null) {
+	return createQuery<GetActivityTypesResponse>(() => {
+		const status = getStatus();
+		const searchParams = new URLSearchParams();
+		if (status) {
+			searchParams.set("status", status);
 		}
-	}));
+
+		return {
+			queryKey: ["activity-types", status],
+			queryFn: async () => {
+				const response = await authFetch(
+					`${config.apiBaseUrl}/activities/types?${searchParams.toString()}`
+				);
+				if (!response.ok) throw new Error("Failed to fetch activity types");
+				return response.json();
+			}
+		};
+	});
 }
 
 export function useActivityTypeQuery(getActivityTypeId: () => number) {

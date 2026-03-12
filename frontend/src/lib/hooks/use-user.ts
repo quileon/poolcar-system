@@ -6,15 +6,23 @@ import { config } from "$lib/config";
 import { goto } from "$app/navigation";
 import { resolve } from "$app/paths";
 
-export function useUsersQuery() {
-	return createQuery<GetUsersResponse[]>(() => ({
-		queryKey: ["users"],
-		queryFn: async () => {
-			const response = await authFetch(`${config.apiBaseUrl}/users`);
-			if (!response.ok) throw new Error("Failed to fetch users");
-			return response.json();
+export function useUsersQuery(getStatus: () => string | null) {
+	return createQuery<GetUsersResponse[]>(() => {
+		const status = getStatus();
+		const searchParams = new URLSearchParams();
+		if (status) {
+			searchParams.set("status", status);
 		}
-	}));
+
+		return {
+			queryKey: ["users", status],
+			queryFn: async () => {
+				const response = await authFetch(`${config.apiBaseUrl}/users?${searchParams.toString()}`);
+				if (!response.ok) throw new Error("Failed to fetch users");
+				return response.json();
+			}
+		};
+	});
 }
 
 export function useUserQuery(getUserId: () => number) {

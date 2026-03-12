@@ -16,8 +16,8 @@
 	let trackerId = $state("");
 	let active = $state(true);
 
-	const trackersQuery = useTrackersQuery();
-	const carTypesQuery = useCarTypesQuery();
+	const trackersQuery = useTrackersQuery(() => "active");
+	const carTypesQuery = useCarTypesQuery(() => "active");
 	const createCarMutation = useCreateCarMutation();
 
 	function handleSubmit(e: Event) {

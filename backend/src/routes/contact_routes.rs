@@ -76,7 +76,7 @@ pub async fn get_contact(
                 contacts.deleted_at
             FROM contacts
             LEFT JOIN contact_types ON contacts.contact_type_id = contact_types.contact_type_id
-            AND contacts.contact_id = $1
+            WHERE contacts.contact_id = $1
             ORDER BY contacts.contact_id ASC
         "#,
         contact_id

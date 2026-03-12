@@ -6,15 +6,25 @@ import { config } from "$lib/config";
 import { goto } from "$app/navigation";
 import { resolve } from "$app/paths";
 
-export function useTrackersQuery() {
-	return createQuery<GetTrackerResponse>(() => ({
-		queryKey: ["trackers"],
-		queryFn: async () => {
-			const response = await authFetch(`${config.apiBaseUrl}/trackers`);
-			if (!response.ok) throw new Error("Failed to fetch trackers");
-			return response.json();
+export function useTrackersQuery(getStatus: () => string | null) {
+	return createQuery<GetTrackerResponse>(() => {
+		const status = getStatus();
+		const searchParams = new URLSearchParams();
+		if (status) {
+			searchParams.set("status", status);
 		}
-	}));
+
+		return {
+			queryKey: ["trackers", status],
+			queryFn: async () => {
+				const response = await authFetch(
+					`${config.apiBaseUrl}/trackers?${searchParams.toString()}`
+				);
+				if (!response.ok) throw new Error("Failed to fetch trackers");
+				return response.json();
+			}
+		};
+	});
 }
 
 export function useTrackerQuery(getTrackerId: () => number) {

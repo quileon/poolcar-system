@@ -6,15 +6,25 @@ import { config } from "$lib/config";
 import { goto } from "$app/navigation";
 import { resolve } from "$app/paths";
 
-export function useCarTypesQuery() {
-	return createQuery<GetCarTypesResponse>(() => ({
-		queryKey: ["car-types"],
-		queryFn: async () => {
-			const response = await authFetch(`${config.apiBaseUrl}/cars/types`);
-			if (!response.ok) throw new Error("Failed to fetch car types");
-			return response.json();
+export function useCarTypesQuery(getStatus: () => string | null) {
+	return createQuery<GetCarTypesResponse>(() => {
+		const status = getStatus();
+		const searchParams = new URLSearchParams();
+		if (status) {
+			searchParams.set("status", status);
 		}
-	}));
+
+		return {
+			queryKey: ["car-types", status],
+			queryFn: async () => {
+				const response = await authFetch(
+					`${config.apiBaseUrl}/cars/types?${searchParams.toString()}`
+				);
+				if (!response.ok) throw new Error("Failed to fetch car types");
+				return response.json();
+			}
+		};
+	});
 }
 
 export function useCarTypeQuery(getCarTypeId: () => number) {

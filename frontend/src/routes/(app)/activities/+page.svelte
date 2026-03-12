@@ -26,8 +26,7 @@
 		const status = page.url.searchParams.get("status");
 		filterValue = status ?? "";
 	});
-
-	const activitiesQuery = useActivitiesQuery(() => (filterValue ? filterValue : null));
+	const activitiesQuery = useActivitiesQuery(() => filterValue || null);
 </script>
 
 <h1 class="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl">

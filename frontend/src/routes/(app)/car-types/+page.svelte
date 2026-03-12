@@ -10,6 +10,7 @@
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import { config } from "$lib/config";
 	import { useCarTypesQuery } from "$lib/hooks/use-car-type";
+	import { page } from "$app/state";
 
 	const filters = [
 		{ label: "Active", value: "active" },
@@ -21,7 +22,11 @@
 		filters.find((filter) => filter.value === filterValue)?.label ?? "Filter by"
 	);
 
-	const carTypesQuery = useCarTypesQuery();
+	$effect(() => {
+		const status = page.url.searchParams.get("status");
+		filterValue = status ?? "";
+	});
+	const carTypesQuery = useCarTypesQuery(() => filterValue || null);
 </script>
 
 <h1 class="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl">Car Types Management</h1>

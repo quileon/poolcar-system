@@ -29,10 +29,10 @@
 	let finishedLongitude = $state("");
 	let description = $state("");
 
-	const carsQuery = useCarsQuery();
-	const contactsQuery = useContactsQuery();
-	const activityTypesQuery = useActivityTypesQuery();
-	const trackersQuery = useTrackersQuery();
+	const carsQuery = useCarsQuery(() => "active");
+	const contactsQuery = useContactsQuery(() => "active");
+	const activityTypesQuery = useActivityTypesQuery(() => "active");
+	const trackersQuery = useTrackersQuery(() => "active");
 
 	const createActivityMutation = useCreateActivityMutation();
 

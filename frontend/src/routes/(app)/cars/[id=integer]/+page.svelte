@@ -20,8 +20,8 @@
 
 	// Queries
 	const carQuery = useCarQuery(() => carId);
-	const trackersQuery = useTrackersQuery();
-	const carTypesQuery = useCarTypesQuery();
+	const trackersQuery = useTrackersQuery(() => "active");
+	const carTypesQuery = useCarTypesQuery(() => "active");
 
 	// Mutations
 	const editCarMutation = useEditCarMutation(() => carId);
