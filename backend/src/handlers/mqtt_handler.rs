@@ -62,7 +62,7 @@ pub async fn mqtt_handler(state: Arc<AppState>, payload: Bytes) -> Result<(), Mq
             activity.activity_id,
             distance
         );
-        if distance < 500.0 {
+        if distance < 100.0 {
             tracing::debug!(
                 "Completing activity {} with distance {}",
                 activity.activity_id,
@@ -80,6 +80,7 @@ pub async fn mqtt_handler(state: Arc<AppState>, payload: Bytes) -> Result<(), Mq
             let deleted_marker = serde_json::to_string(&ActivityMarker {
                 id: activity.activity_id as u8,
                 action: "DELETE".into(),
+                name: None,
                 latitude: None,
                 longitude: None,
             })?;

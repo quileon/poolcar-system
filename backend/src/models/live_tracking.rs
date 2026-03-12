@@ -28,8 +28,9 @@ pub struct GetMqttPayloadHistory {
 #[ts(export)]
 pub struct ActivityMarker {
     pub id: u8,
-    #[ts(type = "POST | PUT | DELETE")]
+    #[ts(type = "\"POST\" | \"PUT\" | \"DELETE\"")]
     pub action: String,
+    pub name: Option<String>,
     #[ts(type = "number | null")]
     pub latitude: Option<Decimal>,
     #[ts(type = "number | null")]
