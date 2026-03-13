@@ -4,7 +4,7 @@ use dotenvy;
 use poolcar_backend::{config::Config, create_app};
 use rand::{distr, Rng};
 use rumqttc::{MqttOptions, Transport};
-use sqlx::postgres::PgPoolOptions;
+use sqlx::mysql::MySqlPoolOptions;
 use std::time::Duration;
 use tokio::signal;
 
@@ -24,7 +24,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Environment configuration loaded");
 
     // Database
-    let db_pool = PgPoolOptions::new()
+    let db_pool = MySqlPoolOptions::new()
         .connect(&config.database_url)
         .await
         .context("Failed to cretae Database pool")?;

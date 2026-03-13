@@ -27,7 +27,7 @@ use tower_http::{
 };
 
 pub fn create_app(
-    db_pool: sqlx::PgPool,
+    db_pool: sqlx::MySqlPool,
     redis_pool: deadpool_redis::Pool,
     mqtt_options: Option<rumqttc::MqttOptions>,
     config: config::Config,

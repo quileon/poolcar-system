@@ -1,18 +1,22 @@
 -- Add migration script here
 CREATE TABLE activities (
-    activity_id SERIAL PRIMARY KEY,
-    car_id INTEGER NULL REFERENCES cars(car_id),
-    contact_id INTEGER NOT NULL REFERENCES contacts(contact_id),
-    activity_type_id INTEGER NOT NULL REFERENCES activity_types(activity_type_id),
-    tracker_id INTEGER NULL REFERENCES trackers(tracker_id),
-    started_at TIMESTAMP NULL DEFAULT NOW(),
+    activity_id INT AUTO_INCREMENT PRIMARY KEY,
+    car_id INT NULL,
+    contact_id INT NOT NULL,
+    activity_type_id INT NOT NULL,
+    tracker_id INT NULL,
+    started_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     finished_at TIMESTAMP NULL,
     finished_latitude DECIMAL(10, 8) NULL,
     finished_longitude DECIMAL(11, 8) NULL,
     description TEXT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP NULL
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (car_id) REFERENCES cars(car_id),
+    FOREIGN KEY (contact_id) REFERENCES contacts(contact_id),
+    FOREIGN KEY (activity_type_id) REFERENCES activity_types(activity_type_id),
+    FOREIGN KEY (tracker_id) REFERENCES trackers(tracker_id)
 );
 
 CREATE INDEX idx_activities_car_id ON activities(car_id);
