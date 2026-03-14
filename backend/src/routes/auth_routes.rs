@@ -17,8 +17,7 @@ pub async fn login_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<LoginRequest>,
 ) -> Result<impl IntoResponse, AppError> {
-    let user = sqlx::query_as!(
-        UserAuth,
+    let user: UserAuth = sqlx::query_as(
         r#"
             SELECT
                 users.username,
@@ -27,11 +26,11 @@ pub async fn login_handler(
                 user_roles.name AS user_role_name
             FROM users
             LEFT JOIN user_roles ON users.user_role_id = user_roles.user_role_id
-            WHERE users.username = $1
+            WHERE users.username = ?
             AND users.deleted_at IS NULL
         "#,
-        payload.username
     )
+    .bind(&payload.username)
     .fetch_optional(&state.db)
     .await?
     .ok_or(AppError::WrongCredentials)?;

@@ -19,17 +19,16 @@ pub async fn get_trackers(
 ) -> Result<impl IntoResponse, AppError> {
     let status = params.status.unwrap_or("active".into());
 
-    let trackers = sqlx::query_as!(
-        TrackerDetails,
+    let trackers: Vec<TrackerDetails> = sqlx::query_as(
         r#"
             SELECT
                 trackers.tracker_id,
                 trackers.name,
-                cars.car_id as "car_id?",
-                cars.name as "car_name?",
-                cars.police_number as "car_police_number?",
-                cars.car_type_id as "car_type_id?",
-                car_types.name as "car_type_name?",
+                cars.car_id as car_id,
+                cars.name as car_name,
+                cars.police_number as car_police_number,
+                cars.car_type_id as car_type_id,
+                car_types.name as car_type_name,
                 trackers.created_at,
                 trackers.updated_at,
                 trackers.deleted_at
@@ -38,15 +37,17 @@ pub async fn get_trackers(
             LEFT JOIN car_types ON cars.car_type_id = car_types.car_type_id
             WHERE
                 CASE
-                    WHEN $1 = 'active' THEN trackers.deleted_at IS NULL
-                    WHEN $1 = 'deleted' THEN trackers.deleted_at IS NOT NULL
-                    WHEN $1 = 'all' THEN TRUE
+                    WHEN ? = 'active' THEN trackers.deleted_at IS NULL
+                    WHEN ? = 'deleted' THEN trackers.deleted_at IS NOT NULL
+                    WHEN ? = 'all' THEN TRUE
                     ELSE trackers.deleted_at IS NULL
                 END
             ORDER BY trackers.tracker_id ASC
         "#,
-        status
     )
+    .bind(&status)
+    .bind(&status)
+    .bind(&status)
     .fetch_all(&state.db)
     .await?;
 
@@ -62,27 +63,26 @@ pub async fn get_tracker(
     State(state): State<Arc<AppState>>,
     Path(tracker_id): Path<i32>,
 ) -> Result<impl IntoResponse, AppError> {
-    let tracker = sqlx::query_as!(
-        TrackerDetails,
+    let tracker: TrackerDetails = sqlx::query_as(
         r#"
             SELECT
                 trackers.tracker_id,
                 trackers.name,
-                cars.car_id as "car_id?",
-                cars.name as "car_name?",
-                cars.police_number as "car_police_number?",
-                cars.car_type_id as "car_type_id?",
-                car_types.name as "car_type_name?",
+                cars.car_id as car_id,
+                cars.name as car_name,
+                cars.police_number as car_police_number,
+                cars.car_type_id as car_type_id,
+                car_types.name as car_type_name,
                 trackers.created_at,
                 trackers.updated_at,
                 trackers.deleted_at
             FROM trackers
             LEFT JOIN cars ON trackers.tracker_id = cars.tracker_id
             LEFT JOIN car_types ON cars.car_type_id = car_types.car_type_id
-            WHERE trackers.tracker_id = $1
+            WHERE trackers.tracker_id = ?
         "#,
-        tracker_id
     )
+    .bind(tracker_id)
     .fetch_one(&state.db)
     .await?;
 
@@ -93,14 +93,18 @@ pub async fn create_tracker(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<TrackerBody>,
 ) -> Result<impl IntoResponse, AppError> {
-    let new_tracker = sqlx::query_as!(
-        Tracker,
+    sqlx::query(
         r#"
             INSERT INTO trackers (name)
-            VALUES ($1)
-            RETURNING tracker_id, name, created_at, updated_at, deleted_at
+            VALUES (?)
         "#,
-        payload.name
+    )
+    .bind(&payload.name)
+    .execute(&state.db)
+    .await?;
+
+    let new_tracker: Tracker = sqlx::query_as(
+        "SELECT tracker_id, name, created_at, updated_at, deleted_at FROM trackers WHERE tracker_id = LAST_INSERT_ID()"
     )
     .fetch_one(&state.db)
     .await?;
@@ -113,17 +117,22 @@ pub async fn update_tracker(
     Path(tracker_id): Path<i32>,
     Json(payload): Json<TrackerBody>,
 ) -> Result<impl IntoResponse, AppError> {
-    let updated_tracker = sqlx::query_as!(
-        Tracker,
+    sqlx::query(
         r#"
             UPDATE trackers
-            SET name = $2
-            WHERE tracker_id = $1
-            RETURNING tracker_id, name, created_at, updated_at, deleted_at
+            SET name = ?
+            WHERE tracker_id = ?
         "#,
-        tracker_id,
-        payload.name
     )
+    .bind(&payload.name)
+    .bind(tracker_id)
+    .execute(&state.db)
+    .await?;
+
+    let updated_tracker: Tracker = sqlx::query_as(
+        "SELECT tracker_id, name, created_at, updated_at, deleted_at FROM trackers WHERE tracker_id = ?"
+    )
+    .bind(tracker_id)
     .fetch_one(&state.db)
     .await?;
 
@@ -134,16 +143,21 @@ pub async fn delete_tracker(
     State(state): State<Arc<AppState>>,
     Path(tracker_id): Path<i32>,
 ) -> Result<impl IntoResponse, AppError> {
-    let deleted_tracker = sqlx::query_as!(
-        Tracker,
+    sqlx::query(
         r#"
             UPDATE trackers
-            SET deleted_at = NOW()
-            WHERE tracker_id = $1
-            RETURNING tracker_id, name, created_at, updated_at, deleted_at
+            SET deleted_at = CURRENT_TIMESTAMP
+            WHERE tracker_id = ?
         "#,
-        tracker_id
     )
+    .bind(tracker_id)
+    .execute(&state.db)
+    .await?;
+
+    let deleted_tracker: Tracker = sqlx::query_as(
+        "SELECT tracker_id, name, created_at, updated_at, deleted_at FROM trackers WHERE tracker_id = ?"
+    )
+    .bind(tracker_id)
     .fetch_one(&state.db)
     .await?;
 
@@ -154,16 +168,21 @@ pub async fn restore_tracker(
     State(state): State<Arc<AppState>>,
     Path(tracker_id): Path<i32>,
 ) -> Result<impl IntoResponse, AppError> {
-    let restored_tracker = sqlx::query_as!(
-        Tracker,
+    sqlx::query(
         r#"
             UPDATE trackers
             SET deleted_at = NULL
-            WHERE tracker_id = $1
-            RETURNING tracker_id, name, created_at, updated_at, deleted_at
+            WHERE tracker_id = ?
         "#,
-        tracker_id
     )
+    .bind(tracker_id)
+    .execute(&state.db)
+    .await?;
+
+    let restored_tracker: Tracker = sqlx::query_as(
+        "SELECT tracker_id, name, created_at, updated_at, deleted_at FROM trackers WHERE tracker_id = ?"
+    )
+    .bind(tracker_id)
     .fetch_one(&state.db)
     .await?;
 
@@ -173,17 +192,16 @@ pub async fn restore_tracker(
 pub async fn export_trackers(
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, AppError> {
-    let trackers = sqlx::query_as!(
-        TrackerDetails,
+    let trackers: Vec<TrackerDetails> = sqlx::query_as(
         r#"
             SELECT
                 trackers.tracker_id,
                 trackers.name,
-                cars.car_id as "car_id?",
-                cars.name as "car_name?",
-                cars.police_number as "car_police_number?",
-                cars.car_type_id as "car_type_id?",
-                car_types.name as "car_type_name?",
+                cars.car_id as car_id,
+                cars.name as car_name,
+                cars.police_number as car_police_number,
+                cars.car_type_id as car_type_id,
+                car_types.name as car_type_name,
                 trackers.created_at,
                 trackers.updated_at,
                 trackers.deleted_at

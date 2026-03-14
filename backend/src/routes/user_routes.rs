@@ -21,8 +21,7 @@ pub async fn get_users(
 ) -> Result<impl IntoResponse, AppError> {
     let status = params.status.unwrap_or("active".into());
 
-    let users = sqlx::query_as!(
-        UserWithDetails,
+    let users: Vec<UserWithDetails> = sqlx::query_as(
         r#"
             SELECT
                 users.user_id,
@@ -35,15 +34,17 @@ pub async fn get_users(
             LEFT JOIN user_roles ON users.user_role_id = user_roles.user_role_id
             WHERE
                 CASE
-                    WHEN $1 = 'active' THEN users.deleted_at IS NULL
-                    WHEN $1 = 'deleted' THEN users.deleted_at IS NOT NULL
-                    WHEN $1 = 'all' THEN TRUE
+                    WHEN ? = 'active' THEN users.deleted_at IS NULL
+                    WHEN ? = 'deleted' THEN users.deleted_at IS NOT NULL
+                    WHEN ? = 'all' THEN TRUE
                     ELSE users.deleted_at IS NULL
                 END
             ORDER BY users.user_id ASC
         "#,
-        status
     )
+    .bind(&status)
+    .bind(&status)
+    .bind(&status)
     .fetch_all(&state.db)
     .await?;
 
@@ -54,8 +55,7 @@ pub async fn get_user(
     State(state): State<Arc<AppState>>,
     Path(tracker_id): Path<i32>,
 ) -> Result<impl IntoResponse, AppError> {
-    let user = sqlx::query_as!(
-        UserWithDetails,
+    let user: UserWithDetails = sqlx::query_as(
         r#"
             SELECT
                 users.user_id,
@@ -66,11 +66,11 @@ pub async fn get_user(
                 user_roles.name AS user_role_name
             FROM users
             LEFT JOIN user_roles ON users.user_role_id = user_roles.user_role_id
-            WHERE users.user_id = $1
+            WHERE users.user_id = ?
             AND users.deleted_at IS NULL
         "#,
-        tracker_id
     )
+    .bind(tracker_id)
     .fetch_one(&state.db)
     .await?;
 
@@ -84,23 +84,22 @@ pub async fn create_user(
     let password = payload.password.ok_or(AppError::MissingField)?;
     let hashed_password = auth_utils::hash_password(&password)?;
 
-    let new_user = sqlx::query_as!(
-        User,
+    sqlx::query(
         r#"
             INSERT INTO users (username, email, password, full_name, user_role_id)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING
-                users.user_id,
-                users.username,
-                users.email,
-                users.full_name,
-                users.user_role_id
+            VALUES (?, ?, ?, ?, ?)
         "#,
-        payload.username,
-        payload.email,
-        hashed_password,
-        payload.full_name,
-        payload.user_role_id
+    )
+    .bind(&payload.username)
+    .bind(&payload.email)
+    .bind(&hashed_password)
+    .bind(&payload.full_name)
+    .bind(payload.user_role_id)
+    .execute(&state.db)
+    .await?;
+
+    let new_user: User = sqlx::query_as(
+        "SELECT user_id, username, email, full_name, user_role_id FROM users WHERE user_id = LAST_INSERT_ID()"
     )
     .fetch_one(&state.db)
     .await?;
@@ -118,31 +117,31 @@ pub async fn update_user(
         None => None,
     };
 
-    let updated_user = sqlx::query_as!(
-        User,
+    sqlx::query(
         r#"
             UPDATE users
             SET
-                username = $2,
-                email = $3,
-                password = COALESCE($4, password),
-                full_name = $5,
-                user_role_id = $6
-            WHERE user_id = $1
-            RETURNING
-                users.user_id,
-                users.username,
-                users.email,
-                users.full_name,
-                users.user_role_id
+                username = ?,
+                email = ?,
+                password = COALESCE(?, password),
+                full_name = ?,
+                user_role_id = ?
+            WHERE user_id = ?
         "#,
-        user_id,
-        payload.username,
-        payload.email,
-        hashed_password,
-        payload.full_name,
-        payload.user_role_id
     )
+    .bind(&payload.username)
+    .bind(&payload.email)
+    .bind(&hashed_password)
+    .bind(&payload.full_name)
+    .bind(payload.user_role_id)
+    .bind(user_id)
+    .execute(&state.db)
+    .await?;
+
+    let updated_user: User = sqlx::query_as(
+        "SELECT user_id, username, email, full_name, user_role_id FROM users WHERE user_id = ?",
+    )
+    .bind(user_id)
     .fetch_one(&state.db)
     .await?;
 
@@ -153,21 +152,21 @@ pub async fn delete_user(
     State(state): State<Arc<AppState>>,
     Path(user_id): Path<i32>,
 ) -> Result<impl IntoResponse, AppError> {
-    let deleted_user = sqlx::query_as!(
-        User,
+    sqlx::query(
         r#"
             UPDATE users
-            SET deleted_at = NOW()
-            WHERE user_id = $1
-            RETURNING
-                users.user_id,
-                users.username,
-                users.email,
-                users.full_name,
-                users.user_role_id
+            SET deleted_at = CURRENT_TIMESTAMP
+            WHERE user_id = ?
         "#,
-        user_id
     )
+    .bind(user_id)
+    .execute(&state.db)
+    .await?;
+
+    let deleted_user: User = sqlx::query_as(
+        "SELECT user_id, username, email, full_name, user_role_id FROM users WHERE user_id = ?",
+    )
+    .bind(user_id)
     .fetch_one(&state.db)
     .await?;
 
@@ -177,8 +176,7 @@ pub async fn delete_user(
 pub async fn export_users(
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, AppError> {
-    let users = sqlx::query_as!(
-        UsersExport,
+    let users: Vec<UsersExport> = sqlx::query_as(
         r#"
             SELECT
                 users.user_id,

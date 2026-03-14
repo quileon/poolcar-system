@@ -21,8 +21,7 @@ pub async fn get_contact_types(
 ) -> Result<Json<GetContactTypesResponse>, AppError> {
     let status = params.status.unwrap_or("active".into());
 
-    let contact_types = sqlx::query_as!(
-        ContactTypeDetails,
+    let contact_types: Vec<ContactTypeDetails> = sqlx::query_as(
         r#"
             SELECT
                 contact_types.contact_type_id,
@@ -35,16 +34,18 @@ pub async fn get_contact_types(
             LEFT JOIN contacts ON contact_types.contact_type_id = contacts.contact_type_id
             WHERE
                 CASE
-                    WHEN $1 = 'active' THEN contact_types.deleted_at IS NULL
-                    WHEN $1 = 'deleted' THEN contact_types.deleted_at IS NOT NULL
-                    WHEN $1 = 'all' THEN TRUE
+                    WHEN ? = 'active' THEN contact_types.deleted_at IS NULL
+                    WHEN ? = 'deleted' THEN contact_types.deleted_at IS NOT NULL
+                    WHEN ? = 'all' THEN TRUE
                     ELSE contact_types.deleted_at IS NULL
                 END
             GROUP BY contact_types.contact_type_id, contact_types.name
             ORDER BY contact_types.contact_type_id ASC
         "#,
-        status
     )
+    .bind(&status)
+    .bind(&status)
+    .bind(&status)
     .fetch_all(&state.db)
     .await?;
 
@@ -60,8 +61,7 @@ pub async fn get_contact_type(
     State(state): State<Arc<AppState>>,
     Path(contact_type_id): Path<i32>,
 ) -> Result<Json<ContactTypeDetails>, AppError> {
-    let contact_type = sqlx::query_as!(
-        ContactTypeDetails,
+    let contact_type: ContactTypeDetails = sqlx::query_as(
         r#"
             SELECT
                 contact_types.contact_type_id,
@@ -72,12 +72,12 @@ pub async fn get_contact_type(
                 contact_types.deleted_at
             FROM contact_types
             LEFT JOIN contacts ON contact_types.contact_type_id = contacts.contact_type_id
-            WHERE contact_types.contact_type_id = $1
+            WHERE contact_types.contact_type_id = ?
             GROUP BY contact_types.contact_type_id, contact_types.name
             ORDER BY contact_types.contact_type_id ASC
         "#,
-        contact_type_id
     )
+    .bind(contact_type_id)
     .fetch_one(&state.db)
     .await?;
 
@@ -88,14 +88,18 @@ pub async fn create_contact_type(
     State(state): State<Arc<AppState>>,
     Json(contact_type): Json<ContactTypeBody>,
 ) -> Result<Json<ContactType>, AppError> {
-    let created_contact_type = sqlx::query_as!(
-        ContactType,
+    sqlx::query(
         r#"
             INSERT INTO contact_types (name)
-            VALUES ($1)
-            RETURNING contact_type_id, name, created_at, updated_at, deleted_at
+            VALUES (?)
         "#,
-        contact_type.name
+    )
+    .bind(&contact_type.name)
+    .execute(&state.db)
+    .await?;
+
+    let created_contact_type: ContactType = sqlx::query_as(
+        "SELECT contact_type_id, name, created_at, updated_at, deleted_at FROM contact_types WHERE contact_type_id = LAST_INSERT_ID()"
     )
     .fetch_one(&state.db)
     .await?;
@@ -108,17 +112,22 @@ pub async fn update_contact_type(
     Path(contact_type_id): Path<i32>,
     Json(contact_type): Json<ContactTypeBody>,
 ) -> Result<Json<ContactType>, AppError> {
-    let updated_contact_type = sqlx::query_as!(
-        ContactType,
+    sqlx::query(
         r#"
             UPDATE contact_types
-            SET name = $2
-            WHERE contact_type_id = $1
-            RETURNING contact_type_id, name, created_at, updated_at, deleted_at
+            SET name = ?
+            WHERE contact_type_id = ?
         "#,
-        contact_type_id,
-        contact_type.name
     )
+    .bind(&contact_type.name)
+    .bind(contact_type_id)
+    .execute(&state.db)
+    .await?;
+
+    let updated_contact_type: ContactType = sqlx::query_as(
+        "SELECT contact_type_id, name, created_at, updated_at, deleted_at FROM contact_types WHERE contact_type_id = ?"
+    )
+    .bind(contact_type_id)
     .fetch_one(&state.db)
     .await?;
 
@@ -129,16 +138,21 @@ pub async fn delete_contact_type(
     State(state): State<Arc<AppState>>,
     Path(contact_type_id): Path<i32>,
 ) -> Result<Json<ContactType>, AppError> {
-    let delete_contact_type = sqlx::query_as!(
-        ContactType,
+    sqlx::query(
         r#"
             UPDATE contact_types
-            SET deleted_at = NOW()
-            WHERE contact_type_id = $1
-            RETURNING contact_type_id, name, created_at, updated_at, deleted_at
+            SET deleted_at = CURRENT_TIMESTAMP
+            WHERE contact_type_id = ?
         "#,
-        contact_type_id,
     )
+    .bind(contact_type_id)
+    .execute(&state.db)
+    .await?;
+
+    let delete_contact_type: ContactType = sqlx::query_as(
+        "SELECT contact_type_id, name, created_at, updated_at, deleted_at FROM contact_types WHERE contact_type_id = ?"
+    )
+    .bind(contact_type_id)
     .fetch_one(&state.db)
     .await?;
 
@@ -149,16 +163,21 @@ pub async fn restore_contact_type(
     State(state): State<Arc<AppState>>,
     Path(contact_type_id): Path<i32>,
 ) -> Result<Json<ContactType>, AppError> {
-    let restored_contact_type = sqlx::query_as!(
-        ContactType,
+    sqlx::query(
         r#"
             UPDATE contact_types
             SET deleted_at = NULL
-            WHERE contact_type_id = $1
-            RETURNING contact_type_id, name, created_at, updated_at, deleted_at
+            WHERE contact_type_id = ?
         "#,
-        contact_type_id,
     )
+    .bind(contact_type_id)
+    .execute(&state.db)
+    .await?;
+
+    let restored_contact_type: ContactType = sqlx::query_as(
+        "SELECT contact_type_id, name, created_at, updated_at, deleted_at FROM contact_types WHERE contact_type_id = ?"
+    )
+    .bind(contact_type_id)
     .fetch_one(&state.db)
     .await?;
 
@@ -168,8 +187,7 @@ pub async fn restore_contact_type(
 pub async fn export_contact_types(
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, AppError> {
-    let contact_types = sqlx::query_as!(
-        ContactTypeDetails,
+    let contact_types: Vec<ContactTypeDetails> = sqlx::query_as(
         r#"
             SELECT
                 contact_types.contact_type_id,
