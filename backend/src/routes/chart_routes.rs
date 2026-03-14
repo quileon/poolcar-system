@@ -13,7 +13,7 @@ struct ChartHistoryPayload {
 pub async fn get_chart_history(
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, AppError> {
-    let tracker_ids = sqlx::query_scalar!(
+    let tracker_ids: Vec<i32> = sqlx::query_scalar(
         r#"
             SELECT tracker_id
             FROM trackers
