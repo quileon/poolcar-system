@@ -1,7 +1,7 @@
 use crate::{
     error::AppError,
-    models::car_type::{CarType, CarTypeBody, CarTypeDetails, GetCarTypesResponse},
-    types::PaginationParams,
+    models::car_type::{CarTypeBody, CarTypeDetails, GetCarTypesResponse},
+    types::{PaginationParams, SuccessResponse},
     AppState,
 };
 use axum::{
@@ -84,7 +84,7 @@ pub async fn get_car_type(
 pub async fn create_car_type(
     State(state): State<Arc<AppState>>,
     Json(car_type): Json<CarTypeBody>,
-) -> Result<impl IntoResponse, AppError> {
+) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
             INSERT INTO car_types (name)
@@ -95,20 +95,14 @@ pub async fn create_car_type(
     .execute(&state.db)
     .await?;
 
-    let created_car_type: CarType = sqlx::query_as(
-        "SELECT car_type_id, name, created_at, updated_at, deleted_at FROM car_types WHERE car_type_id = LAST_INSERT_ID()"
-    )
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(Json(created_car_type))
+    Ok(Json(SuccessResponse::new("Car type created successfully")))
 }
 
 pub async fn update_car_type(
     State(state): State<Arc<AppState>>,
     Path(car_type_id): Path<i32>,
     Json(car_type): Json<CarTypeBody>,
-) -> Result<impl IntoResponse, AppError> {
+) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
             UPDATE car_types
@@ -121,20 +115,13 @@ pub async fn update_car_type(
     .execute(&state.db)
     .await?;
 
-    let updated_car_type: CarType = sqlx::query_as(
-        "SELECT car_type_id, name, created_at, updated_at, deleted_at FROM car_types WHERE car_type_id = ?"
-    )
-    .bind(car_type_id)
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(Json(updated_car_type))
+    Ok(Json(SuccessResponse::new("Car type updated successfully")))
 }
 
 pub async fn delete_car_type(
     State(state): State<Arc<AppState>>,
     Path(car_type_id): Path<i32>,
-) -> Result<impl IntoResponse, AppError> {
+) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
             UPDATE car_types
@@ -146,20 +133,13 @@ pub async fn delete_car_type(
     .execute(&state.db)
     .await?;
 
-    let deleted_car_type: CarType = sqlx::query_as(
-        "SELECT car_type_id, name, created_at, updated_at, deleted_at FROM car_types WHERE car_type_id = ?"
-    )
-    .bind(car_type_id)
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(Json(deleted_car_type))
+    Ok(Json(SuccessResponse::new("Car type deleted successfully")))
 }
 
 pub async fn restore_car_type(
     State(state): State<Arc<AppState>>,
     Path(car_type_id): Path<i32>,
-) -> Result<impl IntoResponse, AppError> {
+) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
             UPDATE car_types
@@ -171,14 +151,7 @@ pub async fn restore_car_type(
     .execute(&state.db)
     .await?;
 
-    let restore_car_type: CarType = sqlx::query_as(
-        "SELECT car_type_id, name, created_at, updated_at, deleted_at FROM car_types WHERE car_type_id = ?"
-    )
-    .bind(car_type_id)
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(Json(restore_car_type))
+    Ok(Json(SuccessResponse::new("Car type restored successfully")))
 }
 
 pub async fn export_car_types(

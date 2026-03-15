@@ -1,9 +1,9 @@
 use crate::{
     error::AppError,
     models::user_role::{
-        GetUserRolesResponse, UserRole, UserRoleBody, UserRoleWithDetails, UserRolesExport,
+        GetUserRolesResponse, UserRoleBody, UserRoleWithDetails, UserRolesExport,
     },
-    types::PaginationParams,
+    types::{PaginationParams, SuccessResponse},
     AppState,
 };
 use axum::{
@@ -82,7 +82,7 @@ pub async fn get_user_role(
 pub async fn create_user_role(
     State(state): State<Arc<AppState>>,
     Json(user_role): Json<UserRoleBody>,
-) -> Result<Json<UserRole>, AppError> {
+) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
             INSERT INTO user_roles (name)
@@ -93,20 +93,14 @@ pub async fn create_user_role(
     .execute(&state.db)
     .await?;
 
-    let created_user_role: UserRole = sqlx::query_as(
-        "SELECT user_role_id, name FROM user_roles WHERE user_role_id = LAST_INSERT_ID()",
-    )
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(Json(created_user_role))
+    Ok(Json(SuccessResponse::new("User role created successfully")))
 }
 
 pub async fn update_user_role(
     State(state): State<Arc<AppState>>,
     Path(user_role_id): Path<i32>,
     Json(user_role): Json<UserRoleBody>,
-) -> Result<Json<UserRole>, AppError> {
+) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
             UPDATE user_roles
@@ -119,19 +113,13 @@ pub async fn update_user_role(
     .execute(&state.db)
     .await?;
 
-    let updated_user_role: UserRole =
-        sqlx::query_as("SELECT user_role_id, name FROM user_roles WHERE user_role_id = ?")
-            .bind(user_role_id)
-            .fetch_one(&state.db)
-            .await?;
-
-    Ok(Json(updated_user_role))
+    Ok(Json(SuccessResponse::new("User role updated successfully")))
 }
 
 pub async fn delete_user_role(
     State(state): State<Arc<AppState>>,
     Path(user_role_id): Path<i32>,
-) -> Result<Json<UserRole>, AppError> {
+) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
             UPDATE user_roles
@@ -143,13 +131,7 @@ pub async fn delete_user_role(
     .execute(&state.db)
     .await?;
 
-    let deleted_user_role: UserRole =
-        sqlx::query_as("SELECT user_role_id, name FROM user_roles WHERE user_role_id = ?")
-            .bind(user_role_id)
-            .fetch_one(&state.db)
-            .await?;
-
-    Ok(Json(deleted_user_role))
+    Ok(Json(SuccessResponse::new("User role deleted successfully")))
 }
 
 pub async fn export_user_roles(

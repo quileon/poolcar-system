@@ -1,9 +1,9 @@
 use crate::{
     auth_utils,
     error::AppError,
-    models::user::{User, UserBody, UserWithDetails, UsersExport},
+    models::user::{UserBody, UserWithDetails, UsersExport},
     routes::user_role_routes,
-    types::PaginationParams,
+    types::{PaginationParams, SuccessResponse},
     AppState,
 };
 use axum::{
@@ -80,7 +80,7 @@ pub async fn get_user(
 pub async fn create_user(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<UserBody>,
-) -> Result<impl IntoResponse, AppError> {
+) -> Result<Json<SuccessResponse>, AppError> {
     let password = payload.password.ok_or(AppError::MissingField)?;
     let hashed_password = auth_utils::hash_password(&password)?;
 
@@ -98,20 +98,14 @@ pub async fn create_user(
     .execute(&state.db)
     .await?;
 
-    let new_user: User = sqlx::query_as(
-        "SELECT user_id, username, email, full_name, user_role_id FROM users WHERE user_id = LAST_INSERT_ID()"
-    )
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(Json(new_user))
+    Ok(Json(SuccessResponse::new("User created successfully")))
 }
 
 pub async fn update_user(
     State(state): State<Arc<AppState>>,
     Path(user_id): Path<i32>,
     Json(payload): Json<UserBody>,
-) -> Result<impl IntoResponse, AppError> {
+) -> Result<Json<SuccessResponse>, AppError> {
     let hashed_password = match &payload.password {
         Some(pw) => Some(auth_utils::hash_password(pw)?),
         None => None,
@@ -138,20 +132,13 @@ pub async fn update_user(
     .execute(&state.db)
     .await?;
 
-    let updated_user: User = sqlx::query_as(
-        "SELECT user_id, username, email, full_name, user_role_id FROM users WHERE user_id = ?",
-    )
-    .bind(user_id)
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(Json(updated_user))
+    Ok(Json(SuccessResponse::new("User updated successfully")))
 }
 
 pub async fn delete_user(
     State(state): State<Arc<AppState>>,
     Path(user_id): Path<i32>,
-) -> Result<impl IntoResponse, AppError> {
+) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
             UPDATE users
@@ -163,14 +150,7 @@ pub async fn delete_user(
     .execute(&state.db)
     .await?;
 
-    let deleted_user: User = sqlx::query_as(
-        "SELECT user_id, username, email, full_name, user_role_id FROM users WHERE user_id = ?",
-    )
-    .bind(user_id)
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(Json(deleted_user))
+    Ok(Json(SuccessResponse::new("User deleted successfully")))
 }
 
 pub async fn export_users(

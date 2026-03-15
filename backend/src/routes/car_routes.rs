@@ -1,8 +1,8 @@
 use crate::{
     error::AppError,
-    models::car::{Car, CarBody, CarDetails, GetCarsResponse},
+    models::car::{CarBody, CarDetails, GetCarsResponse},
     routes::car_type_routes,
-    types::PaginationParams,
+    types::{PaginationParams, SuccessResponse},
     AppState,
 };
 use axum::{
@@ -95,7 +95,7 @@ pub async fn get_car(
 pub async fn create_car(
     State(state): State<Arc<AppState>>,
     Json(car): Json<CarBody>,
-) -> Result<impl IntoResponse, AppError> {
+) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
             INSERT INTO cars (name, police_number, active, car_type_id, tracker_id)
@@ -110,29 +110,18 @@ pub async fn create_car(
     .execute(&state.db)
     .await?;
 
-    let created_car: Car = sqlx::query_as(
-        "SELECT car_id, name, police_number, active, car_type_id, tracker_id, created_at, updated_at, deleted_at FROM cars WHERE car_id = LAST_INSERT_ID()"
-    )
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(Json(created_car))
+    Ok(Json(SuccessResponse::new("Car created successfully")))
 }
 
 pub async fn update_car(
     State(state): State<Arc<AppState>>,
     Path(car_id): Path<i32>,
     Json(car): Json<CarBody>,
-) -> Result<impl IntoResponse, AppError> {
+) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
             UPDATE cars
-            SET
-                name = ?,
-                police_number = ?,
-                active = ?,
-                car_type_id = ?,
-                tracker_id = ?
+            SET name = ?, police_number = ?, active = ?, car_type_id = ?, tracker_id = ?
             WHERE car_id = ?
         "#,
     )
@@ -145,24 +134,17 @@ pub async fn update_car(
     .execute(&state.db)
     .await?;
 
-    let updated_car: Car = sqlx::query_as(
-        "SELECT car_id, name, police_number, active, car_type_id, tracker_id, created_at, updated_at, deleted_at FROM cars WHERE car_id = ?"
-    )
-    .bind(car_id)
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(Json(updated_car))
+    Ok(Json(SuccessResponse::new("Car updated successfully")))
 }
 
 pub async fn delete_car(
     State(state): State<Arc<AppState>>,
     Path(car_id): Path<i32>,
-) -> Result<impl IntoResponse, AppError> {
+) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
             UPDATE cars
-            SET deleted_at = CURRENT_TIMESTAMP, tracker_id = NULL
+            SET deleted_at = CURRENT_TIMESTAMP
             WHERE car_id = ?
         "#,
     )
@@ -170,20 +152,13 @@ pub async fn delete_car(
     .execute(&state.db)
     .await?;
 
-    let deleted_car: Car = sqlx::query_as(
-        "SELECT car_id, name, police_number, active, car_type_id, tracker_id, created_at, updated_at, deleted_at FROM cars WHERE car_id = ?"
-    )
-    .bind(car_id)
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(Json(deleted_car))
+    Ok(Json(SuccessResponse::new("Car deleted successfully")))
 }
 
 pub async fn restore_car(
     State(state): State<Arc<AppState>>,
     Path(car_id): Path<i32>,
-) -> Result<impl IntoResponse, AppError> {
+) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
             UPDATE cars
@@ -195,14 +170,7 @@ pub async fn restore_car(
     .execute(&state.db)
     .await?;
 
-    let restored_car: Car = sqlx::query_as(
-        "SELECT car_id, name, police_number, active, car_type_id, tracker_id, created_at, updated_at, deleted_at FROM cars WHERE car_id = ?"
-    )
-    .bind(car_id)
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(Json(restored_car))
+    Ok(Json(SuccessResponse::new("Car restored successfully")))
 }
 
 pub async fn export_cars(

@@ -3,11 +3,11 @@ use crate::{
     models::{
         activity::{Activity, ActivityBody, ActivityDetails, GetActivitiesResponse},
         contact::Contact,
-        live_tracking::ActivityMarker,
+        websocket::{DeleteActivity, UpdateActivity},
     },
     redis::reload_redis_activities,
     routes::activity_type_routes,
-    types::PaginationParams,
+    types::{PaginationParams, SuccessResponse},
     AppState,
 };
 use axum::{
@@ -122,7 +122,7 @@ pub async fn get_activity(
 pub async fn create_activity(
     State(state): State<Arc<AppState>>,
     Json(activity): Json<ActivityBody>,
-) -> Result<Json<Activity>, AppError> {
+) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
             INSERT INTO activities (car_id, contact_id, activity_type_id, tracker_id, finished_at, started_at, finished_latitude, finished_longitude, description)
@@ -141,60 +141,61 @@ pub async fn create_activity(
     .execute(&state.db)
     .await?;
 
-    let created_activity: Activity = sqlx::query_as(
-        "SELECT activity_id, car_id, contact_id, activity_type_id, tracker_id, finished_at, started_at, finished_latitude, finished_longitude, description, created_at, updated_at, deleted_at FROM activities WHERE activity_id = LAST_INSERT_ID()"
-    )
-    .fetch_one(&state.db)
-    .await?;
-
     reload_redis_activities(&state.db, &state.redis)
         .await
         .map_err(|_| AppError::Internal("Success, but failed to reload activities cache".into()))?;
 
-    if activity.finished_at.is_some() {
-        return Ok(Json(created_activity));
+    if activity.finished_at.is_none() {
+        let created_activity: Activity = sqlx::query_as(
+            "SELECT activity_id, car_id, contact_id, activity_type_id, tracker_id, finished_at, started_at, finished_latitude, finished_longitude, description, created_at, updated_at, deleted_at FROM activities ORDER BY activity_id DESC LIMIT 1"
+        )
+        .fetch_one(&state.db)
+        .await?;
+
+        let contact: Contact = sqlx::query_as(
+            r#"
+                SELECT
+                    contact_id,
+                    name,
+                    latitude,
+                    longitude,
+                    contact_type_id,
+                    created_at,
+                    updated_at,
+                    deleted_at
+                FROM contacts
+                WHERE contact_id = ?
+            "#,
+        )
+        .bind(activity.contact_id)
+        .fetch_one(&state.db)
+        .await?;
+
+        let ws_message = serde_json::json!({
+            "message_type": "update_destination",
+            "data": UpdateActivity {
+                activity_id: created_activity.activity_id as u8,
+                contact_name: contact.name,
+                contact_latitude: contact.latitude,
+                contact_longitude: contact.longitude,
+            }
+        });
+        let new_marker = serde_json::to_string(&ws_message)?;
+
+        match state.tx.send(new_marker) {
+            Ok(_) => tracing::debug!("New activity is broadcasted to WebSockets"),
+            Err(e) => tracing::warn!("Failed to broadcast new activity to WebSockets: {}", e),
+        }
     }
 
-    let contact: Contact = sqlx::query_as(
-        r#"
-            SELECT
-                contact_id,
-                name,
-                latitude,
-                longitude,
-                contact_type_id,
-                created_at,
-                updated_at,
-                deleted_at
-            FROM contacts
-            WHERE contact_id = ?
-        "#,
-    )
-    .bind(activity.contact_id)
-    .fetch_one(&state.db)
-    .await?;
-
-    let new_marker = serde_json::to_string(&ActivityMarker {
-        id: created_activity.activity_id as u8,
-        action: "POST".into(),
-        name: Some(contact.name),
-        latitude: Some(contact.latitude),
-        longitude: Some(contact.longitude),
-    })?;
-
-    match state.tx.send(new_marker) {
-        Ok(_) => tracing::debug!("New activity is broadcasted to WebSockets"),
-        Err(e) => tracing::warn!("Failed to broadcast new activity to WebSockets: {}", e),
-    }
-
-    Ok(Json(created_activity))
+    Ok(Json(SuccessResponse::new("Activity created successfully")))
 }
 
 pub async fn update_activity(
     State(state): State<Arc<AppState>>,
     Path(activity_id): Path<i32>,
     Json(activity): Json<ActivityBody>,
-) -> Result<Json<Activity>, AppError> {
+) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
             UPDATE activities
@@ -227,13 +228,13 @@ pub async fn update_activity(
         .map_err(|_| AppError::Internal("Success, but failed to reload activities cache".into()))?;
 
     let updated_marker = if updated_activity.finished_at.is_some() {
-        serde_json::to_string(&ActivityMarker {
-            id: activity_id as u8,
-            action: "DELETE".into(),
-            name: None,
-            latitude: None,
-            longitude: None,
-        })?
+        let ws_message = serde_json::json!({
+            "message_type": "remove_destination",
+            "data": DeleteActivity {
+                activity_id: activity_id as u8,
+            }
+        });
+        serde_json::to_string(&ws_message)?
     } else {
         let contact: Contact = sqlx::query_as(
             r#"
@@ -254,13 +255,16 @@ pub async fn update_activity(
         .fetch_one(&state.db)
         .await?;
 
-        serde_json::to_string(&ActivityMarker {
-            id: activity_id as u8,
-            action: "PUT".into(),
-            name: Some(contact.name),
-            latitude: Some(contact.latitude),
-            longitude: Some(contact.longitude),
-        })?
+        let ws_message = serde_json::json!({
+            "message_type": "update_destination",
+            "data": UpdateActivity {
+                activity_id: activity_id as u8,
+                contact_name: contact.name,
+                contact_latitude: contact.latitude,
+                contact_longitude: contact.longitude,
+            }
+        });
+        serde_json::to_string(&ws_message)?
     };
 
     match state.tx.send(updated_marker) {
@@ -268,13 +272,13 @@ pub async fn update_activity(
         Err(e) => tracing::warn!("Failed to broadcast updated activity to WebSockets: {}", e),
     }
 
-    Ok(Json(updated_activity))
+    Ok(Json(SuccessResponse::new("Activity updated successfully")))
 }
 
 pub async fn delete_activity(
     State(state): State<Arc<AppState>>,
     Path(activity_id): Path<i32>,
-) -> Result<Json<Activity>, AppError> {
+) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
             UPDATE activities
@@ -297,30 +301,28 @@ pub async fn delete_activity(
         .await
         .map_err(|_| AppError::Internal("Success, but failed to reload activities cache".into()))?;
 
-    if deleted_activity.finished_at.is_some() {
-        return Ok(Json(deleted_activity));
+    if deleted_activity.finished_at.is_none() {
+        let ws_message = serde_json::json!({
+            "message_type": "remove_destination",
+            "data": DeleteActivity {
+                activity_id: activity_id as u8,
+            }
+        });
+        let deleted_marker = serde_json::to_string(&ws_message)?;
+
+        match state.tx.send(deleted_marker) {
+            Ok(_) => tracing::debug!("Deleted activity is broadcasted to WebSockets"),
+            Err(e) => tracing::warn!("Failed to broadcast deleted activity to WebSockets: {}", e),
+        }
     }
 
-    let deleted_marker = serde_json::to_string(&ActivityMarker {
-        id: activity_id as u8,
-        action: "DELETE".into(),
-        name: None,
-        latitude: None,
-        longitude: None,
-    })?;
-
-    match state.tx.send(deleted_marker) {
-        Ok(_) => tracing::debug!("Deleted activity is broadcasted to WebSockets"),
-        Err(e) => tracing::warn!("Failed to broadcast deleted activity to WebSockets: {}", e),
-    }
-
-    Ok(Json(deleted_activity))
+    Ok(Json(SuccessResponse::new("Activity deleted successfully")))
 }
 
 pub async fn restore_activity(
     State(state): State<Arc<AppState>>,
     Path(activity_id): Path<i32>,
-) -> Result<Json<Activity>, AppError> {
+) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
             UPDATE activities
@@ -343,44 +345,45 @@ pub async fn restore_activity(
         .await
         .map_err(|_| AppError::Internal("Success, but failed to reload activities cache".into()))?;
 
-    if restored_activity.finished_at.is_some() {
-        return Ok(Json(restored_activity));
+    if restored_activity.finished_at.is_none() {
+        let contact: Contact = sqlx::query_as(
+            r#"
+                SELECT
+                    c.contact_id,
+                    c.name,
+                    c.latitude,
+                    c.longitude,
+                    c.contact_type_id,
+                    c.created_at,
+                    c.updated_at,
+                    c.deleted_at
+                FROM contacts c
+                JOIN activities a ON a.contact_id = c.contact_id
+                WHERE a.activity_id = ?
+            "#,
+        )
+        .bind(activity_id)
+        .fetch_one(&state.db)
+        .await?;
+
+        let ws_message = serde_json::json!({
+            "message_type": "update_destination",
+            "data": UpdateActivity {
+                activity_id: activity_id as u8,
+                contact_name: contact.name,
+                contact_latitude: contact.latitude,
+                contact_longitude: contact.longitude,
+            }
+        });
+        let restored_marker = serde_json::to_string(&ws_message)?;
+
+        match state.tx.send(restored_marker) {
+            Ok(_) => tracing::debug!("Restored activity is broadcasted to WebSockets"),
+            Err(e) => tracing::warn!("Failed to broadcast restored activity to WebSockets: {}", e),
+        }
     }
 
-    let contact: Contact = sqlx::query_as(
-        r#"
-            SELECT
-                c.contact_id,
-                c.name,
-                c.latitude,
-                c.longitude,
-                c.contact_type_id,
-                c.created_at,
-                c.updated_at,
-                c.deleted_at
-            FROM contacts c
-            JOIN activities a ON a.contact_id = c.contact_id
-            WHERE a.activity_id = ?
-        "#,
-    )
-    .bind(activity_id)
-    .fetch_one(&state.db)
-    .await?;
-
-    let restored_marker = serde_json::to_string(&ActivityMarker {
-        id: activity_id as u8,
-        action: "POST".into(),
-        name: Some(contact.name),
-        latitude: Some(contact.latitude),
-        longitude: Some(contact.longitude),
-    })?;
-
-    match state.tx.send(restored_marker) {
-        Ok(_) => tracing::debug!("Restored activity is broadcasted to WebSockets"),
-        Err(e) => tracing::warn!("Failed to broadcast restored activity to WebSockets: {}", e),
-    }
-
-    Ok(Json(restored_activity))
+    Ok(Json(SuccessResponse::new("Activity restored successfully")))
 }
 
 pub async fn export_activities(

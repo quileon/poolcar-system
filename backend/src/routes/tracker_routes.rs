@@ -1,7 +1,7 @@
 use crate::{
     error::AppError,
-    models::tracker::{GetTrackerResponse, Tracker, TrackerBody, TrackerDetails},
-    types::PaginationParams,
+    models::tracker::{GetTrackerResponse, TrackerBody, TrackerDetails},
+    types::{PaginationParams, SuccessResponse},
     AppState,
 };
 use axum::{
@@ -92,7 +92,7 @@ pub async fn get_tracker(
 pub async fn create_tracker(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<TrackerBody>,
-) -> Result<impl IntoResponse, AppError> {
+) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
             INSERT INTO trackers (name)
@@ -103,20 +103,14 @@ pub async fn create_tracker(
     .execute(&state.db)
     .await?;
 
-    let new_tracker: Tracker = sqlx::query_as(
-        "SELECT tracker_id, name, created_at, updated_at, deleted_at FROM trackers WHERE tracker_id = LAST_INSERT_ID()"
-    )
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(Json(new_tracker))
+    Ok(Json(SuccessResponse::new("Tracker created successfully")))
 }
 
 pub async fn update_tracker(
     State(state): State<Arc<AppState>>,
     Path(tracker_id): Path<i32>,
     Json(payload): Json<TrackerBody>,
-) -> Result<impl IntoResponse, AppError> {
+) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
             UPDATE trackers
@@ -129,20 +123,13 @@ pub async fn update_tracker(
     .execute(&state.db)
     .await?;
 
-    let updated_tracker: Tracker = sqlx::query_as(
-        "SELECT tracker_id, name, created_at, updated_at, deleted_at FROM trackers WHERE tracker_id = ?"
-    )
-    .bind(tracker_id)
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(Json(updated_tracker))
+    Ok(Json(SuccessResponse::new("Tracker updated successfully")))
 }
 
 pub async fn delete_tracker(
     State(state): State<Arc<AppState>>,
     Path(tracker_id): Path<i32>,
-) -> Result<impl IntoResponse, AppError> {
+) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
             UPDATE trackers
@@ -154,20 +141,13 @@ pub async fn delete_tracker(
     .execute(&state.db)
     .await?;
 
-    let deleted_tracker: Tracker = sqlx::query_as(
-        "SELECT tracker_id, name, created_at, updated_at, deleted_at FROM trackers WHERE tracker_id = ?"
-    )
-    .bind(tracker_id)
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(Json(deleted_tracker))
+    Ok(Json(SuccessResponse::new("Tracker deleted successfully")))
 }
 
 pub async fn restore_tracker(
     State(state): State<Arc<AppState>>,
     Path(tracker_id): Path<i32>,
-) -> Result<impl IntoResponse, AppError> {
+) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
             UPDATE trackers
@@ -179,14 +159,7 @@ pub async fn restore_tracker(
     .execute(&state.db)
     .await?;
 
-    let restored_tracker: Tracker = sqlx::query_as(
-        "SELECT tracker_id, name, created_at, updated_at, deleted_at FROM trackers WHERE tracker_id = ?"
-    )
-    .bind(tracker_id)
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(Json(restored_tracker))
+    Ok(Json(SuccessResponse::new("Tracker restored successfully")))
 }
 
 pub async fn export_trackers(

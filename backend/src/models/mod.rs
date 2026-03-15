@@ -10,3 +10,4 @@ pub mod mqtt;
 pub mod tracker;
 pub mod user;
 pub mod user_role;
+pub mod websocket;
