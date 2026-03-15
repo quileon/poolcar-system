@@ -2,7 +2,10 @@
 	import "leaflet/dist/leaflet.css";
 	import { LiveData } from "$lib/hooks/socket.svelte";
 	import { LeafletMap } from "$lib/hooks/leaflet-map.svelte";
+	import type { WebSocketMessage } from "$lib/bindings/WebSocketMessage";
 	import type { MqttPayloadWithId } from "$lib/bindings/MqttPayloadWithId";
+	import type { UpdateActivity } from "$lib/bindings/UpdateActivity";
+	import type { DeleteActivity } from "$lib/bindings/DeleteActivity";
 	import { config } from "$lib/config";
 	import { onMount } from "svelte";
 	import * as Select from "$lib/components/ui/select/index";
@@ -17,11 +20,10 @@
 	import { useActivitiesQuery } from "$lib/hooks/use-activity";
 	import homeMarker from "$lib/assets/home.png";
 	import destinationMarker from "$lib/assets/flag.png";
-	import type { ActivityMarker } from "$lib/bindings/ActivityMarker";
 
 	const initialCoordinates: [number, number] = [-6.382310833, 107.1725405];
 
-	const trackerData = new LiveData<MqttPayloadWithId | ActivityMarker>(`${config.wsBaseUrl}/live`);
+	const wsData = new LiveData<WebSocketMessage>(`${config.wsBaseUrl}/live`);
 	const leaflet = new LeafletMap();
 	const sidebar = useSidebar();
 	const colors = [
@@ -37,7 +39,7 @@
 		"028a87"
 	];
 
-	const trackersQuery = useTrackersQuery();
+	const trackersQuery = useTrackersQuery(() => "active");
 	const activitiesQuery = useActivitiesQuery(() => "active");
 	const mqttPayloadHistoriesQuery = useMqttPayloadHistoriesQuery();
 
@@ -51,11 +53,16 @@
 			?.name ?? "Select Tracker to View"
 	);
 
-	function isTrackerMarker(data: MqttPayloadWithId | ActivityMarker): data is MqttPayloadWithId {
-		return "location" in data && "uptime" in data;
+	function isTrackerMarker(message: WebSocketMessage): boolean {
+		return message.message_type === "tracker_location";
 	}
-	function isDestinationMarker(data: MqttPayloadWithId | ActivityMarker): data is ActivityMarker {
-		return "action" in data;
+
+	function isUpdateActivity(message: WebSocketMessage): boolean {
+		return message.message_type === "update_destination";
+	}
+
+	function isDeleteActivity(message: WebSocketMessage): boolean {
+		return message.message_type === "remove_destination";
 	}
 
 	// Leaflet Initialization
@@ -77,9 +84,9 @@
 
 		const homeIcon = leaflet.createIcon({
 			iconUrl: homeMarker,
-			iconSize: [42, 42],
-			iconAnchor: [21, 21],
-			popupAnchor: [0, -15]
+			iconSize: [21, 21],
+			iconAnchor: [10.5, 10.5],
+			popupAnchor: [0, -7.5]
 		});
 		leaflet.addStaticMarker(initialCoordinates[0], initialCoordinates[1], homeIcon);
 	});
@@ -126,9 +133,9 @@
 			const iconName = trackerDetails.car_type_name === "Truck" ? "truck" : "car";
 			const icon = leaflet.createIcon({
 				iconUrl: new URL(`/src/lib/assets/${iconName}-${iconColor}.png`, import.meta.url).href,
-				iconSize: [31, 46],
-				iconAnchor: [15.5, 42],
-				popupAnchor: [0, -40]
+				iconSize: [15.5, 23],
+				iconAnchor: [7.75, 21],
+				popupAnchor: [0, -20]
 			});
 
 			leaflet.upsertTrackerMarker(
@@ -163,9 +170,9 @@
 
 			const icon = leaflet.createIcon({
 				iconUrl: destinationMarker,
-				iconSize: [31, 46],
-				iconAnchor: [15.5, 42],
-				popupAnchor: [0, -40]
+				iconSize: [15.5, 23],
+				iconAnchor: [7.75, 21],
+				popupAnchor: [0, -20]
 			});
 
 			leaflet.upsertDestinationMarker(id, latitude, longitude, icon, contactName);
@@ -175,10 +182,11 @@
 	// After Leaflet Initialization - WebSocket
 	$effect(() => {
 		if (!leaflet.ready) return;
-		if (!trackerData.current) return;
-		const currentData = trackerData.current;
+		if (!wsData.current) return;
+		const message = wsData.current;
 
-		if (isTrackerMarker(currentData)) {
+		if (isTrackerMarker(message)) {
+			const currentData = message.data as MqttPayloadWithId;
 			if (
 				!currentData?.location?.latitude ||
 				!currentData?.location?.longitude ||
@@ -202,9 +210,9 @@
 			const iconName = trackerDetails.car_type_name === "Truck" ? "truck" : "car";
 			const icon = leaflet.createIcon({
 				iconUrl: new URL(`/src/lib/assets/${iconName}-${iconColor}.png`, import.meta.url).href,
-				iconSize: [31, 46],
-				iconAnchor: [15.5, 42],
-				popupAnchor: [0, -40]
+				iconSize: [15.5, 23],
+				iconAnchor: [7.75, 21],
+				popupAnchor: [0, -20]
 			});
 
 			const shouldPan = isFollowing && selectedTrackerId === id;
@@ -214,38 +222,25 @@
 			} else {
 				leaflet.upsertTrackerMarker(id, latitude, longitude, icon);
 			}
-		} else if (isDestinationMarker(currentData)) {
-			if (currentData.action === "DELETE") {
-				leaflet.removeDestinationMarker(currentData.id);
-			} else if (currentData.action === "POST") {
-				if (!currentData.latitude || !currentData.longitude || !currentData.name) return;
-				leaflet.upsertDestinationMarker(
-					currentData.id,
-					currentData.latitude,
-					currentData.longitude,
-					leaflet.createIcon({
-						iconUrl: destinationMarker,
-						iconSize: [31, 46],
-						iconAnchor: [15.5, 42],
-						popupAnchor: [0, -40]
-					}),
-					currentData.name
-				);
-			} else if (currentData.action === "PUT") {
-				if (!currentData.latitude || !currentData.longitude || !currentData.name) return;
-				leaflet.upsertDestinationMarker(
-					currentData.id,
-					currentData.latitude,
-					currentData.longitude,
-					leaflet.createIcon({
-						iconUrl: destinationMarker,
-						iconSize: [31, 46],
-						iconAnchor: [15.5, 42],
-						popupAnchor: [0, -40]
-					}),
-					currentData.name
-				);
-			}
+		} else if (isUpdateActivity(message)) {
+			const activity = message.data as UpdateActivity;
+			if (!activity.contact_latitude || !activity.contact_longitude || !activity.contact_name)
+				return;
+			leaflet.upsertDestinationMarker(
+				activity.activity_id,
+				activity.contact_latitude,
+				activity.contact_longitude,
+				leaflet.createIcon({
+					iconUrl: destinationMarker,
+					iconSize: [15.5, 23],
+					iconAnchor: [7.75, 21],
+					popupAnchor: [0, -20]
+				}),
+				activity.contact_name
+			);
+		} else if (isDeleteActivity(message)) {
+			const deleteData = message.data as DeleteActivity;
+			leaflet.removeDestinationMarker(deleteData.activity_id);
 		}
 	});
 </script>
@@ -303,14 +298,14 @@
 	</ButtonGroup.Root>
 </div>
 
-{#if trackerData.error || trackersQuery.isError}
+{#if wsData.error || trackersQuery.isError}
 	<div class="space-y-4">
-		{#if trackerData.error}
+		{#if wsData.error}
 			<Alert.Root variant="destructive">
 				<AlertCircleIcon />
 				<Alert.Title>Error</Alert.Title>
 				<Alert.Description>
-					<p>Error WebSocket: {trackerData.error}</p>
+					<p>Error WebSocket: {wsData.error}</p>
 				</Alert.Description>
 			</Alert.Root>
 		{/if}
