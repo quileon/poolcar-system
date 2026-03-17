@@ -77,7 +77,7 @@ pub async fn distance_handler(state: Arc<AppState>) -> Result<(), TasksError> {
             let distance = haversine_rs::distance(
                 contact_point,
                 tracker_point,
-                haversine_rs::units::Unit::Meters,
+                haversine_rs::units::Unit::Kilometers,
             );
 
             if distance < closest_distance {
