@@ -33,9 +33,10 @@ import type { JsonValue } from "./serde_json/JsonValue";
  * ```rust
  * {
  *     "message_type": "distances",
- *     "data": [
- *         Distances, ...
- *     ]
+ *     "data": {
+ *         "1": Distances,
+ *         "2": Distances
+ *     }
  * }
  * ```
  */
