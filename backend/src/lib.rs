@@ -52,9 +52,9 @@ pub fn create_app(
         tokio::spawn(async move { tasks::mqtt::mqtt_loop(mqtt_state, mqtt_options).await });
     }
 
-    // Spawn chart handler background task
-    let chart_state = app_state.clone();
-    tokio::spawn(async move { tasks::chart::chart_loop(chart_state).await });
+    // Spawn distance handler background task
+    let distance_state = app_state.clone();
+    tokio::spawn(async move { tasks::distance::distance_loop(distance_state).await });
 
     let public_routes = Router::new()
         .route("/", get(|| async { "Hello, World!" }))

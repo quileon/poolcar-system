@@ -1,2 +1,2 @@
-pub mod chart;
+pub mod distance;
 pub mod mqtt;

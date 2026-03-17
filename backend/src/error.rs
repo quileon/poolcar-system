@@ -130,3 +130,19 @@ pub enum MqttError {
     #[error("Location is not valid")]
     InvalidLocation,
 }
+
+/// Error types for other spawn tasks
+#[derive(Error, Debug)]
+pub enum TasksError {
+    #[error("Database error")]
+    DatabaseError(#[from] sqlx::Error),
+
+    #[error("Redis pool error")]
+    RedisPoolError(#[from] deadpool_redis::PoolError),
+
+    #[error("Redis error")]
+    RedisError(#[from] deadpool_redis::redis::RedisError),
+
+    #[error("Failed to parse JSON")]
+    ParseJsonError(#[from] serde_json::Error),
+}

@@ -34,9 +34,10 @@ use ts_rs::TS;
 /// ```rust
 /// {
 ///     "message_type": "distances",
-///     "data": [
-///         Distances, ...
-///     ]
+///     "data": {
+///         "1": Distances,
+///         "2": Distances
+///     }
 /// }
 /// ```
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
@@ -69,9 +70,8 @@ pub struct Distances {
     pub activity_id: u8,
     pub tracker_id: u8,
     pub tracker_name: String,
-    pub car_id: u8,
-    pub car_name: String,
-    pub car_police_number: String,
-    #[ts(type = "number")]
-    pub distance: Decimal,
+    pub car_id: Option<u8>,
+    pub car_name: Option<String>,
+    pub car_police_number: Option<String>,
+    pub distance: f64,
 }
