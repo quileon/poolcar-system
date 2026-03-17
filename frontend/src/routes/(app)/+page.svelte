@@ -16,15 +16,17 @@
 	import type { MqttPayloadWithId } from "$lib/bindings/MqttPayloadWithId";
 	import type { UpdateActivity } from "$lib/bindings/UpdateActivity";
 	import type { DeleteActivity } from "$lib/bindings/DeleteActivity";
-	import Progress from "$lib/components/ui/progress/progress.svelte";
+	import type { Distances } from "$lib/bindings/Distances";
+	import { SvelteMap } from "svelte/reactivity";
 
 	const trackersQuery = useTrackersQuery(() => "active");
 	const activitiesQuery = useActivitiesQuery(() => "active");
 	const mqttPayloadHistoriesQuery = useMqttPayloadHistoriesQuery();
 
 	let mapElement: HTMLElement;
+	let distancesMap = new SvelteMap<number, Distances>();
 	const initialCoordinates: [number, number] = [-6.382310833, 107.1725405];
-	const trackerData = new LiveData<WebSocketMessage>(`${config.wsBaseUrl}/live`);
+	const wsData = new LiveData<WebSocketMessage>(`${config.wsBaseUrl}/live`);
 	const leaflet = new LeafletMap();
 	const sidebar = useSidebar();
 	const colors = [
@@ -155,8 +157,8 @@
 	// After Leaflet Initialization - WebSocket
 	$effect(() => {
 		if (!leaflet.ready) return;
-		if (!trackerData.current) return;
-		const message = trackerData.current;
+		if (!wsData.current) return;
+		const message = wsData.current;
 
 		if (isTrackerMarker(message)) {
 			const currentData = message.data as MqttPayloadWithId;
@@ -211,9 +213,12 @@
 		} else if (isDeleteActivity(message)) {
 			const deleteData = message.data as DeleteActivity;
 			leaflet.removeDestinationMarker(deleteData.activity_id);
+			distancesMap.delete(deleteData.activity_id);
 		} else if (isDistances(message)) {
-			// Handle distances data if needed
-			// const distances = message.data as Distances[];
+			const distances = message.data as Record<string, Distances>;
+			Object.entries(distances).forEach(([activity_id, distance]) => {
+				distancesMap.set(Number(activity_id), distance);
+			});
 		}
 	});
 </script>
@@ -263,8 +268,20 @@
 							<Table.Cell>{activity.contact_name}</Table.Cell>
 							<Table.Cell>{activity.activity_type_name}</Table.Cell>
 							<Table.Cell>{activity.started_at}</Table.Cell>
-							<Table.Cell>{activity.car_name}</Table.Cell>
-							<Table.Cell><Progress value={13} max={100} class="w-full" /></Table.Cell>
+							<Table.Cell>
+								{#if activity.finished_at}
+									{activity.car_name || "N/A"}
+								{:else}
+									{distancesMap.get(activity.activity_id)?.car_name || "N/A"}
+								{/if}
+							</Table.Cell>
+							<Table.Cell>
+								{#if activity.finished_at}
+									Finished
+								{:else}
+									{distancesMap.get(activity.activity_id)?.distance.toFixed(2) ?? "N/A"} km
+								{/if}
+							</Table.Cell>
 						</Table.Row>
 					{/each}
 				</Table.Body>
