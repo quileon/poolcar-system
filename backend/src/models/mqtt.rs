@@ -60,6 +60,7 @@ pub struct PayloadDateTime {
     pub minute: Option<u8>,
     pub second: Option<u8>,
     pub centisecond: Option<u32>,
+    pub age: Option<u32>,
     pub valid: bool,
 }
 

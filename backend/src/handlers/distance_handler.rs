@@ -55,22 +55,13 @@ pub async fn distance_handler(state: Arc<AppState>) -> Result<(), TasksError> {
             continue;
         }
 
-        let contact_latitude = match activity.contact_latitude.to_f64() {
-            Some(lat) => lat,
-            None => continue,
-        };
-        let contact_longitude = match activity.contact_longitude.to_f64() {
-            Some(long) => long,
-            None => continue,
-        };
-
-        let contact_point = Point::new(contact_latitude, contact_longitude);
+        let contact_point = Point::new(activity.contact_latitude, activity.contact_longitude);
         let mut closest_distance = f64::MAX;
         let mut closest_tracker: Option<&MqttPayloadWithId> = None;
 
         for tracker_payload in &tracker_payloads {
-            let tracker_latitude = tracker_payload.location.latitude.unwrap_or(0.0);
-            let tracker_longitude = tracker_payload.location.longitude.unwrap_or(0.0);
+            let tracker_latitude = tracker_payload.location.latitude.unwrap_or_else(|| 0.0);
+            let tracker_longitude = tracker_payload.location.longitude.unwrap_or_else(|| 0.0);
 
             let tracker_point = Point::new(tracker_latitude, tracker_longitude);
             let distance = haversine_rs::distance(
