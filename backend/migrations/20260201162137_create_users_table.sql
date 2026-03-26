@@ -16,3 +16,7 @@ CREATE INDEX idx_users_user_role_id ON users(user_role_id);
 CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_full_name ON users(full_name);
+
+-- Development
+INSERT INTO users (username, email, password, full_name, user_role_id) VALUES
+    ('admin', 'quilavr@gmail.com', 'argon2id$v=19$m=19456,t=2,p=1$aHbA3PZLkdhWI3RXAHYdIw$FUD6uGmH/XMc2/PR7RdNuY6ORn/cTdnBnt4xe+6Va8E', 'Quilavr', 1);

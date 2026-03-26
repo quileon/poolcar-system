@@ -16,3 +16,8 @@ CREATE TABLE cars (
 CREATE INDEX idx_cars_car_type_id ON cars(car_type_id);
 CREATE INDEX idx_cars_tracker_id ON cars(tracker_id);
 CREATE INDEX idx_cars_police_number ON cars(police_number);
+
+-- Development
+INSERT INTO cars (name, police_number, car_type_id, tracker_id) VALUES
+    ('Truck', 'ABC123', 1, 1),
+    ('Passenger', 'DEF456', 2, NULL);

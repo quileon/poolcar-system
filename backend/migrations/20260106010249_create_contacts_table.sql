@@ -2,8 +2,8 @@
 CREATE TABLE contacts (
     contact_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    latitude DECIMAL(10, 8) NOT NULL,
-    longitude DECIMAL(11, 8) NOT NULL,
+    latitude DOUBLE NOT NULL,
+    longitude DOUBLE NOT NULL,
     contact_type_id INT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -12,3 +12,9 @@ CREATE TABLE contacts (
 );
 
 CREATE INDEX idx_contacts_contact_type_id ON contacts(contact_type_id);
+
+-- Development
+INSERT INTO contacts (name, latitude, longitude, contact_type_id) VALUES
+    ('Indomaret Sukamahi', -6.362989058525321, 107.18121119874932, 1),
+    ('Sakura Hotel', -6.3681875213804595, 107.17894547792268, 2),
+    ('McDonald Deltamas', -6.365373101217244, 107.17883897102675, 1);
