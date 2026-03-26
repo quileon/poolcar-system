@@ -1,4 +1,3 @@
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
 use ts_rs::TS;
@@ -59,9 +58,9 @@ pub struct UpdateActivity {
     pub activity_id: u8,
     pub contact_name: String,
     #[ts(type = "number")]
-    pub contact_latitude: Decimal,
+    pub contact_latitude: f64,
     #[ts(type = "number")]
-    pub contact_longitude: Decimal,
+    pub contact_longitude: f64,
 }
 
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]

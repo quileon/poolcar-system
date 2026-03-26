@@ -1,6 +1,5 @@
 use deadpool_redis::redis::AsyncCommands;
 use haversine_rs::point::Point;
-use rust_decimal::prelude::ToPrimitive;
 use std::collections::HashMap;
 use std::sync::Arc;
 

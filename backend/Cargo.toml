@@ -15,7 +15,6 @@ haversine-rs = "0.3.0"
 jsonwebtoken = { version = "10.3.0", features = ["aws_lc_rs"] }
 rand = "0.9.2"
 rumqttc = { version = "0.25.1", features = ["use-rustls"] }
-rust_decimal = { version = "1.39.0", features = ["macros", "serde"] }
 serde = "1.0.228"
 serde_json = "1.0.148"
 sqlx = { version = "0.8.6", features = [
@@ -25,7 +24,6 @@ sqlx = { version = "0.8.6", features = [
     "postgres",
     "tls-rustls-aws-lc-rs",
     "chrono",
-    "rust_decimal",
 ] }
 thiserror = "2.0.18"
 tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread", "signal"] }

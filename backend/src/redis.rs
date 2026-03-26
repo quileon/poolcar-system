@@ -1,6 +1,5 @@
 use crate::{error::MqttError, models::activity::ActivityDetails};
 use deadpool_redis::redis::AsyncCommands;
-use rust_decimal::Decimal;
 
 pub async fn reload_redis_activities(
     db: &sqlx::MySqlPool,
@@ -64,8 +63,8 @@ pub async fn complete_redis_activities(
     redis: &deadpool_redis::Pool,
     activity_id: i32,
     tracker_id: u8,
-    finished_latitude: Decimal,
-    finished_longitude: Decimal,
+    finished_latitude: f64,
+    finished_longitude: f64,
 ) -> Result<(), MqttError> {
     let car_id: Option<i32> = sqlx::query_scalar(
         r#"

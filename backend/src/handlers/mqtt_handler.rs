@@ -1,7 +1,6 @@
 use axum::body::Bytes;
 use deadpool_redis::redis::AsyncCommands;
 use haversine_rs::point::Point;
-use rust_decimal::{prelude::ToPrimitive, Decimal};
 use std::sync::Arc;
 
 use crate::{
@@ -47,14 +46,8 @@ pub async fn mqtt_handler(state: Arc<AppState>, payload: Bytes) -> Result<(), Mq
 
     let activities = get_all_redis_activities(&state.redis).await?;
     for activity in activities {
-        let contact_latitude = match activity.contact_latitude.to_f64() {
-            Some(lat) => lat,
-            None => continue,
-        };
-        let contact_longitude = match activity.contact_longitude.to_f64() {
-            Some(long) => long,
-            None => continue,
-        };
+        let contact_latitude = activity.contact_latitude;
+        let contact_longitude = activity.contact_longitude;
         let tracker_latitude = tracker_payload.location.latitude.unwrap_or(0.0);
         let tracker_longitude = tracker_payload.location.longitude.unwrap_or(0.0);
 
@@ -78,8 +71,8 @@ pub async fn mqtt_handler(state: Arc<AppState>, payload: Bytes) -> Result<(), Mq
                 &state.redis,
                 activity.activity_id,
                 tracker_payload.id,
-                Decimal::from_f64_retain(tracker_latitude).unwrap_or(Decimal::ZERO),
-                Decimal::from_f64_retain(tracker_longitude).unwrap_or(Decimal::ZERO),
+                tracker_latitude,
+                tracker_longitude,
             )
             .await?;
 
