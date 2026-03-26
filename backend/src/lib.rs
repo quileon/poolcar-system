@@ -46,6 +46,13 @@ pub fn create_app(
         .allow_origin(Any)
         .allow_headers(Any);
 
+    let init_state = app_state.clone();
+    tokio::spawn(async move {
+        if let Err(e) = redis::reload_redis_activities(&init_state.db, &init_state.redis).await {
+            tracing::error!("Failed to initialize Redis activities cache: {}", e);
+        }
+    });
+
     // Only spawn MQTT task if mqtt_options are provided (for testing)
     if let Some(mqtt_options) = mqtt_options {
         let mqtt_state = app_state.clone();
