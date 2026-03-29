@@ -31,7 +31,6 @@ import type { JsonValue } from "./serde_json/JsonValue";
  *
  * No. 4, closest tracker distances to destination
  * ```rust
- * {
  *     "message_type": "distances",
  *     "data": {
  *         "1": Distances,
@@ -39,5 +38,15 @@ import type { JsonValue } from "./serde_json/JsonValue";
  *     }
  * }
  * ```
+ *
+ * No. 5, tracker on the last 60 minute
+ * ```rust
+ * {
+ *     "message_type": "audit",
+ *     "data": {
+ *         "1": Vec<Option<MqttPayloadWithId>>
+ *         "2": Vec<Option<MqttPayloadWithId>>
+ *     }
+ * }
  */
 export type WebSocketMessage = { message_type: string, data: JsonValue, };
