@@ -31,7 +31,7 @@ use ts_rs::TS;
 ///
 /// No. 4, closest tracker distances to destination
 /// ```rust
-/// {
+// {
 ///     "message_type": "distances",
 ///     "data": {
 ///         "1": Distances,
@@ -39,6 +39,16 @@ use ts_rs::TS;
 ///     }
 /// }
 /// ```
+///
+/// No. 5, tracker on the last 60 minute
+/// ```rust
+/// {
+///     "message_type": "audit",
+///     "data": {
+///         "1": Vec<Option<MqttPayloadWithId>>
+///         "2": Vec<Option<MqttPayloadWithId>>
+///     }
+/// }
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
 #[ts(export)]
 pub struct WebSocketMessage {

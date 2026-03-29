@@ -63,6 +63,10 @@ pub fn create_app(
     let distance_state = app_state.clone();
     tokio::spawn(async move { tasks::distance::distance_loop(distance_state).await });
 
+    // Spawn audit handler background task
+    let audit_state = app_state.clone();
+    tokio::spawn(async move { tasks::audit::audit_loop(audit_state).await });
+
     let public_routes = Router::new()
         .route("/", get(|| async { "Hello, World!" }))
         .nest("/auth", auth_routes::routes());
