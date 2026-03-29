@@ -4,7 +4,7 @@
 	"version": "0.1.11",
 	"type": "module",
 	"scripts": {
-		"dev": "vite dev",
+		"dev": "NODE_TLS_REJECT_UNAUTHORIZED=0 vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",

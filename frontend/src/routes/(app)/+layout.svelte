@@ -6,9 +6,6 @@
 	import AppHeader from "$lib/components/app-header.svelte";
 	import Separator from "$lib/components/ui/separator/separator.svelte";
 	import { QueryClient, QueryClientProvider } from "@tanstack/svelte-query";
-	import { authState } from "$lib/hooks/auth.svelte";
-
-	authState.guard();
 
 	let sidebarOpen = $state(true);
 	const queryClient = new QueryClient();
