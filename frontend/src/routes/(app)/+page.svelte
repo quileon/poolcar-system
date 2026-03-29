@@ -1,6 +1,7 @@
 <script lang="ts">
 	import "leaflet/dist/leaflet.css";
 	import * as Card from "$lib/components/ui/card/index";
+	import * as Chart from "$lib/components/ui/chart/index";
 	import * as Table from "$lib/components/ui/table/index";
 	import { config } from "$lib/config";
 	import { LeafletMap } from "$lib/hooks/leaflet-map.svelte";
@@ -14,10 +15,14 @@
 	import destinationMarker from "$lib/assets/flag.png";
 	import type { WebSocketMessage } from "$lib/bindings/WebSocketMessage";
 	import type { MqttPayloadWithId } from "$lib/bindings/MqttPayloadWithId";
+	import { AreaChart } from "layerchart";
+	import { LatencyChart } from "$lib/hooks/chart.svelte";
+	import type { MqttPayloadWithTrackerCar } from "$lib/bindings/MqttPayloadWithTrackerCar";
 	import type { UpdateActivity } from "$lib/bindings/UpdateActivity";
 	import type { DeleteActivity } from "$lib/bindings/DeleteActivity";
 	import type { Distances } from "$lib/bindings/Distances";
 	import { SvelteMap } from "svelte/reactivity";
+	import { scaleTime } from "d3-scale";
 
 	const trackersQuery = useTrackersQuery(() => "active");
 	const activitiesQuery = useActivitiesQuery(() => "active");
@@ -27,6 +32,7 @@
 	let distancesMap = new SvelteMap<number, Distances>();
 	const initialCoordinates: [number, number] = [-6.382310833, 107.1725405];
 	const wsData = new LiveData<WebSocketMessage>(`${config.wsBaseUrl}/live`);
+	const latencyChart = new LatencyChart();
 	const leaflet = new LeafletMap();
 	const sidebar = useSidebar();
 	const colors = [
@@ -42,6 +48,35 @@
 		"028a87"
 	];
 
+	const chartConfig = $derived.by(() => {
+		const config: Chart.ChartConfig = {
+			time: {
+				label: "Time"
+			}
+		};
+		if (trackersQuery.data) {
+			trackersQuery.data.trackers.forEach((tracker) => {
+				const color = colors[tracker.tracker_id % colors.length];
+				config[tracker.tracker_id.toString()] = {
+					label: tracker.name,
+					color: `#${color}`
+				};
+			});
+		}
+		return config;
+	});
+
+	const chartSeries = $derived.by(() => {
+		if (!trackersQuery.data) return [];
+		return trackersQuery.data.trackers.map((tracker) => {
+			return {
+				key: tracker.tracker_id.toString(),
+				label: tracker.name,
+				color: chartConfig[tracker.tracker_id.toString()].color
+			};
+		});
+	});
+
 	function isTrackerMarker(message: WebSocketMessage): boolean {
 		return message.message_type === "tracker_location";
 	}
@@ -54,15 +89,93 @@
 	function isDistances(message: WebSocketMessage): boolean {
 		return message.message_type === "distances";
 	}
+	function isAudit(message: WebSocketMessage): boolean {
+		return message.message_type === "audit";
+	}
 
-	// Leaflet Initialization
+	// Leaflet & WebSocket Initialization
 	onMount(() => {
 		leaflet.init(mapElement, {
 			center: initialCoordinates,
 			zoom: 12
 		});
 
-		return () => leaflet.destroy();
+		wsData.connect();
+
+		const unsubscribeWS = wsData.onMessage((message) => {
+			console.log(message);
+			if (!leaflet.ready) return;
+
+			if (isTrackerMarker(message)) {
+				const currentData = message.data as MqttPayloadWithId;
+				if (!currentData.location.latitude || !currentData.location.longitude || !currentData.id)
+					return;
+				if (!trackersQuery.data) return;
+
+				const id = currentData.id;
+				const latitude = currentData.location.latitude;
+				const longitude = currentData.location.longitude;
+				if (!id || !latitude || !longitude) return;
+
+				const trackerDetails = trackersQuery.data.trackers.find(
+					(tracker) => tracker.tracker_id === id
+				);
+				if (!trackerDetails) return;
+
+				const iconColor = colors[id % colors.length];
+				const iconName = trackerDetails.car_type_name === "Truck" ? "truck" : "car";
+				const icon = leaflet.createIcon({
+					iconUrl: new URL(`/src/lib/assets/${iconName}-${iconColor}.png`, import.meta.url).href,
+					iconSize: [15.5, 23],
+					iconAnchor: [7.75, 21],
+					popupAnchor: [0, -20]
+				});
+
+				leaflet.upsertTrackerMarker(
+					id,
+					latitude,
+					longitude,
+					icon,
+					trackerDetails.car_name
+						? `Tracker ${trackerDetails.name} (${trackerDetails.car_name})`
+						: `Tracker ${trackerDetails.name}`
+				);
+			} else if (isUpdateActivity(message)) {
+				const activity = message.data as UpdateActivity;
+				if (!activity.contact_latitude || !activity.contact_longitude || !activity.contact_name)
+					return;
+				leaflet.upsertDestinationMarker(
+					activity.activity_id,
+					activity.contact_latitude,
+					activity.contact_longitude,
+					leaflet.createIcon({
+						iconUrl: destinationMarker,
+						iconSize: [15.5, 23],
+						iconAnchor: [7.75, 21],
+						popupAnchor: [0, -20]
+					}),
+					activity.contact_name
+				);
+			} else if (isDeleteActivity(message)) {
+				const deleteData = message.data as DeleteActivity;
+				leaflet.removeDestinationMarker(deleteData.activity_id);
+				distancesMap.delete(deleteData.activity_id);
+			} else if (isDistances(message)) {
+				const distances = message.data as Record<string, Distances>;
+				Object.entries(distances).forEach(([activity_id, distance]) => {
+					distancesMap.set(Number(activity_id), distance);
+				});
+			} else if (isAudit(message)) {
+				const auditData = message.data as Record<string, MqttPayloadWithTrackerCar | null>;
+				latencyChart.addAuditData(auditData);
+			}
+		});
+
+		return () => {
+			leaflet.destroy();
+			unsubscribeWS();
+			wsData.disconnect();
+		};
 	});
 
 	// After Leaflet Initialization - Sidebar Resize Handling
@@ -153,74 +266,6 @@
 			);
 		});
 	});
-
-	// After Leaflet Initialization - WebSocket
-	$effect(() => {
-		if (!leaflet.ready) return;
-		if (!wsData.current) return;
-		const message = wsData.current;
-
-		if (isTrackerMarker(message)) {
-			const currentData = message.data as MqttPayloadWithId;
-			if (!currentData.location.latitude || !currentData.location.longitude || !currentData.id)
-				return;
-			if (!trackersQuery.data) return;
-
-			const id = currentData.id;
-			const latitude = currentData.location.latitude;
-			const longitude = currentData.location.longitude;
-			if (!id || !latitude || !longitude) return;
-
-			const trackerDetails = trackersQuery.data.trackers.find(
-				(tracker) => tracker.tracker_id === id
-			);
-			if (!trackerDetails) return;
-
-			const iconColor = colors[id % colors.length];
-			const iconName = trackerDetails.car_type_name === "Truck" ? "truck" : "car";
-			const icon = leaflet.createIcon({
-				iconUrl: new URL(`/src/lib/assets/${iconName}-${iconColor}.png`, import.meta.url).href,
-				iconSize: [15.5, 23],
-				iconAnchor: [7.75, 21],
-				popupAnchor: [0, -20]
-			});
-
-			leaflet.upsertTrackerMarker(
-				id,
-				latitude,
-				longitude,
-				icon,
-				trackerDetails.car_name
-					? `Tracker ${trackerDetails.name} (${trackerDetails.car_name})`
-					: `Tracker ${trackerDetails.name}`
-			);
-		} else if (isUpdateActivity(message)) {
-			const activity = message.data as UpdateActivity;
-			if (!activity.contact_latitude || !activity.contact_longitude || !activity.contact_name)
-				return;
-			leaflet.upsertDestinationMarker(
-				activity.activity_id,
-				activity.contact_latitude,
-				activity.contact_longitude,
-				leaflet.createIcon({
-					iconUrl: destinationMarker,
-					iconSize: [15.5, 23],
-					iconAnchor: [7.75, 21],
-					popupAnchor: [0, -20]
-				}),
-				activity.contact_name
-			);
-		} else if (isDeleteActivity(message)) {
-			const deleteData = message.data as DeleteActivity;
-			leaflet.removeDestinationMarker(deleteData.activity_id);
-			distancesMap.delete(deleteData.activity_id);
-		} else if (isDistances(message)) {
-			const distances = message.data as Record<string, Distances>;
-			Object.entries(distances).forEach(([activity_id, distance]) => {
-				distancesMap.set(Number(activity_id), distance);
-			});
-		}
-	});
 </script>
 
 <div class="flex h-full w-full flex-col gap-4">
@@ -229,7 +274,37 @@
 		<div class="flex flex-3 flex-col gap-4">
 			<Card.Root class="flex-1"></Card.Root>
 			<Card.Root class="flex-1"></Card.Root>
-			<Card.Root class="flex-1"></Card.Root>
+			<!-- Chart -->
+			<Card.Root class="flex-2 p-4">
+				<Chart.Container config={chartConfig} class="h-full w-full">
+					<AreaChart
+						data={latencyChart.data}
+						xScale={scaleTime()}
+						x="time"
+						axis="x"
+						legend
+						series={chartSeries}
+						props={{
+							xAxis: {
+								format: (d: Date) =>
+									d.toLocaleTimeString(undefined, {
+										hour12: false,
+										hour: "2-digit",
+										minute: "2-digit",
+										second: "2-digit"
+									})
+							},
+							yAxis: {
+								format: (d) => `${d} ms`
+							}
+						}}
+					>
+						{#snippet tooltip()}
+							<Chart.Tooltip labelFormatter={(d: Date) => d.toLocaleTimeString()} />
+						{/snippet}
+					</AreaChart>
+				</Chart.Container>
+			</Card.Root>
 		</div>
 		<!-- Map -->
 		<Card.Root class="flex-9 gap-0 p-0">
