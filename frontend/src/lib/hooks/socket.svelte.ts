@@ -1,63 +1,54 @@
-import { createSubscriber } from "svelte/reactivity";
-
 export class LiveData<T> {
 	#socket: WebSocket | null = null;
 	#url: string;
-	#latestData: T | null = null;
-	#error: string | null = null;
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity
+	#callbacks: Set<(data: T) => void> = new Set();
 
-	#subscribe: () => void;
+	isConnected = $state(false);
+	error = $state<string | null>(null);
 
 	constructor(url: string) {
 		this.#url = url;
-
-		this.#subscribe = createSubscriber((update) => {
-			this.#socket = new WebSocket(this.#url);
-
-			this.#socket.onopen = () => {
-				this.#error = null;
-				update();
-			};
-
-			this.#socket.onerror = () => {
-				this.#error = "WebSocket connection failed";
-				update();
-			};
-
-			this.#socket.onclose = (event) => {
-				if (!event.wasClean) {
-					this.#error = `WebSocket closed unexpectedly (code: ${event.code})`;
-					update();
-				}
-			};
-
-			this.#socket.onmessage = (event) => {
-				try {
-					this.#latestData = JSON.parse(event.data) as T;
-					update();
-				} catch (e) {
-					console.error("Failed to parse WS message", e);
-				}
-			};
-
-			return () => {
-				this.#socket?.close();
-			};
-		});
 	}
 
-	get current() {
-		this.#subscribe();
-		return this.#latestData;
+	connect() {
+		if (this.#socket) return;
+		this.#socket = new WebSocket(this.#url);
+
+		this.#socket.onopen = () => {
+			this.error = null;
+			this.isConnected = true;
+		};
+
+		this.#socket.onerror = () => {
+			this.error = "WebSocket connection failed";
+		};
+
+		this.#socket.onclose = (event) => {
+			this.isConnected = false;
+			if (!event.wasClean) {
+				this.error = `WebSocket closed unexpectedly (code: ${event.code})`;
+			}
+			this.#socket = null;
+		};
+
+		this.#socket.onmessage = (event) => {
+			try {
+				const data = JSON.parse(event.data) as T;
+				this.#callbacks.forEach((cb) => cb(data));
+			} catch (e) {
+				console.error("Failed to parse WS message", e);
+			}
+		};
 	}
 
-	get isConnected() {
-		this.#subscribe();
-		return this.#socket?.readyState === WebSocket.OPEN;
+	disconnect() {
+		this.#socket?.close();
+		this.#socket = null;
 	}
 
-	get error() {
-		this.#subscribe();
-		return this.#error;
+	onMessage(callback: (data: T) => void) {
+		this.#callbacks.add(callback);
+		return () => this.#callbacks.delete(callback);
 	}
 }
