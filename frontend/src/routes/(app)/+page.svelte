@@ -272,7 +272,9 @@
 								{#if activity.finished_at}
 									{activity.car_name || "N/A"}
 								{:else}
-									{distancesMap.get(activity.activity_id)?.car_name || "N/A"}
+									{distancesMap.get(activity.activity_id)
+										? `${distancesMap.get(activity.activity_id)?.car_name} - ${distancesMap.get(activity.activity_id)?.car_police_number}`
+										: "No Car Assigned"}
 								{/if}
 							</Table.Cell>
 							<Table.Cell>
