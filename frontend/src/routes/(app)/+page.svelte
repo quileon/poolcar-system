@@ -103,7 +103,6 @@
 		wsData.connect();
 
 		const unsubscribeWS = wsData.onMessage((message) => {
-			console.log(message);
 			if (!leaflet.ready) return;
 
 			if (isTrackerMarker(message)) {
