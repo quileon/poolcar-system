@@ -33,3 +33,19 @@ impl SuccessResponse {
         }
     }
 }
+
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
+pub struct SuccessDataResponse {
+    pub status: String,
+    pub data: serde_json::Value,
+}
+
+impl SuccessDataResponse {
+    pub fn new<T: serde::Serialize>(data: T) -> Result<Self, serde_json::Error> {
+        Ok(Self {
+            status: "success".to_string(),
+            data: serde_json::to_value(data)?,
+        })
+    }
+}

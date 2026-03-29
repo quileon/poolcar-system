@@ -1,7 +1,6 @@
 use crate::{auth_utils::decode_jwt, error::AppError, AppState};
 use axum::{
     extract::{Request, State},
-    http::header,
     middleware::Next,
     response::Response,
 };
@@ -14,9 +13,18 @@ pub async fn auth_middleware(
 ) -> Result<Response, AppError> {
     let token = req
         .headers()
-        .get(header::AUTHORIZATION)
+        .get("cookie")
         .and_then(|h| h.to_str().ok())
-        .and_then(|h| h.strip_prefix("Bearer "))
+        .and_then(|cookies| {
+            cookies.split(';').find_map(|cookie| {
+                let cookie = cookie.trim();
+                if cookie.starts_with("auth_token=") {
+                    cookie.strip_prefix("auth_token=")
+                } else {
+                    None
+                }
+            })
+        })
         .ok_or(AppError::InvalidToken)?;
 
     let token_data = decode_jwt(token, &state.config.jwt_secret)?;
