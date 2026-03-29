@@ -56,16 +56,14 @@
 	function isTrackerMarker(message: WebSocketMessage): boolean {
 		return message.message_type === "tracker_location";
 	}
-
 	function isUpdateActivity(message: WebSocketMessage): boolean {
 		return message.message_type === "update_destination";
 	}
-
 	function isDeleteActivity(message: WebSocketMessage): boolean {
 		return message.message_type === "remove_destination";
 	}
 
-	// Leaflet Initialization
+	// Leaflet & WebSocket Initialization
 	onMount(() => {
 		leaflet.init(mapElement, {
 			center: initialCoordinates,
@@ -75,7 +73,75 @@
 			}
 		});
 
-		return () => leaflet.destroy();
+		wsData.connect();
+
+		const unsubscribeWS = wsData.onMessage((message) => {
+			if (!leaflet.ready) return;
+
+			if (isTrackerMarker(message)) {
+				const currentData = message.data as MqttPayloadWithId;
+				if (
+					!currentData?.location?.latitude ||
+					!currentData?.location?.longitude ||
+					!currentData?.id
+				) {
+					return;
+				}
+				if (!trackersQuery.data) return;
+
+				const id = currentData.id;
+				const latitude = currentData.location.latitude;
+				const longitude = currentData.location.longitude;
+				if (!id || !latitude || !longitude) return;
+
+				const trackerDetails = trackersQuery.data.trackers.find(
+					(tracker) => tracker.tracker_id === id
+				);
+				if (!trackerDetails) return;
+
+				const iconColor = colors[id % colors.length];
+				const iconName = trackerDetails.car_type_name === "Truck" ? "truck" : "car";
+				const icon = leaflet.createIcon({
+					iconUrl: new URL(`/src/lib/assets/${iconName}-${iconColor}.png`, import.meta.url).href,
+					iconSize: [15.5, 23],
+					iconAnchor: [7.75, 21],
+					popupAnchor: [0, -20]
+				});
+
+				const shouldPan = isFollowing && selectedTrackerId === id;
+
+				if (shouldPan) {
+					leaflet.upsertTrackerMarkerAndPan(id, latitude, longitude, icon);
+				} else {
+					leaflet.upsertTrackerMarker(id, latitude, longitude, icon);
+				}
+			} else if (isUpdateActivity(message)) {
+				const activity = message.data as UpdateActivity;
+				if (!activity.contact_latitude || !activity.contact_longitude || !activity.contact_name)
+					return;
+				leaflet.upsertDestinationMarker(
+					activity.activity_id,
+					activity.contact_latitude,
+					activity.contact_longitude,
+					leaflet.createIcon({
+						iconUrl: destinationMarker,
+						iconSize: [15.5, 23],
+						iconAnchor: [7.75, 21],
+						popupAnchor: [0, -20]
+					}),
+					activity.contact_name
+				);
+			} else if (isDeleteActivity(message)) {
+				const deleteData = message.data as DeleteActivity;
+				leaflet.removeDestinationMarker(deleteData.activity_id);
+			}
+		});
+
+		return () => {
+			leaflet.destroy();
+			unsubscribeWS();
+			wsData.disconnect();
+		};
 	});
 
 	// After Leaflet Initialization - Home Marker
@@ -177,71 +243,6 @@
 
 			leaflet.upsertDestinationMarker(id, latitude, longitude, icon, contactName);
 		});
-	});
-
-	// After Leaflet Initialization - WebSocket
-	$effect(() => {
-		if (!leaflet.ready) return;
-		if (!wsData.current) return;
-		const message = wsData.current;
-
-		if (isTrackerMarker(message)) {
-			const currentData = message.data as MqttPayloadWithId;
-			if (
-				!currentData?.location?.latitude ||
-				!currentData?.location?.longitude ||
-				!currentData?.id
-			) {
-				return;
-			}
-			if (!trackersQuery.data) return;
-
-			const id = currentData.id;
-			const latitude = currentData.location.latitude;
-			const longitude = currentData.location.longitude;
-			if (!id || !latitude || !longitude) return;
-
-			const trackerDetails = trackersQuery.data.trackers.find(
-				(tracker) => tracker.tracker_id === id
-			);
-			if (!trackerDetails) return;
-
-			const iconColor = colors[id % colors.length];
-			const iconName = trackerDetails.car_type_name === "Truck" ? "truck" : "car";
-			const icon = leaflet.createIcon({
-				iconUrl: new URL(`/src/lib/assets/${iconName}-${iconColor}.png`, import.meta.url).href,
-				iconSize: [15.5, 23],
-				iconAnchor: [7.75, 21],
-				popupAnchor: [0, -20]
-			});
-
-			const shouldPan = isFollowing && selectedTrackerId === id;
-
-			if (shouldPan) {
-				leaflet.upsertTrackerMarkerAndPan(id, latitude, longitude, icon);
-			} else {
-				leaflet.upsertTrackerMarker(id, latitude, longitude, icon);
-			}
-		} else if (isUpdateActivity(message)) {
-			const activity = message.data as UpdateActivity;
-			if (!activity.contact_latitude || !activity.contact_longitude || !activity.contact_name)
-				return;
-			leaflet.upsertDestinationMarker(
-				activity.activity_id,
-				activity.contact_latitude,
-				activity.contact_longitude,
-				leaflet.createIcon({
-					iconUrl: destinationMarker,
-					iconSize: [15.5, 23],
-					iconAnchor: [7.75, 21],
-					popupAnchor: [0, -20]
-				}),
-				activity.contact_name
-			);
-		} else if (isDeleteActivity(message)) {
-			const deleteData = message.data as DeleteActivity;
-			leaflet.removeDestinationMarker(deleteData.activity_id);
-		}
 	});
 </script>
 
