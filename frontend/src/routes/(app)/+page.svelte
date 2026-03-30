@@ -3,6 +3,7 @@
 	import * as Card from "$lib/components/ui/card/index";
 	import * as Chart from "$lib/components/ui/chart/index";
 	import * as Table from "$lib/components/ui/table/index";
+	import TrendingUpIcon from "@lucide/svelte/icons/trending-up";
 	import { config } from "$lib/config";
 	import { LeafletMap } from "$lib/hooks/leaflet-map.svelte";
 	import { LiveData } from "$lib/hooks/socket.svelte";
@@ -23,7 +24,9 @@
 	import type { Distances } from "$lib/bindings/Distances";
 	import { SvelteMap } from "svelte/reactivity";
 	import { scaleTime } from "d3-scale";
+	import { useCarsQuery } from "$lib/hooks/use-car";
 
+	const carsQuery = useCarsQuery(() => "active");
 	const trackersQuery = useTrackersQuery(() => "active");
 	const activitiesQuery = useActivitiesQuery(() => "active");
 	const mqttPayloadHistoriesQuery = useMqttPayloadHistoriesQuery();
@@ -271,8 +274,36 @@
 	<div class="flex flex-8 gap-4">
 		<!-- Details -->
 		<div class="flex flex-3 flex-col gap-4">
-			<Card.Root class="flex-1"></Card.Root>
-			<Card.Root class="flex-1"></Card.Root>
+			<!-- Status -->
+			<Card.Root class="flex-1">
+				<Card.Header>
+					<Card.Description>Total Cars with Tracker</Card.Description>
+					<Card.Title class="text-2xl font-semibold tabular-nums">
+						{carsQuery.data?.cars.filter((car) => car.tracker_id).length || 0}
+					</Card.Title>
+					<Card.Action>
+						<TrendingUpIcon />
+					</Card.Action>
+				</Card.Header>
+				<Card.Footer class="text-sm"
+					>From total of {carsQuery.data?.car_count || 0} cars</Card.Footer
+				>
+			</Card.Root>
+			<Card.Root class="flex-1">
+				<Card.Header>
+					<Card.Description>Total Activities In Progress</Card.Description>
+					<Card.Title class="text-2xl font-semibold tabular-nums">
+						{activitiesQuery.data?.activities.filter((activity) => !activity.finished_at).length ||
+							0}
+					</Card.Title>
+					<Card.Action>
+						<TrendingUpIcon />
+					</Card.Action>
+				</Card.Header>
+				<Card.Footer class="text-sm">
+					From total of {activitiesQuery.data?.activity_count || 0} activities
+				</Card.Footer>
+			</Card.Root>
 			<!-- Chart -->
 			<Card.Root class="flex-2 p-4">
 				<Chart.Container config={chartConfig} class="h-full w-full">
