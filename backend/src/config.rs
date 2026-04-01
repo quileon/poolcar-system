@@ -12,6 +12,7 @@ pub struct Config {
     pub mqtt_password: String,
     pub mqtt_ca_crt: String,
     pub jwt_secret: String,
+    pub google_api_key: String,
 }
 
 impl Config {
@@ -27,6 +28,8 @@ impl Config {
             mqtt_password: std::env::var("MQTT_PASSWORD").context("MQTT_PASSWORD must be set")?,
             mqtt_ca_crt: std::env::var("MQTT_CA_CRT").context("MQTT_CA_CRT must be set")?,
             jwt_secret: std::env::var("JWT_SECRET").context("JWT_SECRET must be set")?,
+            google_api_key: std::env::var("GOOGLE_API_KEY")
+                .context("GOOGLE_API_KEY must be set")?,
         })
     }
 }

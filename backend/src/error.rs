@@ -33,6 +33,9 @@ pub enum AppError {
     #[error("Internal server error")]
     StdIoError(#[from] std::io::Error),
 
+    #[error("Internal server error")]
+    ReqwestError(#[from] reqwest::Error),
+
     #[error("Missing field")]
     MissingField,
 
@@ -92,6 +95,11 @@ impl IntoResponse for AppError {
                 eprintln!("Standard input error {:?}", error_message);
                 (StatusCode::INTERNAL_SERVER_ERROR, "File I/O error")
             }
+            AppError::ReqwestError(error_message) => {
+                eprintln!("Reqwest error {:?}", error_message);
+                (StatusCode::INTERNAL_SERVER_ERROR, "HTTP request error")
+            }
+
             AppError::MissingField => (StatusCode::BAD_REQUEST, "Missing required field"),
             AppError::WrongCredentials => (StatusCode::UNAUTHORIZED, "Invalid credentials"),
             AppError::InvalidToken => (StatusCode::UNAUTHORIZED, "Invalid or expired token"),

@@ -4,6 +4,7 @@ pub mod car;
 pub mod car_type;
 pub mod contact;
 pub mod contact_type;
+pub mod google_map;
 pub mod live_tracking;
 pub mod login;
 pub mod mqtt;

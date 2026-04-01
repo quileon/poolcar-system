@@ -13,7 +13,7 @@ mod websocket;
 
 use crate::{
     routes::{
-        activity_routes, auth_routes, car_routes, chart_routes, contact_routes,
+        activity_routes, auth_routes, car_routes, chart_routes, contact_routes, google_map_routes,
         live_tracking_routes, tracker_routes, user_routes,
     },
     state::AppState,
@@ -83,6 +83,7 @@ pub fn create_app(
         .nest("/live", live_tracking_routes::routes())
         .nest("/trackers", tracker_routes::routes())
         .nest("/users", user_routes::routes())
+        .nest("/search", google_map_routes::routes())
         .route_layer(axum::middleware::from_fn_with_state(
             app_state.clone(),
             middleware::auth_middleware,
