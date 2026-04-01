@@ -55,7 +55,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     mqtt_options.set_keep_alive(Duration::from_secs(5));
     mqtt_options.set_credentials(&config.mqtt_username, &config.mqtt_password);
 
-    let ca_cert = include_bytes!("../assets/emqxsl-ca.crt").to_vec();
+    let ca_cert = std::fs::read(&config.mqtt_ca_crt).context("Failed to read MQTT certificate")?;
     let transport = Transport::Tls(rumqttc::TlsConfiguration::Simple {
         ca: ca_cert,
         alpn: None,
