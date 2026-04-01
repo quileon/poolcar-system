@@ -31,7 +31,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: gitea.quileon.me/quileon/poolcar-system
+          images: gitea.quilavr.top/quilavr/poolcar-system
           tags: |
             type=raw,value=${{ steps.version.outputs.version }}-frontend
             type=semver,pattern={{major}}-frontend,value=${{ steps.version.outputs.version }}
@@ -41,7 +41,7 @@ jobs:
       - name: Login and Push
         uses: docker/login-action@v3
         with:
-          registry: gitea.quileon.me
+          registry: gitea.quilavr.top
           username: ${{ vars.USERNAME }}
           password: ${{ secrets.PASSWORD_TOKEN }}
 
@@ -54,5 +54,5 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            PUBLIC_API_BASE_URL=https://poolcar.quileon.me/api
-            PUBLIC_WS_BASE_URL=wss://poolcar.quileon.me/ws
+            PUBLIC_API_BASE_URL=https://poolcar.quilavr.top/api
+            PUBLIC_WS_BASE_URL=wss://poolcar.quilavr.top/ws
