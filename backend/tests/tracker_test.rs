@@ -2,7 +2,7 @@ mod common;
 
 use common::TestApp;
 use serde::{Deserialize, Serialize};
-use sqlx::{prelude::FromRow, PgPool};
+use sqlx::{prelude::FromRow, MySqlPool};
 
 #[derive(Debug, FromRow, Deserialize, Serialize)]
 pub struct Tracker {
@@ -33,7 +33,7 @@ impl TrackerWithDetails {
     }
 }
 
-async fn seed_trackers(pool: &PgPool) {
+async fn seed_trackers(pool: &MySqlPool) {
     sqlx::query(
         r#"INSERT INTO trackers (name) VALUES ('Tracker 1'), ('Tracker 2'), ('Tracker 3')"#,
     )
@@ -43,7 +43,7 @@ async fn seed_trackers(pool: &PgPool) {
 }
 
 #[sqlx::test]
-async fn test_get_trackers(pool: PgPool) {
+async fn test_get_trackers(pool: MySqlPool) {
     seed_trackers(&pool).await;
     let app = TestApp::spawn(pool).await;
 
@@ -66,7 +66,7 @@ async fn test_get_trackers(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_get_tracker(pool: PgPool) {
+async fn test_get_tracker(pool: MySqlPool) {
     seed_trackers(&pool).await;
     let app = TestApp::spawn(pool).await;
 
@@ -83,7 +83,7 @@ async fn test_get_tracker(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_create_tracker(pool: PgPool) {
+async fn test_create_tracker(pool: MySqlPool) {
     seed_trackers(&pool).await;
     let app = TestApp::spawn(pool.clone()).await;
 
@@ -104,7 +104,7 @@ async fn test_create_tracker(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_update_tracker(pool: PgPool) {
+async fn test_update_tracker(pool: MySqlPool) {
     seed_trackers(&pool).await;
     let app = TestApp::spawn(pool.clone()).await;
 
@@ -125,7 +125,7 @@ async fn test_update_tracker(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_delete_tracker(pool: PgPool) {
+async fn test_delete_tracker(pool: MySqlPool) {
     seed_trackers(&pool).await;
     let app = TestApp::spawn(pool.clone()).await;
 

@@ -2,7 +2,7 @@ mod common;
 
 use common::TestApp;
 use serde::{Deserialize, Serialize};
-use sqlx::{prelude::FromRow, PgPool};
+use sqlx::{prelude::FromRow, MySqlPool};
 
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq)]
 pub struct CarType {
@@ -42,7 +42,7 @@ impl CarType {
     }
 }
 
-async fn seed_car_types(pool: &PgPool) {
+async fn seed_car_types(pool: &MySqlPool) {
     sqlx::query(
         r#"
             INSERT INTO car_types (name)
@@ -55,7 +55,7 @@ async fn seed_car_types(pool: &PgPool) {
 }
 
 #[sqlx::test]
-async fn test_get_car_types(pool: PgPool) {
+async fn test_get_car_types(pool: MySqlPool) {
     seed_car_types(&pool).await;
     let app = TestApp::spawn(pool).await;
 
@@ -74,7 +74,7 @@ async fn test_get_car_types(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_get_car_type(pool: PgPool) {
+async fn test_get_car_type(pool: MySqlPool) {
     seed_car_types(&pool).await;
     let app = TestApp::spawn(pool).await;
 
@@ -91,7 +91,7 @@ async fn test_get_car_type(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_create_car_type(pool: PgPool) {
+async fn test_create_car_type(pool: MySqlPool) {
     seed_car_types(&pool).await;
     let app = TestApp::spawn(pool.clone()).await;
 
@@ -112,7 +112,7 @@ async fn test_create_car_type(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_update_car_type(pool: PgPool) {
+async fn test_update_car_type(pool: MySqlPool) {
     seed_car_types(&pool).await;
     let app = TestApp::spawn(pool.clone()).await;
 
@@ -133,7 +133,7 @@ async fn test_update_car_type(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_delete_car_type(pool: PgPool) {
+async fn test_delete_car_type(pool: MySqlPool) {
     seed_car_types(&pool).await;
     let app = TestApp::spawn(pool.clone()).await;
 

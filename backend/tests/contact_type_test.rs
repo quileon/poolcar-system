@@ -1,7 +1,7 @@
 use anyhow::Context;
 use poolcar_backend::{config::Config, create_app};
 use serde::{Deserialize, Serialize};
-use sqlx::{prelude::FromRow, PgPool};
+use sqlx::{prelude::FromRow, MySqlPool};
 use tokio::{net::TcpListener, task::JoinHandle};
 
 #[derive(Debug, FromRow, Deserialize, Serialize)]
@@ -10,7 +10,7 @@ pub struct ContactType {
     pub name: String,
 }
 
-async fn spawn_app(db_pool: PgPool) -> (String, JoinHandle<()>) {
+async fn spawn_app(db_pool: MySqlPool) -> (String, JoinHandle<()>) {
     seed_database(&db_pool).await;
 
     // Setup redis pool
@@ -37,7 +37,7 @@ async fn spawn_app(db_pool: PgPool) -> (String, JoinHandle<()>) {
     (address, handle)
 }
 
-async fn seed_database(pool: &PgPool) {
+async fn seed_database(pool: &MySqlPool) {
     sqlx::query(
         r#"
             INSERT INTO contact_types (name)
@@ -50,7 +50,7 @@ async fn seed_database(pool: &PgPool) {
 }
 
 #[sqlx::test]
-async fn test_get_contact_types(pool: PgPool) {
+async fn test_get_contact_types(pool: MySqlPool) {
     let (address, handle) = spawn_app(pool.clone()).await;
     let client = reqwest::Client::new();
 
@@ -78,7 +78,7 @@ async fn test_get_contact_types(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_create_contact_type(pool: PgPool) {
+async fn test_create_contact_type(pool: MySqlPool) {
     let (address, handle) = spawn_app(pool.clone()).await;
     let client = reqwest::Client::new();
 
@@ -115,7 +115,7 @@ async fn test_create_contact_type(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_update_car_type(pool: PgPool) {
+async fn test_update_contact_type(pool: MySqlPool) {
     let (address, handle) = spawn_app(pool.clone()).await;
     let client = reqwest::Client::new();
 
@@ -155,7 +155,7 @@ async fn test_update_car_type(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_delete_car_type(pool: PgPool) {
+async fn test_delete_contact_type(pool: MySqlPool) {
     let (address, handle) = spawn_app(pool.clone()).await;
     let client = reqwest::Client::new();
 

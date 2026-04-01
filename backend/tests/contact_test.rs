@@ -1,17 +1,15 @@
 use anyhow::Context;
 use poolcar_backend::{config::Config, create_app};
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use sqlx::{prelude::FromRow, PgPool};
-use std::str::FromStr;
+use sqlx::{prelude::FromRow, MySqlPool};
 use tokio::{net::TcpListener, task::JoinHandle};
 
 #[derive(Debug, FromRow, Deserialize, Serialize)]
 pub struct Contact {
     pub contact_id: i32,
     pub name: String,
-    pub latitude: Decimal,
-    pub longitude: Decimal,
+    pub latitude: f64,
+    pub longitude: f64,
     pub contact_type_id: i32,
 }
 
@@ -19,8 +17,8 @@ pub struct Contact {
 struct ContactWithContactType {
     pub contact_id: i32,
     pub name: String,
-    pub latitude: Decimal,
-    pub longitude: Decimal,
+    pub latitude: f64,
+    pub longitude: f64,
     pub contact_type_id: i32,
     pub contact_type_name: String,
 }
@@ -30,7 +28,7 @@ pub struct ErrorResponse {
     pub message: String,
 }
 
-async fn spawn_app(db_pool: PgPool) -> (String, JoinHandle<()>) {
+async fn spawn_app(db_pool: MySqlPool) -> (String, JoinHandle<()>) {
     seed_database(&db_pool).await;
 
     // Setup redis pool
@@ -57,7 +55,7 @@ async fn spawn_app(db_pool: PgPool) -> (String, JoinHandle<()>) {
     (address, handle)
 }
 
-async fn seed_database(pool: &PgPool) {
+async fn seed_database(pool: &MySqlPool) {
     sqlx::query(
         r#"
             INSERT INTO contact_types (name)
@@ -82,7 +80,7 @@ async fn seed_database(pool: &PgPool) {
 }
 
 #[sqlx::test]
-async fn test_get_contacts(pool: PgPool) {
+async fn test_get_contacts(pool: MySqlPool) {
     let (address, handle) = spawn_app(pool.clone()).await;
     let client = reqwest::Client::new();
 
@@ -111,24 +109,24 @@ async fn test_get_contacts(pool: PgPool) {
     // Contact 1
     assert_eq!(contacts[0].contact_id, 1);
     assert_eq!(contacts[0].name, "Contact 1");
-    assert_eq!(contacts[0].latitude, Decimal::from_str("1.0").unwrap());
-    assert_eq!(contacts[0].longitude, Decimal::from_str("1.0").unwrap());
+    assert!((contacts[0].latitude - 1.0).abs() < f64::EPSILON);
+    assert!((contacts[0].longitude - 1.0).abs() < f64::EPSILON);
     assert_eq!(contacts[0].contact_type_id, 1);
     assert_eq!(contacts[0].contact_type_name, "Supplier");
 
     // Contact 2
     assert_eq!(contacts[1].contact_id, 2);
     assert_eq!(contacts[1].name, "Contact 2");
-    assert_eq!(contacts[1].latitude, Decimal::from_str("2.0").unwrap());
-    assert_eq!(contacts[1].longitude, Decimal::from_str("2.0").unwrap());
+    assert!((contacts[1].latitude - 2.0).abs() < f64::EPSILON);
+    assert!((contacts[1].longitude - 2.0).abs() < f64::EPSILON);
     assert_eq!(contacts[1].contact_type_id, 2);
     assert_eq!(contacts[1].contact_type_name, "Consumer");
 
     // Contact 3
     assert_eq!(contacts[2].contact_id, 3);
     assert_eq!(contacts[2].name, "Contact 3");
-    assert_eq!(contacts[2].latitude, Decimal::from_str("3.0").unwrap());
-    assert_eq!(contacts[2].longitude, Decimal::from_str("3.0").unwrap());
+    assert!((contacts[2].latitude - 3.0).abs() < f64::EPSILON);
+    assert!((contacts[2].longitude - 3.0).abs() < f64::EPSILON);
     assert_eq!(contacts[2].contact_type_id, 1);
     assert_eq!(contacts[2].contact_type_name, "Supplier");
 
@@ -136,7 +134,7 @@ async fn test_get_contacts(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_create_contact_string_coordinates(pool: PgPool) {
+async fn test_create_contact_string_coordinates(pool: MySqlPool) {
     let (address, handle) = spawn_app(pool.clone()).await;
     let client = reqwest::Client::new();
 
@@ -156,8 +154,8 @@ async fn test_create_contact_string_coordinates(pool: PgPool) {
             .expect("Failed to deserialize JSON");
     assert_eq!(body.contact_id, 4);
     assert_eq!(body.name, "Contact 4");
-    assert_eq!(body.latitude, Decimal::from_str("4.12345679").unwrap());
-    assert_eq!(body.longitude, Decimal::from_str("4.12345679").unwrap());
+    assert!((body.latitude - 4.12345679).abs() < 1e-6);
+    assert!((body.longitude - 4.12345679).abs() < 1e-6);
     assert_eq!(body.contact_type_id, 1);
 
     // Database check
@@ -168,21 +166,15 @@ async fn test_create_contact_string_coordinates(pool: PgPool) {
             .expect("Failed to fetch contact");
     assert_eq!(query_response.contact_id, 4);
     assert_eq!(query_response.name, "Contact 4");
-    assert_eq!(
-        query_response.latitude,
-        Decimal::from_str("4.12345679").unwrap()
-    );
-    assert_eq!(
-        query_response.longitude,
-        Decimal::from_str("4.12345679").unwrap()
-    );
+    assert!((query_response.latitude - 4.12345679).abs() < 1e-6);
+    assert!((query_response.longitude - 4.12345679).abs() < 1e-6);
     assert_eq!(query_response.contact_type_id, 1);
 
     handle.abort();
 }
 
 #[sqlx::test]
-async fn test_create_contact_float_coordinates(pool: PgPool) {
+async fn test_create_contact_float_coordinates(pool: MySqlPool) {
     let (address, handle) = spawn_app(pool.clone()).await;
     let client = reqwest::Client::new();
 
@@ -202,8 +194,8 @@ async fn test_create_contact_float_coordinates(pool: PgPool) {
             .expect("Failed to deserialize JSON");
     assert_eq!(body.contact_id, 4);
     assert_eq!(body.name, "Contact 4");
-    assert_eq!(body.latitude, Decimal::from_str("4.12345679").unwrap());
-    assert_eq!(body.longitude, Decimal::from_str("4.12345679").unwrap());
+    assert!((body.latitude - 4.12345679).abs() < 1e-6);
+    assert!((body.longitude - 4.12345679).abs() < 1e-6);
     assert_eq!(body.contact_type_id, 1);
 
     // Database check
@@ -214,21 +206,15 @@ async fn test_create_contact_float_coordinates(pool: PgPool) {
             .expect("Failed to fetch contact");
     assert_eq!(query_response.contact_id, 4);
     assert_eq!(query_response.name, "Contact 4");
-    assert_eq!(
-        query_response.latitude,
-        Decimal::from_str("4.12345679").unwrap()
-    );
-    assert_eq!(
-        query_response.longitude,
-        Decimal::from_str("4.12345679").unwrap()
-    );
+    assert!((query_response.latitude - 4.12345679).abs() < 1e-6);
+    assert!((query_response.longitude - 4.12345679).abs() < 1e-6);
     assert_eq!(query_response.contact_type_id, 1);
 
     handle.abort();
 }
 
 #[sqlx::test]
-async fn test_update_contact_string_coordinates(pool: PgPool) {
+async fn test_update_contact_string_coordinates(pool: MySqlPool) {
     let (address, handle) = spawn_app(pool.clone()).await;
     let client = reqwest::Client::new();
 
@@ -249,8 +235,8 @@ async fn test_update_contact_string_coordinates(pool: PgPool) {
             .expect("Failed to deserialize JSON");
     assert_eq!(body.contact_id, 1);
     assert_eq!(body.name, "Contact 1.1");
-    assert_eq!(body.latitude, Decimal::from_str("4.12345679").unwrap());
-    assert_eq!(body.longitude, Decimal::from_str("4.12345679").unwrap());
+    assert!((body.latitude - 4.12345679).abs() < 1e-6);
+    assert!((body.longitude - 4.12345679).abs() < 1e-6);
     assert_eq!(body.contact_type_id, 1);
 
     // Database check
@@ -261,21 +247,15 @@ async fn test_update_contact_string_coordinates(pool: PgPool) {
             .expect("Failed to fetch contact");
     assert_eq!(query_response.contact_id, 1);
     assert_eq!(query_response.name, "Contact 1.1");
-    assert_eq!(
-        query_response.latitude,
-        Decimal::from_str("4.12345679").unwrap()
-    );
-    assert_eq!(
-        query_response.longitude,
-        Decimal::from_str("4.12345679").unwrap()
-    );
+    assert!((query_response.latitude - 4.12345679).abs() < 1e-6);
+    assert!((query_response.longitude - 4.12345679).abs() < 1e-6);
     assert_eq!(query_response.contact_type_id, 1);
 
     handle.abort();
 }
 
 #[sqlx::test]
-async fn test_update_contact_float_coordinates(pool: PgPool) {
+async fn test_update_contact_float_coordinates(pool: MySqlPool) {
     let (address, handle) = spawn_app(pool.clone()).await;
     let client = reqwest::Client::new();
 
@@ -296,8 +276,8 @@ async fn test_update_contact_float_coordinates(pool: PgPool) {
             .expect("Failed to deserialize JSON");
     assert_eq!(body.contact_id, 1);
     assert_eq!(body.name, "Contact 1.1");
-    assert_eq!(body.latitude, Decimal::from_str("4.12345679").unwrap());
-    assert_eq!(body.longitude, Decimal::from_str("4.12345679").unwrap());
+    assert!((body.latitude - 4.12345679).abs() < 1e-6);
+    assert!((body.longitude - 4.12345679).abs() < 1e-6);
     assert_eq!(body.contact_type_id, 1);
 
     // Database check
@@ -308,21 +288,15 @@ async fn test_update_contact_float_coordinates(pool: PgPool) {
             .expect("Failed to fetch contact");
     assert_eq!(query_response.contact_id, 1);
     assert_eq!(query_response.name, "Contact 1.1");
-    assert_eq!(
-        query_response.latitude,
-        Decimal::from_str("4.12345679").unwrap()
-    );
-    assert_eq!(
-        query_response.longitude,
-        Decimal::from_str("4.12345679").unwrap()
-    );
+    assert!((query_response.latitude - 4.12345679).abs() < 1e-6);
+    assert!((query_response.longitude - 4.12345679).abs() < 1e-6);
     assert_eq!(query_response.contact_type_id, 1);
 
     handle.abort();
 }
 
 #[sqlx::test]
-async fn test_delete_contact(pool: PgPool) {
+async fn test_delete_contact(pool: MySqlPool) {
     let (address, handle) = spawn_app(pool.clone()).await;
     let client = reqwest::Client::new();
 
@@ -342,8 +316,8 @@ async fn test_delete_contact(pool: PgPool) {
             .expect("Failed to deserialize JSON");
     assert_eq!(body.contact_id, 1);
     assert_eq!(body.name, "Contact 1");
-    assert_eq!(body.latitude, Decimal::from_str("1.0").unwrap());
-    assert_eq!(body.longitude, Decimal::from_str("1.0").unwrap());
+    assert!((body.latitude - 1.0).abs() < f64::EPSILON);
+    assert!((body.longitude - 1.0).abs() < f64::EPSILON);
     assert_eq!(body.contact_type_id, 1);
 
     // Database check
@@ -355,8 +329,8 @@ async fn test_delete_contact(pool: PgPool) {
     .expect("Failed to fetch contact");
     assert_eq!(query_response.contact_id, 1);
     assert_eq!(query_response.name, "Contact 1");
-    assert_eq!(query_response.latitude, Decimal::from_str("1.0").unwrap());
-    assert_eq!(query_response.longitude, Decimal::from_str("1.0").unwrap());
+    assert!((query_response.latitude - 1.0).abs() < f64::EPSILON);
+    assert!((query_response.longitude - 1.0).abs() < f64::EPSILON);
     assert_eq!(query_response.contact_type_id, 1);
 
     handle.abort();
