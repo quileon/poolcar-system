@@ -14,6 +14,7 @@ dotenvy = "0.15.7"
 haversine-rs = "0.3.0"
 jsonwebtoken = { version = "10.3.0", features = ["aws_lc_rs"] }
 rand = "0.9.2"
+reqwest = { version = "0.13.1", features = ["json", "rustls"] }
 rumqttc = { version = "0.25.1", features = ["use-rustls"] }
 serde = "1.0.228"
 serde_json = "1.0.148"
@@ -35,9 +36,6 @@ ts-rs = { version = "11.1.0", features = [
     "chrono-impl",
     "serde-json-impl",
 ] }
-
-[dev-dependencies]
-reqwest = { version = "0.13.1", features = ["json", "rustls"] }
 
 [profile.release]
 strip = true
