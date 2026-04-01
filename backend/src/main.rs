@@ -51,17 +51,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .collect();
     let mqtt_client = format!("{}-{}", config.mqtt_client, random_suffix);
 
-    let mut mqtt_options = MqttOptions::new(mqtt_client, &config.mqtt_url, 8883);
+    let mut mqtt_options = MqttOptions::new(mqtt_client, &config.mqtt_url, config.mqtt_port);
     mqtt_options.set_keep_alive(Duration::from_secs(5));
     mqtt_options.set_credentials(&config.mqtt_username, &config.mqtt_password);
 
-    let ca_cert = std::fs::read(&config.mqtt_ca_crt).context("Failed to read MQTT certificate")?;
-    let transport = Transport::Tls(rumqttc::TlsConfiguration::Simple {
-        ca: ca_cert,
-        alpn: None,
-        client_auth: None,
-    });
-    mqtt_options.set_transport(transport);
+    if config.mqtt_secure {
+        let ca_cert_path = config
+            .mqtt_ca_crt
+            .as_ref()
+            .context("MQTT_CA_CRT path is required when MQTT_SECURE is true")?;
+        let ca_cert = std::fs::read(ca_cert_path).context("Failed to read MQTT certificate")?;
+        let transport = Transport::Tls(rumqttc::TlsConfiguration::Simple {
+            ca: ca_cert,
+            alpn: None,
+            client_auth: None,
+        });
+        mqtt_options.set_transport(transport);
+    }
     tracing::info!("MQTT client configured");
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:7270")
