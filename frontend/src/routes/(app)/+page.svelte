@@ -25,6 +25,7 @@
 	import { SvelteMap } from "svelte/reactivity";
 	import { scaleTime } from "d3-scale";
 	import { useCarsQuery } from "$lib/hooks/use-car";
+	import { DateTime } from "luxon";
 
 	const carsQuery = useCarsQuery(() => "active");
 	const trackersQuery = useTrackersQuery(() => "active");
@@ -372,7 +373,11 @@
 						<Table.Row>
 							<Table.Cell>{activity.contact_name}</Table.Cell>
 							<Table.Cell>{activity.activity_type_name}</Table.Cell>
-							<Table.Cell>{activity.started_at}</Table.Cell>
+							<Table.Cell
+								>{activity.started_at
+									? DateTime.fromISO(activity.started_at).toLocaleString(DateTime.DATETIME_MED)
+									: "N/A"}</Table.Cell
+							>
 							<Table.Cell>
 								{#if activity.finished_at}
 									{activity.car_name || "N/A"}
@@ -386,7 +391,9 @@
 								{#if activity.finished_at}
 									Finished
 								{:else}
-									{distancesMap.get(activity.activity_id)?.distance.toFixed(2) ?? "N/A"} km
+									{distancesMap.get(activity.activity_id)
+										? `${distancesMap.get(activity.activity_id)?.distance.toFixed(2)} km`
+										: "-"}
 								{/if}
 							</Table.Cell>
 						</Table.Row>
