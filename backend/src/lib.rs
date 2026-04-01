@@ -13,7 +13,7 @@ mod websocket;
 
 use crate::{
     routes::{
-        activity_routes, auth_routes, car_routes, chart_routes, contact_routes,
+        activity_routes, auth_routes, car_routes, chart_routes, contact_routes, google_map_routes,
         live_tracking_routes, tracker_routes, user_routes,
     },
     state::AppState,
@@ -27,7 +27,7 @@ use tower_http::{
 };
 
 pub fn create_app(
-    db_pool: sqlx::PgPool,
+    db_pool: sqlx::MySqlPool,
     redis_pool: deadpool_redis::Pool,
     mqtt_options: Option<rumqttc::MqttOptions>,
     config: config::Config,
@@ -46,15 +46,26 @@ pub fn create_app(
         .allow_origin(Any)
         .allow_headers(Any);
 
+    let init_state = app_state.clone();
+    tokio::spawn(async move {
+        if let Err(e) = redis::reload_redis_activities(&init_state.db, &init_state.redis).await {
+            tracing::error!("Failed to initialize Redis activities cache: {}", e);
+        }
+    });
+
     // Only spawn MQTT task if mqtt_options are provided (for testing)
     if let Some(mqtt_options) = mqtt_options {
         let mqtt_state = app_state.clone();
         tokio::spawn(async move { tasks::mqtt::mqtt_loop(mqtt_state, mqtt_options).await });
     }
 
-    // Spawn chart handler background task
-    let chart_state = app_state.clone();
-    tokio::spawn(async move { tasks::chart::chart_loop(chart_state).await });
+    // Spawn distance handler background task
+    let distance_state = app_state.clone();
+    tokio::spawn(async move { tasks::distance::distance_loop(distance_state).await });
+
+    // Spawn audit handler background task
+    let audit_state = app_state.clone();
+    tokio::spawn(async move { tasks::audit::audit_loop(audit_state).await });
 
     let public_routes = Router::new()
         .route("/", get(|| async { "Hello, World!" }))
@@ -72,6 +83,7 @@ pub fn create_app(
         .nest("/live", live_tracking_routes::routes())
         .nest("/trackers", tracker_routes::routes())
         .nest("/users", user_routes::routes())
+        .nest("/search", google_map_routes::routes())
         .route_layer(axum::middleware::from_fn_with_state(
             app_state.clone(),
             middleware::auth_middleware,

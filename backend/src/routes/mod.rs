@@ -6,6 +6,7 @@ pub mod car_type_routes;
 pub mod chart_routes;
 pub mod contact_routes;
 pub mod contact_type_routes;
+pub mod google_map_routes;
 pub mod live_tracking_routes;
 pub mod tracker_routes;
 pub mod user_role_routes;

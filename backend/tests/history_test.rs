@@ -1,10 +1,8 @@
 use anyhow::Context;
 use chrono::NaiveDateTime;
 use poolcar_backend::{config::Config, create_app};
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use sqlx::{prelude::FromRow, PgPool};
-use std::str::FromStr;
+use sqlx::{prelude::FromRow, MySqlPool};
 use tokio::{net::TcpListener, task::JoinHandle};
 
 #[derive(Debug, FromRow, Serialize, Deserialize)]
@@ -16,8 +14,8 @@ pub struct History {
     pub tracker_id: Option<i32>,
     pub finished_at: Option<NaiveDateTime>,
     pub started_at: Option<NaiveDateTime>,
-    pub finished_latitude: Option<Decimal>,
-    pub finished_longitude: Option<Decimal>,
+    pub finished_latitude: Option<f64>,
+    pub finished_longitude: Option<f64>,
     pub description: Option<String>,
 }
 
@@ -34,8 +32,8 @@ struct HistoryWithDetails {
     pub tracker_name: Option<String>,
     pub finished_at: Option<NaiveDateTime>,
     pub started_at: Option<NaiveDateTime>,
-    pub finished_latitude: Option<Decimal>,
-    pub finished_longitude: Option<Decimal>,
+    pub finished_latitude: Option<f64>,
+    pub finished_longitude: Option<f64>,
     pub description: Option<String>,
 }
 
@@ -44,7 +42,7 @@ pub struct ErrorResponse {
     pub message: String,
 }
 
-async fn spawn_app(db_pool: PgPool) -> (String, JoinHandle<()>) {
+async fn spawn_app(db_pool: MySqlPool) -> (String, JoinHandle<()>) {
     seed_database(&db_pool).await;
 
     // Setup redis pool
@@ -71,7 +69,7 @@ async fn spawn_app(db_pool: PgPool) -> (String, JoinHandle<()>) {
     (address, handle)
 }
 
-async fn seed_database(pool: &PgPool) {
+async fn seed_database(pool: &MySqlPool) {
     sqlx::query(
         r#"
             INSERT INTO car_types (name)
@@ -150,7 +148,7 @@ async fn seed_database(pool: &PgPool) {
 }
 
 #[sqlx::test]
-async fn test_get_histories(pool: PgPool) {
+async fn test_get_activities(pool: MySqlPool) {
     let (address, handle) = spawn_app(pool.clone()).await;
     let client = reqwest::Client::new();
 
@@ -233,12 +231,12 @@ async fn test_get_histories(pool: PgPool) {
     );
     assert_eq!(
         histories[0].finished_latitude,
-        Some(Decimal::from_str("1.0").unwrap()),
+        Some(1.0),
         "first array finished_latitude should be 1.0"
     );
     assert_eq!(
         histories[0].finished_longitude,
-        Some(Decimal::from_str("1.0").unwrap()),
+        Some(1.0),
         "first array finished_longitude should be 1.0"
     );
     assert_eq!(
@@ -377,7 +375,7 @@ async fn test_get_histories(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_create_noncomplete_history(pool: PgPool) {
+async fn test_create_noncomplete_history(pool: MySqlPool) {
     let (address, handle) = spawn_app(pool.clone()).await;
     let client = reqwest::Client::new();
 
@@ -473,7 +471,7 @@ async fn test_create_noncomplete_history(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_create_complete_history(pool: PgPool) {
+async fn test_create_complete_history(pool: MySqlPool) {
     let (address, handle) = spawn_app(pool.clone()).await;
     let client = reqwest::Client::new();
 
@@ -528,12 +526,12 @@ async fn test_create_complete_history(pool: PgPool) {
     );
     assert_eq!(
         body.finished_latitude,
-        Some(Decimal::from_str("1.0").unwrap()),
+        Some(1.0),
         "finished_latitude should be 1.0"
     );
     assert_eq!(
         body.finished_longitude,
-        Some(Decimal::from_str("1.0").unwrap()),
+        Some(1.0),
         "finished_longitude should be 1.0"
     );
     assert_eq!(
@@ -571,12 +569,12 @@ async fn test_create_complete_history(pool: PgPool) {
     );
     assert_eq!(
         query_response.finished_latitude,
-        Some(Decimal::from_str("1.0").unwrap()),
+        Some(1.0),
         "finished_latitude should be 1.0"
     );
     assert_eq!(
         query_response.finished_longitude,
-        Some(Decimal::from_str("1.0").unwrap()),
+        Some(1.0),
         "finished_longitude should be 1.0"
     );
     assert_eq!(
@@ -589,7 +587,7 @@ async fn test_create_complete_history(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_update_history_to_complete(pool: PgPool) {
+async fn test_update_history_to_complete(pool: MySqlPool) {
     let (address, handle) = spawn_app(pool.clone()).await;
     let client = reqwest::Client::new();
 
@@ -645,12 +643,12 @@ async fn test_update_history_to_complete(pool: PgPool) {
     );
     assert_eq!(
         body.finished_latitude,
-        Some(Decimal::from_str("1.0").unwrap()),
+        Some(1.0),
         "finished_latitude should be 1.0"
     );
     assert_eq!(
         body.finished_longitude,
-        Some(Decimal::from_str("1.0").unwrap()),
+        Some(1.0),
         "finished_longitude should be 1.0"
     );
     assert_eq!(
@@ -688,12 +686,12 @@ async fn test_update_history_to_complete(pool: PgPool) {
     );
     assert_eq!(
         query_response.finished_latitude,
-        Some(Decimal::from_str("1.0").unwrap()),
+        Some(1.0),
         "finished_latitude should be 1.0"
     );
     assert_eq!(
         query_response.finished_longitude,
-        Some(Decimal::from_str("1.0").unwrap()),
+        Some(1.0),
         "finished_longitude should be 1.0"
     );
     assert_eq!(
@@ -706,7 +704,7 @@ async fn test_update_history_to_complete(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_update_history_to_uncomplete(pool: PgPool) {
+async fn test_update_history_to_uncomplete(pool: MySqlPool) {
     let (address, handle) = spawn_app(pool.clone()).await;
     let client = reqwest::Client::new();
 
@@ -803,7 +801,7 @@ async fn test_update_history_to_uncomplete(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn delete_history(pool: PgPool) {
+async fn delete_history(pool: MySqlPool) {
     let (address, handle) = spawn_app(pool.clone()).await;
     let client = reqwest::Client::new();
 
@@ -848,12 +846,12 @@ async fn delete_history(pool: PgPool) {
     );
     assert_eq!(
         body.finished_latitude,
-        Some(Decimal::from_str("1.0").unwrap()),
+        Some(1.0),
         "finished_latitude should be 1.0"
     );
     assert_eq!(
         body.finished_longitude,
-        Some(Decimal::from_str("1.0").unwrap()),
+        Some(1.0),
         "finished_longitude should be 1.0"
     );
     assert_eq!(
@@ -892,12 +890,12 @@ async fn delete_history(pool: PgPool) {
     );
     assert_eq!(
         query_response.finished_latitude,
-        Some(Decimal::from_str("1.0").unwrap()),
+        Some(1.0),
         "finished_latitude should be 1.0"
     );
     assert_eq!(
         query_response.finished_longitude,
-        Some(Decimal::from_str("1.0").unwrap()),
+        Some(1.0),
         "finished_longitude should be 1.0"
     );
     assert_eq!(

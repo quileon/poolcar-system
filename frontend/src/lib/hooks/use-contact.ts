@@ -6,15 +6,25 @@ import { config } from "$lib/config";
 import { goto } from "$app/navigation";
 import { resolve } from "$app/paths";
 
-export function useContactsQuery() {
-	return createQuery<GetContactsResponse>(() => ({
-		queryKey: ["contacts"],
-		queryFn: async () => {
-			const response = await authFetch(`${config.apiBaseUrl}/contacts`);
-			if (!response.ok) throw new Error("Failed to fetch contacts");
-			return response.json();
+export function useContactsQuery(getStatus: () => string | null) {
+	return createQuery<GetContactsResponse>(() => {
+		const status = getStatus();
+		const searchParams = new URLSearchParams();
+		if (status) {
+			searchParams.set("status", status);
 		}
-	}));
+
+		return {
+			queryKey: ["contacts", status],
+			queryFn: async () => {
+				const response = await authFetch(
+					`${config.apiBaseUrl}/contacts?${searchParams.toString()}`
+				);
+				if (!response.ok) throw new Error("Failed to fetch contacts");
+				return response.json();
+			}
+		};
+	});
 }
 
 export function useContactQuery(getContactId: () => number) {

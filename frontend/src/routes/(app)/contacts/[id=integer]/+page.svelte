@@ -19,7 +19,7 @@
 
 	// Queries
 	const contactQuery = useContactQuery(() => contactId);
-	const contactTypesQuery = useContactTypesQuery();
+	const contactTypesQuery = useContactTypesQuery(() => "active");
 
 	// Mutations
 	const editContactMutation = useEditContactMutation(() => contactId);

@@ -6,15 +6,25 @@ import { config } from "$lib/config";
 import { goto } from "$app/navigation";
 import { resolve } from "$app/paths";
 
-export function useUserRolesQuery() {
-	return createQuery<GetUserRolesResponse[]>(() => ({
-		queryKey: ["user-roles"],
-		queryFn: async () => {
-			const response = await authFetch(`${config.apiBaseUrl}/users/roles`);
-			if (!response.ok) throw new Error("Failed to fetch user roles");
-			return response.json();
+export function useUserRolesQuery(getStatus: () => string | null) {
+	return createQuery<GetUserRolesResponse[]>(() => {
+		const status = getStatus();
+		const searchParams = new URLSearchParams();
+		if (status) {
+			searchParams.set("status", status);
 		}
-	}));
+
+		return {
+			queryKey: ["user-roles", status],
+			queryFn: async () => {
+				const response = await authFetch(
+					`${config.apiBaseUrl}/users/roles?${searchParams.toString()}`
+				);
+				if (!response.ok) throw new Error("Failed to fetch user roles");
+				return response.json();
+			}
+		};
+	});
 }
 
 export function useUserRoleQuery(getUserRoleId: () => number) {

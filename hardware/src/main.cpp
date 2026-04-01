@@ -40,9 +40,15 @@ TinyGsmClient client(modem);
 SSLClient sslClient(&client);
 PubSubClient mqtt(sslClient);
 MqttClient mqttClient(mqtt, MQTT_BROKER, MQTT_PORT, MQTT_TOPIC, MQTT_MESSAGE_SIZE, MQTT_KEEP_ALIVE_TIMEOUT, MQTT_RECONNECT_TIMEOUT, MQTT_USERNAME, MQTT_PASSWORD);
+
+#elif defined(MQTT_USERNAME)
+PubSubClient mqtt(client);
+MqttClient mqttClient(mqtt, MQTT_BROKER, MQTT_PORT, MQTT_TOPIC, MQTT_MESSAGE_SIZE, MQTT_KEEP_ALIVE_TIMEOUT, MQTT_RECONNECT_TIMEOUT, MQTT_USERNAME, MQTT_PASSWORD);
+
 #else
 PubSubClient mqtt(client);
 MqttClient mqttClient(mqtt, MQTT_BROKER, MQTT_PORT, MQTT_TOPIC, MQTT_MESSAGE_SIZE, MQTT_KEEP_ALIVE_TIMEOUT, MQTT_RECONNECT_TIMEOUT);
+
 #endif
 
 bool modemConnected = false;

@@ -38,10 +38,10 @@
 	let description = $state("");
 	let completedFetching = false;
 
-	const carsQuery = useCarsQuery();
-	const contactsQuery = useContactsQuery();
-	const activityTypesQuery = useActivityTypesQuery();
-	const trackersQuery = useTrackersQuery();
+	const carsQuery = useCarsQuery(() => "active");
+	const contactsQuery = useContactsQuery(() => "active");
+	const activityTypesQuery = useActivityTypesQuery(() => "active");
+	const trackersQuery = useTrackersQuery(() => "active");
 	const activityQuery = useActivityQuery(() => activityId);
 
 	const editActivityMutation = useEditActivityMutation(() => activityId);

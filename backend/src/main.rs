@@ -4,7 +4,7 @@ use dotenvy;
 use poolcar_backend::{config::Config, create_app};
 use rand::{distr, Rng};
 use rumqttc::{MqttOptions, Transport};
-use sqlx::postgres::PgPoolOptions;
+use sqlx::mysql::MySqlPoolOptions;
 use std::time::Duration;
 use tokio::signal;
 
@@ -24,7 +24,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Environment configuration loaded");
 
     // Database
-    let db_pool = PgPoolOptions::new()
+    let db_pool = MySqlPoolOptions::new()
         .connect(&config.database_url)
         .await
         .context("Failed to cretae Database pool")?;
@@ -55,7 +55,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     mqtt_options.set_keep_alive(Duration::from_secs(5));
     mqtt_options.set_credentials(&config.mqtt_username, &config.mqtt_password);
 
-    let ca_cert = include_bytes!("../assets/emqxsl-ca.crt").to_vec();
+    let ca_cert = std::fs::read(&config.mqtt_ca_crt).context("Failed to read MQTT certificate")?;
     let transport = Transport::Tls(rumqttc::TlsConfiguration::Simple {
         ca: ca_cert,
         alpn: None,

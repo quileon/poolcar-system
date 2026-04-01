@@ -17,16 +17,14 @@
 constexpr short GSM_MAX_RETRIES = 3;
 
 // MQTT Configuration
-constexpr char MQTT_BROKER[] = "w309506f.ala.eu-central-1.emqxsl.com";
-constexpr int MQTT_PORT = 8883;
+// constexpr char MQTT_BROKER[] = "w309506f.ala.eu-central-1.emqxsl.com";
+// constexpr int MQTT_PORT = 8883;
 // constexpr char MQTT_BROKER[] = "broker.emqx.io";
 // constexpr int MQTT_PORT = 1883;
 constexpr char MQTT_TOPIC[] = "poolcar/";
 constexpr int MQTT_MESSAGE_SIZE = 1024;
 constexpr int MQTT_KEEP_ALIVE_TIMEOUT = 30000;
 constexpr int MQTT_RECONNECT_TIMEOUT = 5000;
-constexpr char MQTT_USERNAME[] = "tracker";
-constexpr char MQTT_PASSWORD[] = "rahasia";
 constexpr char MQTT_CA_CERTIFICATE[] PROGMEM = R"(
 -----BEGIN CERTIFICATE-----
 MIIDjjCCAnagAwIBAgIQAzrx5qcRqaC7KGSxHQn65TANBgkqhkiG9w0BAQsFADBh
@@ -51,7 +49,6 @@ pLiaWN0bfVKfjllDiIGknibVb63dDcY3fe0Dkhvld1927jyNxF1WW6LZZm6zNTfl
 MrY=
 -----END CERTIFICATE-----
 )";
-#define MQTT_SECURE
 
 // Pin Configuration
 constexpr int GSM_RX_PIN = 16; // Connect to TX of GSM module

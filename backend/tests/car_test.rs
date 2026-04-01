@@ -2,7 +2,7 @@ mod common;
 
 use common::TestApp;
 use serde::{Deserialize, Serialize};
-use sqlx::{prelude::FromRow, PgPool};
+use sqlx::{prelude::FromRow, MySqlPool};
 
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq)]
 pub struct Car {
@@ -81,7 +81,7 @@ pub struct ErrorResponse {
     pub message: String,
 }
 
-async fn seed_cars(pool: &PgPool) {
+async fn seed_cars(pool: &MySqlPool) {
     sqlx::query(
         r#"
             INSERT INTO car_types (name)
@@ -116,7 +116,7 @@ async fn seed_cars(pool: &PgPool) {
 }
 
 #[sqlx::test]
-async fn test_get_cars(pool: PgPool) {
+async fn test_get_cars(pool: MySqlPool) {
     seed_cars(&pool).await;
     let app = TestApp::spawn(pool).await;
 
@@ -156,7 +156,7 @@ async fn test_get_cars(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_get_car(pool: PgPool) {
+async fn test_get_car(pool: MySqlPool) {
     seed_cars(&pool).await;
     let app = TestApp::spawn(pool).await;
 
@@ -185,7 +185,7 @@ async fn test_get_car(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_create_car_without_tracker(pool: PgPool) {
+async fn test_create_car_without_tracker(pool: MySqlPool) {
     seed_cars(&pool).await;
     let app = TestApp::spawn(pool.clone()).await;
 
@@ -205,7 +205,7 @@ async fn test_create_car_without_tracker(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_create_car_with_tracker(pool: PgPool) {
+async fn test_create_car_with_tracker(pool: MySqlPool) {
     seed_cars(&pool).await;
     let app = TestApp::spawn(pool.clone()).await;
 
@@ -225,7 +225,7 @@ async fn test_create_car_with_tracker(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_update_car_with_tracker_to_without_tracker(pool: PgPool) {
+async fn test_update_car_with_tracker_to_without_tracker(pool: MySqlPool) {
     seed_cars(&pool).await;
     let app = TestApp::spawn(pool.clone()).await;
 
@@ -245,7 +245,7 @@ async fn test_update_car_with_tracker_to_without_tracker(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_update_car_with_tracker_to_another_tracker(pool: PgPool) {
+async fn test_update_car_with_tracker_to_another_tracker(pool: MySqlPool) {
     seed_cars(&pool).await;
     let app = TestApp::spawn(pool.clone()).await;
 
@@ -268,7 +268,7 @@ async fn test_update_car_with_tracker_to_another_tracker(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_update_car_with_tracker_to_already_assigned_tracker(pool: PgPool) {
+async fn test_update_car_with_tracker_to_already_assigned_tracker(pool: MySqlPool) {
     seed_cars(&pool).await;
     let app = TestApp::spawn(pool.clone()).await;
 
@@ -288,7 +288,7 @@ async fn test_update_car_with_tracker_to_already_assigned_tracker(pool: PgPool) 
 }
 
 #[sqlx::test]
-async fn test_update_car_without_tracker_to_tracker(pool: PgPool) {
+async fn test_update_car_without_tracker_to_tracker(pool: MySqlPool) {
     seed_cars(&pool).await;
     let app = TestApp::spawn(pool.clone()).await;
 
@@ -311,7 +311,7 @@ async fn test_update_car_without_tracker_to_tracker(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_update_car_without_tracker(pool: PgPool) {
+async fn test_update_car_without_tracker(pool: MySqlPool) {
     seed_cars(&pool).await;
     let app = TestApp::spawn(pool.clone()).await;
 
@@ -331,7 +331,7 @@ async fn test_update_car_without_tracker(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_update_car_without_tracker_to_already_assigned_tracker(pool: PgPool) {
+async fn test_update_car_without_tracker_to_already_assigned_tracker(pool: MySqlPool) {
     seed_cars(&pool).await;
     let app = TestApp::spawn(pool.clone()).await;
 
@@ -351,7 +351,7 @@ async fn test_update_car_without_tracker_to_already_assigned_tracker(pool: PgPoo
 }
 
 #[sqlx::test]
-async fn test_delete_car_with_tracker(pool: PgPool) {
+async fn test_delete_car_with_tracker(pool: MySqlPool) {
     seed_cars(&pool).await;
     let app = TestApp::spawn(pool.clone()).await;
 
@@ -366,7 +366,7 @@ async fn test_delete_car_with_tracker(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_delete_car_without_tracker(pool: PgPool) {
+async fn test_delete_car_without_tracker(pool: MySqlPool) {
     seed_cars(&pool).await;
     let app = TestApp::spawn(pool.clone()).await;
 

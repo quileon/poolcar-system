@@ -12,7 +12,7 @@
 	import { resolve } from "$app/paths";
 	import type { Component, ComponentProps } from "svelte";
 	import type { Url } from "$lib/url";
-	const sidebar_items: {
+	const primary_items: {
 		title: string;
 		url: Url;
 		icon: Component;
@@ -22,6 +22,18 @@
 			url: "/",
 			icon: HouseIcon
 		},
+		{
+			title: "Live Tracking",
+			url: "/live",
+			icon: MapIcon
+		}
+	];
+
+	const crud_items: {
+		title: string;
+		url: Url;
+		icon: Component;
+	}[] = [
 		{
 			title: "Cars",
 			url: "/cars",
@@ -56,11 +68,6 @@
 			title: "Activity Types",
 			url: "/activity-types",
 			icon: BookOpenIcon
-		},
-		{
-			title: "Live Tracking",
-			url: "/live",
-			icon: MapIcon
 		}
 	];
 
@@ -71,10 +78,29 @@
 	<Sidebar.Header />
 	<Sidebar.Content>
 		<Sidebar.Group>
-			<Sidebar.GroupLabel>Poolcar System</Sidebar.GroupLabel>
+			<Sidebar.GroupLabel>Navigation</Sidebar.GroupLabel>
 			<Sidebar.GroupContent>
 				<Sidebar.Menu>
-					{#each sidebar_items as sidebar_item (sidebar_item.title)}
+					{#each primary_items as sidebar_item (sidebar_item.title)}
+						<Sidebar.MenuItem>
+							<Sidebar.MenuButton>
+								{#snippet child({ props })}
+									<a href={resolve(`${sidebar_item.url}`)} {...props}>
+										<sidebar_item.icon />
+										<span>{sidebar_item.title}</span>
+									</a>
+								{/snippet}
+							</Sidebar.MenuButton>
+						</Sidebar.MenuItem>
+					{/each}
+				</Sidebar.Menu>
+			</Sidebar.GroupContent>
+		</Sidebar.Group>
+		<Sidebar.Group>
+			<Sidebar.GroupLabel>Management</Sidebar.GroupLabel>
+			<Sidebar.GroupContent>
+				<Sidebar.Menu>
+					{#each crud_items as sidebar_item (sidebar_item.title)}
 						<Sidebar.MenuItem>
 							<Sidebar.MenuButton>
 								{#snippet child({ props })}

@@ -11,6 +11,7 @@
 	import { config } from "$lib/config";
 	import { resolve } from "$app/paths";
 	import { useContactsQuery } from "$lib/hooks/use-contact";
+	import { page } from "$app/state";
 
 	const filters = [
 		{ label: "Active", value: "active" },
@@ -22,7 +23,12 @@
 		filters.find((filter) => filter.value === filterValue)?.label ?? "Filter by"
 	);
 
-	const contactsQuery = useContactsQuery();
+	$effect(() => {
+		const status = page.url.searchParams.get("status");
+		filterValue = status ?? "";
+	});
+
+	const contactsQuery = useContactsQuery(() => filterValue || null);
 </script>
 
 <h1 class="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl">Contacts Management</h1>

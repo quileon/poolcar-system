@@ -1,5 +1,4 @@
 use chrono::NaiveDateTime;
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
 use ts_rs::TS;
@@ -15,9 +14,9 @@ pub struct Activity {
     pub started_at: Option<NaiveDateTime>,
     pub finished_at: Option<NaiveDateTime>,
     #[ts(type = "number | null")]
-    pub finished_latitude: Option<Decimal>,
+    pub finished_latitude: Option<f64>,
     #[ts(type = "number | null")]
-    pub finished_longitude: Option<Decimal>,
+    pub finished_longitude: Option<f64>,
     pub description: Option<String>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
@@ -34,9 +33,9 @@ pub struct ActivityBody {
     pub started_at: Option<NaiveDateTime>,
     pub finished_at: Option<NaiveDateTime>,
     #[ts(type = "number | null")]
-    pub finished_latitude: Option<Decimal>,
+    pub finished_latitude: Option<f64>,
     #[ts(type = "number | null")]
-    pub finished_longitude: Option<Decimal>,
+    pub finished_longitude: Option<f64>,
     pub description: Option<String>,
 }
 
@@ -50,9 +49,9 @@ pub struct ActivityDetails {
     pub contact_id: i32,
     pub contact_name: String,
     #[ts(type = "number")]
-    pub contact_latitude: Decimal,
+    pub contact_latitude: f64,
     #[ts(type = "number")]
-    pub contact_longitude: Decimal,
+    pub contact_longitude: f64,
     pub activity_type_id: i32,
     pub activity_type_name: String,
     pub tracker_id: Option<i32>,
@@ -60,9 +59,9 @@ pub struct ActivityDetails {
     pub started_at: Option<NaiveDateTime>,
     pub finished_at: Option<NaiveDateTime>,
     #[ts(type = "number | null")]
-    pub finished_latitude: Option<Decimal>,
+    pub finished_latitude: Option<f64>,
     #[ts(type = "number | null")]
-    pub finished_longitude: Option<Decimal>,
+    pub finished_longitude: Option<f64>,
     pub description: Option<String>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,

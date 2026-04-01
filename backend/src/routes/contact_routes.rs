@@ -1,8 +1,8 @@
 use crate::{
     error::AppError,
-    models::contact::{Contact, ContactBody, ContactDetails, GetContactsResponse},
+    models::contact::{ContactBody, ContactDetails, GetContactsResponse},
     routes::contact_type_routes,
-    types::PaginationParams,
+    types::{PaginationParams, SuccessResponse},
     AppState,
 };
 use axum::{
@@ -18,15 +18,9 @@ pub async fn get_contacts(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PaginationParams>,
 ) -> Result<impl IntoResponse, AppError> {
-    let page = params.page.unwrap_or(1);
-    let limit = params.limit.unwrap_or(5);
+    let status = params.status.unwrap_or("active".into());
 
-    let page = if page < 1 { 1 } else { page };
-    let limit = if limit < 1 { 1 } else { limit };
-    let offset = (page - 1) * 5;
-
-    let contacts = sqlx::query_as!(
-        ContactDetails,
+    let contacts: Vec<ContactDetails> = sqlx::query_as(
         r#"
             SELECT
                 contacts.contact_id,
@@ -40,11 +34,19 @@ pub async fn get_contacts(
                 contacts.deleted_at
             FROM contacts
             LEFT JOIN contact_types ON contacts.contact_type_id = contact_types.contact_type_id
+            WHERE
+                CASE
+                    WHEN ? = 'active' THEN contacts.deleted_at IS NULL
+                    WHEN ? = 'deleted' THEN contacts.deleted_at IS NOT NULL
+                    WHEN ? = 'all' THEN TRUE
+                    ELSE contacts.deleted_at IS NULL
+                END
             ORDER BY contacts.contact_id ASC
         "#,
-        // limit as i64,
-        // offset as i64
     )
+    .bind(&status)
+    .bind(&status)
+    .bind(&status)
     .fetch_all(&state.db)
     .await?;
 
@@ -60,8 +62,7 @@ pub async fn get_contact(
     State(state): State<Arc<AppState>>,
     Path(contact_id): Path<i32>,
 ) -> Result<impl IntoResponse, AppError> {
-    let contact = sqlx::query_as!(
-        ContactDetails,
+    let contact: ContactDetails = sqlx::query_as(
         r#"
             SELECT
                 contacts.contact_id,
@@ -75,11 +76,11 @@ pub async fn get_contact(
                 contacts.deleted_at
             FROM contacts
             LEFT JOIN contact_types ON contacts.contact_type_id = contact_types.contact_type_id
-            AND contacts.contact_id = $1
+            WHERE contacts.contact_id = ?
             ORDER BY contacts.contact_id ASC
         "#,
-        contact_id
     )
+    .bind(contact_id)
     .fetch_one(&state.db)
     .await?;
 
@@ -89,95 +90,86 @@ pub async fn get_contact(
 pub async fn create_contact(
     State(state): State<Arc<AppState>>,
     Json(contact): Json<ContactBody>,
-) -> Result<impl IntoResponse, AppError> {
-    let created_contact = sqlx::query_as!(
-        Contact,
+) -> Result<Json<SuccessResponse>, AppError> {
+    sqlx::query(
         r#"
             INSERT INTO contacts (name, latitude, longitude, contact_type_id)
-            VALUES ($1, $2, $3, $4)
-            RETURNING contact_id, name, latitude, longitude, contact_type_id, created_at, updated_at, deleted_at
+            VALUES (?, ?, ?, ?)
         "#,
-        contact.name,
-        contact.latitude,
-        contact.longitude,
-        contact.contact_type_id
     )
-    .fetch_one(&state.db)
+    .bind(&contact.name)
+    .bind(contact.latitude)
+    .bind(contact.longitude)
+    .bind(contact.contact_type_id)
+    .execute(&state.db)
     .await?;
 
-    Ok(Json(created_contact))
+    Ok(Json(SuccessResponse::new("Contact created successfully")))
 }
 
 pub async fn update_contact(
     State(state): State<Arc<AppState>>,
     Path(contact_id): Path<i32>,
     Json(contact): Json<ContactBody>,
-) -> Result<impl IntoResponse, AppError> {
-    let updated_contact = sqlx::query_as!(
-        Contact,
+) -> Result<Json<SuccessResponse>, AppError> {
+    sqlx::query(
         r#"
             UPDATE contacts
-            SET name = $2, latitude = $3, longitude = $4, contact_type_id = $5
-            WHERE contact_id = $1
-            RETURNING contact_id, name, latitude, longitude, contact_type_id, created_at, updated_at, deleted_at
+            SET name = ?, latitude = ?, longitude = ?, contact_type_id = ?
+            WHERE contact_id = ?
         "#,
-        contact_id,
-        contact.name,
-        contact.latitude,
-        contact.longitude,
-        contact.contact_type_id,
     )
-    .fetch_one(&state.db)
+    .bind(&contact.name)
+    .bind(contact.latitude)
+    .bind(contact.longitude)
+    .bind(contact.contact_type_id)
+    .bind(contact_id)
+    .execute(&state.db)
     .await?;
 
-    Ok(Json(updated_contact))
+    Ok(Json(SuccessResponse::new("Contact updated successfully")))
 }
 
 pub async fn delete_contact(
     State(state): State<Arc<AppState>>,
     Path(contact_id): Path<i32>,
-) -> Result<impl IntoResponse, AppError> {
-    let deleted_contact = sqlx::query_as!(
-        Contact,
+) -> Result<Json<SuccessResponse>, AppError> {
+    sqlx::query(
         r#"
             UPDATE contacts
-            SET deleted_at = NOW()
-            WHERE contact_id = $1
-            RETURNING contact_id, name, latitude, longitude, contact_type_id, created_at, updated_at, deleted_at
+            SET deleted_at = CURRENT_TIMESTAMP
+            WHERE contact_id = ?
         "#,
-        contact_id
     )
-    .fetch_one(&state.db)
+    .bind(contact_id)
+    .execute(&state.db)
     .await?;
 
-    Ok(Json(deleted_contact))
+    Ok(Json(SuccessResponse::new("Contact deleted successfully")))
 }
 
 pub async fn restore_contact(
     State(state): State<Arc<AppState>>,
     Path(contact_id): Path<i32>,
-) -> Result<impl IntoResponse, AppError> {
-    let restored_contact = sqlx::query_as!(
-        Contact,
+) -> Result<Json<SuccessResponse>, AppError> {
+    sqlx::query(
         r#"
             UPDATE contacts
             SET deleted_at = NULL
-            WHERE contact_id = $1
-            RETURNING contact_id, name, latitude, longitude, contact_type_id, created_at, updated_at, deleted_at
+            WHERE contact_id = ?
         "#,
-        contact_id
     )
-    .fetch_one(&state.db)
+    .bind(contact_id)
+    .execute(&state.db)
     .await?;
 
-    Ok(Json(restored_contact))
+    Ok(Json(SuccessResponse::new("Contact restored successfully")))
 }
 
 pub async fn export_contacts(
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, AppError> {
-    let contacts = sqlx::query_as!(
-        ContactDetails,
+    let contacts: Vec<ContactDetails> = sqlx::query_as(
         r#"
             SELECT
                 contacts.contact_id,

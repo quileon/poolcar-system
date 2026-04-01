@@ -2,7 +2,7 @@ use jsonwebtoken::{encode, EncodingKey, Header};
 use poolcar_backend::{config::Config, create_app};
 use reqwest::{Client, RequestBuilder};
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use sqlx::MySqlPool;
 use tokio::{net::TcpListener, task::JoinHandle};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -20,7 +20,7 @@ pub struct TestApp {
 }
 
 impl TestApp {
-    pub async fn spawn(db_pool: PgPool) -> Self {
+    pub async fn spawn(db_pool: MySqlPool) -> Self {
         dotenvy::dotenv().ok();
         let config = Config::from_env().unwrap();
 

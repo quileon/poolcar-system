@@ -17,3 +17,35 @@ pub struct Claims {
     pub role_name: String,
     pub exp: usize,
 }
+
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
+pub struct SuccessResponse {
+    pub status: String,
+    pub message: String,
+}
+
+impl SuccessResponse {
+    pub fn new(message: impl Into<String>) -> Self {
+        Self {
+            status: "success".to_string(),
+            message: message.into(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
+pub struct SuccessDataResponse {
+    pub status: String,
+    pub data: serde_json::Value,
+}
+
+impl SuccessDataResponse {
+    pub fn new<T: serde::Serialize>(data: T) -> Result<Self, serde_json::Error> {
+        Ok(Self {
+            status: "success".to_string(),
+            data: serde_json::to_value(data)?,
+        })
+    }
+}

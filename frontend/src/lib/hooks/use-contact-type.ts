@@ -6,15 +6,25 @@ import { goto } from "$app/navigation";
 import { resolve } from "$app/paths";
 import type { ContactTypeDetails } from "$lib/bindings/ContactTypeDetails";
 
-export function useContactTypesQuery() {
-	return createQuery<GetContactTypesResponse>(() => ({
-		queryKey: ["contact-types"],
-		queryFn: async () => {
-			const response = await authFetch(`${config.apiBaseUrl}/contacts/types`);
-			if (!response.ok) throw new Error("Failed to fetch contact types");
-			return response.json();
+export function useContactTypesQuery(getStatus: () => string | null) {
+	return createQuery<GetContactTypesResponse>(() => {
+		const status = getStatus();
+		const searchParams = new URLSearchParams();
+		if (status) {
+			searchParams.set("status", status);
 		}
-	}));
+
+		return {
+			queryKey: ["contact-types", status],
+			queryFn: async () => {
+				const response = await authFetch(
+					`${config.apiBaseUrl}/contacts/types?${searchParams.toString()}`
+				);
+				if (!response.ok) throw new Error("Failed to fetch contact types");
+				return response.json();
+			}
+		};
+	});
 }
 
 export function useContactTypeQuery(getContactTypeId: () => number) {

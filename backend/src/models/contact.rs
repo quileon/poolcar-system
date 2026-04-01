@@ -1,5 +1,4 @@
 use chrono::NaiveDateTime;
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
 use ts_rs::TS;
@@ -10,9 +9,9 @@ pub struct Contact {
     pub contact_id: i32,
     pub name: String,
     #[ts(type = "number")]
-    pub latitude: Decimal,
+    pub latitude: f64,
     #[ts(type = "number")]
-    pub longitude: Decimal,
+    pub longitude: f64,
     pub contact_type_id: i32,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
@@ -24,9 +23,9 @@ pub struct Contact {
 pub struct ContactBody {
     pub name: String,
     #[ts(type = "number")]
-    pub latitude: Decimal,
+    pub latitude: f64,
     #[ts(type = "number")]
-    pub longitude: Decimal,
+    pub longitude: f64,
     pub contact_type_id: i32,
 }
 
@@ -36,9 +35,9 @@ pub struct ContactDetails {
     pub contact_id: i32,
     pub name: String,
     #[ts(type = "number")]
-    pub latitude: Decimal,
+    pub latitude: f64,
     #[ts(type = "number")]
-    pub longitude: Decimal,
+    pub longitude: f64,
     pub contact_type_id: i32,
     pub contact_type_name: String,
     pub created_at: NaiveDateTime,

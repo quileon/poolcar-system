@@ -11,6 +11,7 @@
 	import { resolve } from "$app/paths";
 	import { useActivitiesQuery } from "$lib/hooks/use-activity";
 	import { page } from "$app/state";
+	import { DateTime } from "luxon";
 
 	const filters = [
 		{ label: "Active", value: "active" },
@@ -26,8 +27,7 @@
 		const status = page.url.searchParams.get("status");
 		filterValue = status ?? "";
 	});
-
-	const activitiesQuery = useActivitiesQuery(() => (filterValue ? filterValue : null));
+	const activitiesQuery = useActivitiesQuery(() => filterValue || null);
 </script>
 
 <h1 class="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl">
@@ -110,15 +110,23 @@
 			{#each activitiesQuery.data.activities as activity (activity.activity_id)}
 				<Table.Row class={activity.deleted_at ? "text-red-700" : ""}>
 					<Table.Cell>{activity.activity_id}</Table.Cell>
-					<Table.Cell>{activity.car_name}</Table.Cell>
-					<Table.Cell>{activity.car_police_number}</Table.Cell>
+					<Table.Cell>{activity.car_name || "-"}</Table.Cell>
+					<Table.Cell>{activity.car_police_number || "-"}</Table.Cell>
 					<Table.Cell>{activity.contact_name}</Table.Cell>
 					<Table.Cell>{activity.activity_type_name}</Table.Cell>
-					<Table.Cell>{activity.tracker_name}</Table.Cell>
-					<Table.Cell>{activity.started_at}</Table.Cell>
-					<Table.Cell>{activity.finished_at}</Table.Cell>
-					<Table.Cell>{activity.finished_latitude}</Table.Cell>
-					<Table.Cell>{activity.finished_longitude}</Table.Cell>
+					<Table.Cell>{activity.tracker_name || "-"}</Table.Cell>
+					<Table.Cell
+						>{activity.started_at
+							? DateTime.fromISO(activity.started_at).toLocaleString(DateTime.DATETIME_MED)
+							: "-"}</Table.Cell
+					>
+					<Table.Cell
+						>{activity.finished_at
+							? DateTime.fromISO(activity.finished_at).toLocaleString(DateTime.DATETIME_MED)
+							: "-"}</Table.Cell
+					>
+					<Table.Cell>{activity.finished_latitude || "-"}</Table.Cell>
+					<Table.Cell>{activity.finished_longitude || "-"}</Table.Cell>
 					<Table.Cell>
 						<Button
 							href={resolve(`/activities/${activity.activity_id}`)}

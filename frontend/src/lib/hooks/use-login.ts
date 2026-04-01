@@ -1,6 +1,5 @@
 import type { LoginResponse } from "$lib/bindings/LoginResponse";
 import { createMutation, useQueryClient } from "@tanstack/svelte-query";
-import { authState } from "./auth.svelte";
 import { config } from "$lib/config";
 import { goto } from "$app/navigation";
 import { resolve } from "$app/paths";
@@ -26,8 +25,6 @@ export function useLoginMutation() {
 			}
 
 			const dataResponse: LoginResponse = await response.json();
-			authState.setToken(dataResponse.token);
-
 			return dataResponse;
 		},
 		onSuccess: () => {

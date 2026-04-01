@@ -12,5 +12,6 @@ pub struct LoginRequest {
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
 #[ts(export)]
 pub struct LoginResponse {
-    pub token: String,
+    pub username: String,
+    pub role: String,
 }

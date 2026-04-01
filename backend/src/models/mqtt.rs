@@ -60,6 +60,7 @@ pub struct PayloadDateTime {
     pub minute: Option<u8>,
     pub second: Option<u8>,
     pub centisecond: Option<u32>,
+    pub age: Option<u32>,
     pub valid: bool,
 }
 
@@ -107,6 +108,23 @@ pub struct MqttPayload {
 #[ts(export)]
 pub struct MqttPayloadWithId {
     pub id: u8,
+    pub uptime: u32,
+    pub connection: PayloadConnection,
+    pub location: PayloadLocation,
+    pub altitude: PayloadAltitude,
+    pub speed: PayloadSpeed,
+    pub course: PayloadCourse,
+    pub datetime: PayloadDateTime,
+    pub satellites: PayloadSatellites,
+    pub hdop: PayloadHdop,
+    pub stats: PayloadStats,
+}
+
+#[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
+#[ts(export)]
+pub struct MqttPayloadWithTrackerCar {
+    pub id: u8,
+    pub car_id: Option<u8>,
     pub uptime: u32,
     pub connection: PayloadConnection,
     pub location: PayloadLocation,

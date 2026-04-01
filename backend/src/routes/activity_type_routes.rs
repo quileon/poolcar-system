@@ -1,9 +1,7 @@
 use crate::{
     error::AppError,
-    models::activity_type::{
-        ActivityType, ActivityTypeBody, ActivityTypeDetails, GetActivityTypesResponse,
-    },
-    types::PaginationParams,
+    models::activity_type::{ActivityTypeBody, ActivityTypeDetails, GetActivityTypesResponse},
+    types::{PaginationParams, SuccessResponse},
     AppState,
 };
 use axum::{
@@ -19,15 +17,9 @@ pub async fn get_activity_types(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PaginationParams>,
 ) -> Result<Json<GetActivityTypesResponse>, AppError> {
-    let page = params.page.unwrap_or(1);
-    let limit = params.limit.unwrap_or(5);
+    let status = params.status.unwrap_or("active".into());
 
-    let page = if page < 1 { 1 } else { page };
-    let limit = if limit < 1 { 1 } else { limit };
-    let offset = (page - 1) * 5;
-
-    let activity_types = sqlx::query_as!(
-        ActivityTypeDetails,
+    let activity_types: Vec<ActivityTypeDetails> = sqlx::query_as(
         r#"
             SELECT
                 activity_types.activity_type_id,
@@ -38,12 +30,20 @@ pub async fn get_activity_types(
                 activity_types.deleted_at
             FROM activity_types
             LEFT JOIN activities ON activity_types.activity_type_id = activities.activity_type_id
+            WHERE
+                CASE
+                    WHEN ? = 'active' THEN activity_types.deleted_at IS NULL
+                    WHEN ? = 'deleted' THEN activity_types.deleted_at IS NOT NULL
+                    WHEN ? = 'all' THEN TRUE
+                    ELSE activity_types.deleted_at IS NULL
+                END
             GROUP BY activity_types.activity_type_id, activity_types.name
             ORDER BY activity_types.activity_type_id ASC
         "#,
-        // limit as i64,
-        // offset as i64
     )
+    .bind(&status)
+    .bind(&status)
+    .bind(&status)
     .fetch_all(&state.db)
     .await?;
 
@@ -59,8 +59,7 @@ pub async fn get_activity_type(
     State(state): State<Arc<AppState>>,
     Path(activity_type_id): Path<i32>,
 ) -> Result<Json<ActivityTypeDetails>, AppError> {
-    let activity_type = sqlx::query_as!(
-        ActivityTypeDetails,
+    let activity_type: ActivityTypeDetails = sqlx::query_as(
         r#"
             SELECT
                 activity_types.activity_type_id,
@@ -71,12 +70,12 @@ pub async fn get_activity_type(
                 activity_types.deleted_at
             FROM activity_types
             LEFT JOIN activities ON activity_types.activity_type_id = activities.activity_type_id
-            WHERE activity_types.activity_type_id = $1
+            WHERE activity_types.activity_type_id = ?
             GROUP BY activity_types.activity_type_id, activity_types.name
             ORDER BY activity_types.activity_type_id ASC
         "#,
-        activity_type_id
     )
+    .bind(activity_type_id)
     .fetch_one(&state.db)
     .await?;
 
@@ -86,89 +85,88 @@ pub async fn get_activity_type(
 pub async fn create_activity_type(
     State(state): State<Arc<AppState>>,
     Json(activity_type): Json<ActivityTypeBody>,
-) -> Result<Json<ActivityType>, AppError> {
-    let created_activity_type = sqlx::query_as!(
-        ActivityType,
+) -> Result<Json<SuccessResponse>, AppError> {
+    sqlx::query(
         r#"
             INSERT INTO activity_types (name)
-            VALUES ($1)
-            RETURNING activity_type_id, name, created_at, updated_at, deleted_at
+            VALUES (?)
         "#,
-        activity_type.name
     )
-    .fetch_one(&state.db)
+    .bind(&activity_type.name)
+    .execute(&state.db)
     .await?;
 
-    Ok(Json(created_activity_type))
+    Ok(Json(SuccessResponse::new(
+        "Activity type created successfully",
+    )))
 }
 
 pub async fn update_activity_type(
     State(state): State<Arc<AppState>>,
     Path(activity_type_id): Path<i32>,
     Json(activity_type): Json<ActivityTypeBody>,
-) -> Result<Json<ActivityType>, AppError> {
-    let updated_activity_type = sqlx::query_as!(
-        ActivityType,
+) -> Result<Json<SuccessResponse>, AppError> {
+    sqlx::query(
         r#"
             UPDATE activity_types
-            SET name = $2
-            WHERE activity_type_id = $1
-            RETURNING activity_type_id, name, created_at, updated_at, deleted_at
+            SET name = ?
+            WHERE activity_type_id = ?
         "#,
-        activity_type_id,
-        activity_type.name
     )
-    .fetch_one(&state.db)
+    .bind(&activity_type.name)
+    .bind(activity_type_id)
+    .execute(&state.db)
     .await?;
 
-    Ok(Json(updated_activity_type))
+    Ok(Json(SuccessResponse::new(
+        "Activity type updated successfully",
+    )))
 }
 
 pub async fn delete_activity_type(
     State(state): State<Arc<AppState>>,
     Path(activity_type_id): Path<i32>,
-) -> Result<Json<ActivityType>, AppError> {
-    let deleted_activity_type = sqlx::query_as!(
-        ActivityType,
+) -> Result<Json<SuccessResponse>, AppError> {
+    sqlx::query(
         r#"
             UPDATE activity_types
-            SET deleted_at = NOW()
-            WHERE activity_type_id = $1
-            RETURNING activity_type_id, name, created_at, updated_at, deleted_at
+            SET deleted_at = CURRENT_TIMESTAMP
+            WHERE activity_type_id = ?
         "#,
-        activity_type_id
     )
-    .fetch_one(&state.db)
+    .bind(activity_type_id)
+    .execute(&state.db)
     .await?;
 
-    Ok(Json(deleted_activity_type))
+    Ok(Json(SuccessResponse::new(
+        "Activity type deleted successfully",
+    )))
 }
 
 pub async fn restore_activity_type(
     State(state): State<Arc<AppState>>,
     Path(activity_type_id): Path<i32>,
-) -> Result<Json<ActivityType>, AppError> {
-    let restore_activity_type = sqlx::query_as!(
-        ActivityType,
+) -> Result<Json<SuccessResponse>, AppError> {
+    sqlx::query(
         r#"
             UPDATE activity_types
             SET deleted_at = NULL
-            WHERE activity_type_id = $1
-            RETURNING activity_type_id, name, created_at, updated_at, deleted_at
+            WHERE activity_type_id = ?
         "#,
-        activity_type_id
     )
-    .fetch_one(&state.db)
+    .bind(activity_type_id)
+    .execute(&state.db)
     .await?;
 
-    Ok(Json(restore_activity_type))
+    Ok(Json(SuccessResponse::new(
+        "Activity type restored successfully",
+    )))
 }
 
 pub async fn export_activities(
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, AppError> {
-    let activity_types = sqlx::query_as!(
-        ActivityTypeDetails,
+    let activity_types: Vec<ActivityTypeDetails> = sqlx::query_as(
         r#"
             SELECT
                 activity_types.activity_type_id,

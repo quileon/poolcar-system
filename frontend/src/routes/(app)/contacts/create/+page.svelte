@@ -14,7 +14,7 @@
 	let longitude = $state("");
 	let contactTypeId = $state("");
 
-	const contactTypesQuery = useContactTypesQuery();
+	const contactTypesQuery = useContactTypesQuery(() => "active");
 	const createContactMutation = useCreateContactMutation();
 
 	function handleSubmit(e: Event) {

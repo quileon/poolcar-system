@@ -1,12 +1,11 @@
 use axum::body::Bytes;
 use deadpool_redis::redis::AsyncCommands;
 use haversine_rs::point::Point;
-use rust_decimal::{prelude::ToPrimitive, Decimal};
 use std::sync::Arc;
 
 use crate::{
     error::MqttError,
-    models::{live_tracking::ActivityMarker, mqtt::MqttPayloadWithId},
+    models::{mqtt::MqttPayloadWithId, websocket::DeleteActivity},
     redis::{complete_redis_activities, get_all_redis_activities},
     AppState,
 };
@@ -21,7 +20,7 @@ use crate::{
 pub async fn mqtt_handler(state: Arc<AppState>, payload: Bytes) -> Result<(), MqttError> {
     let tracker_payload: MqttPayloadWithId = serde_json::from_slice(&payload)?;
     if tracker_payload.location.latitude.is_none() || tracker_payload.location.longitude.is_none() {
-        return Ok(());
+        return Err(MqttError::InvalidLocation);
     }
     let tracker_payload_string = serde_json::to_string(&tracker_payload)?;
 
@@ -35,21 +34,20 @@ pub async fn mqtt_handler(state: Arc<AppState>, payload: Bytes) -> Result<(), Mq
     .await?;
     tracing::debug!("MQTT payload is saved into Redis");
 
-    match state.tx.send(tracker_payload_string) {
+    let ws_message = serde_json::json!({
+        "message_type": "tracker_location",
+        "data": tracker_payload
+    });
+    let ws_message_string = serde_json::to_string(&ws_message)?;
+    match state.tx.send(ws_message_string) {
         Ok(_) => tracing::debug!("MQTT payload is broadcasted to WebSockets"),
         Err(e) => tracing::warn!("Failed to broadcast MQTT payload to WebSockets: {}", e),
     }
 
     let activities = get_all_redis_activities(&state.redis).await?;
     for activity in activities {
-        let contact_latitude = match activity.contact_latitude.to_f64() {
-            Some(lat) => lat,
-            None => continue,
-        };
-        let contact_longitude = match activity.contact_longitude.to_f64() {
-            Some(long) => long,
-            None => continue,
-        };
+        let contact_latitude = activity.contact_latitude;
+        let contact_longitude = activity.contact_longitude;
         let tracker_latitude = tracker_payload.location.latitude.unwrap_or(0.0);
         let tracker_longitude = tracker_payload.location.longitude.unwrap_or(0.0);
 
@@ -73,18 +71,18 @@ pub async fn mqtt_handler(state: Arc<AppState>, payload: Bytes) -> Result<(), Mq
                 &state.redis,
                 activity.activity_id,
                 tracker_payload.id,
-                Decimal::from_f64_retain(tracker_latitude).unwrap_or(Decimal::ZERO),
-                Decimal::from_f64_retain(tracker_longitude).unwrap_or(Decimal::ZERO),
+                tracker_latitude,
+                tracker_longitude,
             )
             .await?;
 
-            let deleted_marker = serde_json::to_string(&ActivityMarker {
-                id: activity.activity_id as u8,
-                action: "DELETE".into(),
-                name: None,
-                latitude: None,
-                longitude: None,
-            })?;
+            let ws_message = serde_json::json!({
+                "message_type": "remove_destination",
+                "data": DeleteActivity {
+                    activity_id: activity.activity_id as u8,
+                }
+            });
+            let deleted_marker = serde_json::to_string(&ws_message)?;
 
             match state.tx.send(deleted_marker) {
                 Ok(_) => tracing::debug!("Completed activity is broadcasted to WebSockets"),

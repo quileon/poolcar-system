@@ -11,6 +11,7 @@
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import { config } from "$lib/config";
 	import { resolve } from "$app/paths";
+	import { page } from "$app/state";
 
 	const filters = [
 		{ label: "Active", value: "active" },
@@ -22,7 +23,11 @@
 		filters.find((filter) => filter.value === filterValue)?.label ?? "Filter by"
 	);
 
-	const contactTypesQuery = useContactTypesQuery();
+	$effect(() => {
+		const status = page.url.searchParams.get("status");
+		filterValue = status ?? "";
+	});
+	const contactTypesQuery = useContactTypesQuery(() => filterValue || null);
 </script>
 
 <h1 class="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl">
