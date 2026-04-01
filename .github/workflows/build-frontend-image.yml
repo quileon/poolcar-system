@@ -32,6 +32,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: gitea.quilavr.top/quilavr/poolcar-system
+          flavor: |
+            latest=false
           tags: |
             type=raw,value=${{ steps.version.outputs.version }}-frontend
             type=semver,pattern={{major}}-frontend,value=${{ steps.version.outputs.version }}
