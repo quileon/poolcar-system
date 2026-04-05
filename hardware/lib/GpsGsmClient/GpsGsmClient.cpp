@@ -141,6 +141,12 @@ String GpsGsmClient::toJsonString()
     return jsonString;
 }
 
+String GpsGsmClient::getRawGpsData()
+{
+    String rawData = this->gsmModem.getGPSraw();
+    return rawData;
+}
+
 float GpsGsmClient::meters(const float &meters)
 {
     return meters;

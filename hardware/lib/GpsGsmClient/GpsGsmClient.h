@@ -30,6 +30,7 @@ public:
     // Core methods
     JsonDocument &toJsonDocument();
     String toJsonString();
+    String getRawGpsData();
 
     // Convenience methods
     float meters(const float &meters);
