@@ -59,7 +59,7 @@ pub async fn audit_handler(state: Arc<AppState>) -> Result<(), TasksError> {
                             course: payload.course,
                             datetime: payload.datetime,
                             satellites: payload.satellites,
-                            hdop: payload.hdop,
+                            dop: payload.dop,
                             stats: payload.stats,
                         };
                         tracker_payloads.push((tracker_car.tracker_id, Some(payload_with_car)));

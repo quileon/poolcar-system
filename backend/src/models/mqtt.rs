@@ -67,15 +67,19 @@ pub struct PayloadDateTime {
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
 #[ts(export)]
 pub struct PayloadSatellites {
-    pub count: Option<u8>,
+    pub visible: Option<u8>,
+    pub used: Option<u8>,
+    pub carrier_to_noise: Option<u8>,
     pub age: Option<u32>,
     pub valid: bool,
 }
 
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
 #[ts(export)]
-pub struct PayloadHdop {
-    pub value: Option<f32>,
+pub struct PayloadDop {
+    pub hdop: Option<f32>,
+    pub pdop: Option<f32>,
+    pub vdop: Option<f32>,
     pub age: Option<u32>,
     pub valid: bool,
 }
@@ -100,7 +104,7 @@ pub struct MqttPayload {
     pub course: PayloadCourse,
     pub datetime: PayloadDateTime,
     pub satellites: PayloadSatellites,
-    pub hdop: PayloadHdop,
+    pub dop: PayloadDop,
     pub stats: PayloadStats,
 }
 
@@ -116,7 +120,7 @@ pub struct MqttPayloadWithId {
     pub course: PayloadCourse,
     pub datetime: PayloadDateTime,
     pub satellites: PayloadSatellites,
-    pub hdop: PayloadHdop,
+    pub dop: PayloadDop,
     pub stats: PayloadStats,
 }
 
@@ -133,6 +137,6 @@ pub struct MqttPayloadWithTrackerCar {
     pub course: PayloadCourse,
     pub datetime: PayloadDateTime,
     pub satellites: PayloadSatellites,
-    pub hdop: PayloadHdop,
+    pub dop: PayloadDop,
     pub stats: PayloadStats,
 }
