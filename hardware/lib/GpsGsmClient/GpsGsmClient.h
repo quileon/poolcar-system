@@ -28,6 +28,7 @@ public:
     ~GpsGsmClient();
 
     // Core methods
+    bool enableGps();
     JsonDocument &toJsonDocument();
     String toJsonString();
     String getRawGpsData();

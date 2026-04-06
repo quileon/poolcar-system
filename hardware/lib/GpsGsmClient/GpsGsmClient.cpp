@@ -7,6 +7,11 @@ GpsGsmClient::GpsGsmClient(TinyGsm &gsmModem) : gsmModem(gsmModem)
 
 GpsGsmClient::~GpsGsmClient() = default;
 
+bool GpsGsmClient::enableGps()
+{
+    return this->gsmModem.enableGPS();
+}
+
 JsonDocument &GpsGsmClient::toJsonDocument()
 {
     // Clear per-instance document
