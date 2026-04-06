@@ -142,6 +142,14 @@ void loop()
             Serial.println("Failed to connect to MQTT broker!");
             return;
         }
+        
+#if defined(TINY_GSM_MODEM_SIM808)
+        if (!gsmWrapper.enableGPS())
+        {
+            Serial.println("Failed to initialize GPS modem!");
+            return;
+        }
+#endif // TINY_GSM_MODEM_SIM808
 
         systemReady = true;
     }
