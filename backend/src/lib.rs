@@ -13,8 +13,8 @@ mod websocket;
 
 use crate::{
     routes::{
-        activity_routes, auth_routes, car_routes, chart_routes, contact_routes, google_map_routes,
-        live_tracking_routes, tracker_routes, user_routes,
+        activity_routes, audit_routes, auth_routes, car_routes, chart_routes, contact_routes,
+        google_map_routes, live_tracking_routes, tracker_routes, user_routes,
     },
     state::AppState,
 };
@@ -80,6 +80,7 @@ pub fn create_app(
         .nest("/chart", chart_routes::routes())
         .nest("/contacts", contact_routes::routes())
         .nest("/activities", activity_routes::routes())
+        .nest("/audit", audit_routes::routes())
         .nest("/live", live_tracking_routes::routes())
         .nest("/trackers", tracker_routes::routes())
         .nest("/users", user_routes::routes())

@@ -1,5 +1,6 @@
 pub mod activity;
 pub mod activity_type;
+pub mod audit;
 pub mod car;
 pub mod car_type;
 pub mod contact;
