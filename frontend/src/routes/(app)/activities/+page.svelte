@@ -6,6 +6,7 @@
 	import * as Select from "$lib/components/ui/select/index";
 	import * as ButtonGroup from "$lib/components/ui/button-group/index";
 	import Button from "$lib/components/ui/button/button.svelte";
+	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import { config } from "$lib/config";
 	import { resolve } from "$app/paths";
@@ -73,6 +74,9 @@
 						</Select.Group>
 					</Select.Content>
 				</Select.Root>
+				<Button variant="outline" aria-label="Send" size="icon">
+					<ArrowRightIcon />
+				</Button>
 			</ButtonGroup.Root>
 			<ButtonGroup.Root>
 				<Button

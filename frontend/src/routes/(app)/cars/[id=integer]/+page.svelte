@@ -4,6 +4,7 @@
 	import * as Select from "$lib/components/ui/select/index";
 	import * as Alert from "$lib/components/ui/alert/index";
 	import Input from "$lib/components/ui/input/input.svelte";
+	import Checkbox from "$lib/components/ui/checkbox/checkbox.svelte";
 	import Button from "$lib/components/ui/button/button.svelte";
 	import AlertCircleIcon from "@lucide/svelte/icons/alert-circle";
 	import { resolve } from "$app/paths";
@@ -146,6 +147,18 @@
 						<Field.Description
 							>Enter the tracker that will be used to track the car (optional).</Field.Description
 						>
+					</Field.Field>
+				</Field.Group>
+			</Field.Set>
+			<Field.Separator />
+			<Field.Set>
+				<Field.Group>
+					<Field.Field orientation="horizontal">
+						<Checkbox id="active" bind:checked={active} />
+						<Field.Content>
+							<Field.Label for="active">Active</Field.Label>
+							<Field.Description>Set the car status to active.</Field.Description>
+						</Field.Content>
 					</Field.Field>
 				</Field.Group>
 			</Field.Set>
