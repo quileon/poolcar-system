@@ -1,7 +1,7 @@
 use crate::{
     auth_utils,
     error::AppError,
-    models::user::{UserBody, UserWithDetails, UsersExport},
+    models::user::{UserBody, UserDetails},
     routes::user_role_routes,
     types::{PaginationParams, SuccessResponse},
     AppState,
@@ -21,7 +21,7 @@ pub async fn get_users(
 ) -> Result<impl IntoResponse, AppError> {
     let status = params.status.unwrap_or("active".into());
 
-    let users: Vec<UserWithDetails> = sqlx::query_as(
+    let users: Vec<UserDetails> = sqlx::query_as(
         r#"
             SELECT
                 users.user_id,
@@ -29,7 +29,10 @@ pub async fn get_users(
                 users.email,
                 users.full_name,
                 users.user_role_id,
-                user_roles.name AS user_role_name
+                user_roles.name AS user_role_name,
+                users.created_at,
+                users.updated_at,
+                users.deleted_at
             FROM users
             LEFT JOIN user_roles ON users.user_role_id = user_roles.user_role_id
             WHERE
@@ -55,7 +58,7 @@ pub async fn get_user(
     State(state): State<Arc<AppState>>,
     Path(tracker_id): Path<i32>,
 ) -> Result<impl IntoResponse, AppError> {
-    let user: UserWithDetails = sqlx::query_as(
+    let user: UserDetails = sqlx::query_as(
         r#"
             SELECT
                 users.user_id,
@@ -156,7 +159,7 @@ pub async fn delete_user(
 pub async fn export_users(
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, AppError> {
-    let users: Vec<UsersExport> = sqlx::query_as(
+    let users: Vec<UserDetails> = sqlx::query_as(
         r#"
             SELECT
                 users.user_id,
