@@ -55,7 +55,7 @@ pub async fn get_users(
         user_count: users.len(),
         users,
     };
-    Ok(axum::Json(response))
+    Ok(Json(response))
 }
 
 pub async fn get_user(
@@ -84,7 +84,7 @@ pub async fn get_user(
     .fetch_one(&state.db)
     .await?;
 
-    Ok(axum::Json(user))
+    Ok(Json(user))
 }
 
 pub async fn create_user(
