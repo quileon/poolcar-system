@@ -10,7 +10,7 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
-    routing::get,
+    routing::{get, put},
     Json, Router,
 };
 use std::sync::Arc;
@@ -163,6 +163,24 @@ pub async fn delete_user(
     Ok(Json(SuccessResponse::new("User deleted successfully")))
 }
 
+pub async fn restore_user(
+    State(state): State<Arc<AppState>>,
+    Path(user_id): Path<i32>,
+) -> Result<Json<SuccessResponse>, AppError> {
+    sqlx::query(
+        r#"
+            UPDATE users
+            SET deleted_at = NULL
+            WHERE user_id = ?
+        "#,
+    )
+    .bind(user_id)
+    .execute(&state.db)
+    .await?;
+
+    Ok(Json(SuccessResponse::new("User restored successfully")))
+}
+
 pub async fn export_users(
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -238,4 +256,5 @@ pub fn routes() -> Router<Arc<AppState>> {
             "/{user_id}",
             get(get_user).put(update_user).delete(delete_user),
         )
+        .route("/{user_id}/restore", put(restore_user))
 }

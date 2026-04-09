@@ -11,6 +11,9 @@ pub struct User {
     pub email: String,
     pub full_name: String,
     pub user_role_id: i32,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+    pub deleted_at: Option<NaiveDateTime>,
 }
 
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
@@ -20,9 +23,6 @@ pub struct UserAuth {
     pub password: String,
     pub user_role_id: i32,
     pub user_role_name: String,
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
-    pub deleted_at: Option<NaiveDateTime>,
 }
 
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
