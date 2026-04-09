@@ -65,8 +65,8 @@ export function useCreateUserMutation() {
 			return response.json();
 		},
 		onSuccess: async () => {
-			await goto(resolve("/users"));
 			await queryClient.invalidateQueries({ queryKey: ["users"] });
+			await goto(resolve("/users"));
 		}
 	}));
 }
