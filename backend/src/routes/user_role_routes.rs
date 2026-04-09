@@ -1,8 +1,6 @@
 use crate::{
     error::AppError,
-    models::user_role::{
-        GetUserRolesResponse, UserRoleBody, UserRoleWithDetails, UserRolesExport,
-    },
+    models::user_role::{GetUserRolesResponse, UserRoleBody, UserRoleDetails},
     types::{PaginationParams, SuccessResponse},
     AppState,
 };
@@ -10,7 +8,7 @@ use axum::{
     extract::{Path, Query, State},
     http::{header, StatusCode},
     response::IntoResponse,
-    routing::get,
+    routing::{get, put},
     Json, Router,
 };
 use std::sync::Arc;
@@ -21,12 +19,15 @@ pub async fn get_user_roles(
 ) -> Result<Json<GetUserRolesResponse>, AppError> {
     let status = params.status.unwrap_or("active".into());
 
-    let user_roles: Vec<UserRoleWithDetails> = sqlx::query_as(
+    let user_roles: Vec<UserRoleDetails> = sqlx::query_as(
         r#"
             SELECT
                 user_roles.user_role_id,
                 user_roles.name,
-                COUNT(users.user_id) as user_count
+                COUNT(users.user_id) as user_count,
+                user_roles.created_at,
+                user_roles.updated_at,
+                user_roles.deleted_at
             FROM user_roles
             LEFT JOIN users ON users.user_role_id = user_roles.user_role_id
             WHERE
@@ -57,17 +58,19 @@ pub async fn get_user_roles(
 pub async fn get_user_role(
     State(state): State<Arc<AppState>>,
     Path(user_role_id): Path<i32>,
-) -> Result<Json<UserRoleWithDetails>, AppError> {
-    let user_role: UserRoleWithDetails = sqlx::query_as(
+) -> Result<Json<UserRoleDetails>, AppError> {
+    let user_role: UserRoleDetails = sqlx::query_as(
         r#"
             SELECT
                 user_roles.user_role_id,
                 user_roles.name,
                 COUNT(users.user_id) as user_count
+                user_roles.created_at,
+                user_roles.updated_at,
+                user_roles.deleted_at
             FROM user_roles
             LEFT JOIN users ON users.user_role_id = user_roles.user_role_id
-            WHERE user_roles.deleted_at IS NULL
-            AND user_roles.user_role_id = ?
+            WHERE user_roles.user_role_id = ?
             GROUP BY user_roles.user_role_id, user_roles.name
             ORDER BY user_roles.user_role_id ASC
         "#,
@@ -134,10 +137,30 @@ pub async fn delete_user_role(
     Ok(Json(SuccessResponse::new("User role deleted successfully")))
 }
 
+pub async fn restore_user_role(
+    State(state): State<Arc<AppState>>,
+    Path(user_role_id): Path<i32>,
+) -> Result<Json<SuccessResponse>, AppError> {
+    sqlx::query(
+        r#"
+            UPDATE user_roles
+            SET deleted_at = NULL
+            WHERE user_role_id = ?
+        "#,
+    )
+    .bind(user_role_id)
+    .execute(&state.db)
+    .await?;
+
+    Ok(Json(SuccessResponse::new(
+        "User role restored successfully",
+    )))
+}
+
 pub async fn export_user_roles(
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, AppError> {
-    let user_roles: Vec<UserRolesExport> = sqlx::query_as(
+    let user_roles: Vec<UserRoleDetails> = sqlx::query_as(
         r#"
             SELECT
                 user_roles.user_role_id,
@@ -168,10 +191,9 @@ pub async fn export_user_roles(
         ])?;
 
         for user_role in user_roles {
-            writer
-                .serialize(user_role)
-                .map_err(|e| AppError::Internal(e.to_string()))?;
+            writer.serialize(user_role)?;
         }
+
         writer.flush()?;
     }
 
@@ -198,4 +220,5 @@ pub fn routes() -> Router<Arc<AppState>> {
                 .put(update_user_role)
                 .delete(delete_user_role),
         )
+        .route("/{user_role_id}/restore", put(restore_user_role))
 }

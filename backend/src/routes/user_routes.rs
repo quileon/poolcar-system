@@ -70,14 +70,13 @@ pub async fn get_user(
                 users.email,
                 users.full_name,
                 users.user_role_id,
-                user_roles.name AS user_role_name
+                user_roles.name AS user_role_name,
                 users.created_at,
                 users.updated_at,
                 users.deleted_at
             FROM users
             LEFT JOIN user_roles ON users.user_role_id = user_roles.user_role_id
             WHERE users.user_id = ?
-            AND users.deleted_at IS NULL
         "#,
     )
     .bind(tracker_id)

@@ -8,14 +8,9 @@ use ts_rs::TS;
 pub struct UserRole {
     pub user_role_id: i32,
     pub name: String,
-}
-
-#[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
-#[ts(export)]
-pub struct UserRoleWithDetails {
-    pub user_role_id: i32,
-    pub name: String,
-    pub user_count: Option<i64>,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+    pub deleted_at: Option<NaiveDateTime>,
 }
 
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
@@ -26,18 +21,18 @@ pub struct UserRoleBody {
 
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
 #[ts(export)]
-pub struct GetUserRolesResponse {
-    pub user_roles: Vec<UserRoleWithDetails>,
-    pub user_role_count: usize,
-}
-
-#[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
-#[ts(export)]
-pub struct UserRolesExport {
+pub struct UserRoleDetails {
     pub user_role_id: i32,
     pub name: String,
     pub user_count: Option<i64>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
     pub deleted_at: Option<NaiveDateTime>,
+}
+
+#[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
+#[ts(export)]
+pub struct GetUserRolesResponse {
+    pub user_roles: Vec<UserRoleDetails>,
+    pub user_role_count: usize,
 }
