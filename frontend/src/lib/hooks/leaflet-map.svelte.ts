@@ -5,6 +5,11 @@ type MarkerEntry = {
 	id: number;
 };
 
+type PolylineEntry = {
+	polyline: L.Polyline;
+	id: string;
+};
+
 type LeafletMapOptions = {
 	center: [number, number];
 	zoom: number;
@@ -22,6 +27,10 @@ export class LeafletMap {
 	#trackerMarkers: Map<number, MarkerEntry> = new Map();
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity
 	#destinationMarkers: Map<number, MarkerEntry> = new Map();
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity
+	#auditMarkers: Map<string, MarkerEntry> = new Map();
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity
+	#polylines: Map<string, PolylineEntry> = new Map();
 
 	get ready() {
 		return this.#ready;
@@ -221,6 +230,139 @@ export class LeafletMap {
 	}
 
 	/**
+	 * Adds an audit marker by string ID (e.g., "audit_123" or "tracker_1_record_5").
+	 * Useful for displaying individual audit records on the map.
+	 */
+	addAuditMarker(id: string, lat: number, lng: number, icon?: L.Icon, text?: string): L.Marker {
+		if (!this.#L || !this.#map) throw new Error("LeafletMap not initialized");
+
+		const existing = this.#auditMarkers.get(id);
+		if (existing) {
+			return existing.marker;
+		}
+
+		const marker = this.#L.marker([lat, lng], icon ? { icon } : {});
+		marker.addTo(this.#map);
+		if (text) {
+			marker.bindPopup(text);
+		}
+		this.#auditMarkers.set(id, { marker, id: parseInt(id) });
+		return marker;
+	}
+
+	/**
+	 * Removes an audit marker by ID.
+	 */
+	removeAuditMarker(id: string): void {
+		const existing = this.#auditMarkers.get(id);
+		if (existing && this.#map) {
+			this.#map.removeLayer(existing.marker);
+			this.#auditMarkers.delete(id);
+		}
+	}
+
+	/**
+	 * Clears all audit markers.
+	 */
+	clearAuditMarkers(): void {
+		this.#auditMarkers.forEach((entry) => {
+			if (this.#map) {
+				this.#map.removeLayer(entry.marker);
+			}
+		});
+		this.#auditMarkers.clear();
+	}
+
+	/**
+	 * Gets an audit marker by ID, or undefined if it doesn't exist.
+	 */
+	getAuditMarker(id: string): L.Marker | undefined {
+		return this.#auditMarkers.get(id)?.marker;
+	}
+
+	/**
+	 * Adds a polyline connecting multiple coordinates.
+	 * Useful for visualizing routes or audit trails.
+	 *
+	 * @param id Unique identifier for the polyline
+	 * @param coordinates Array of [lat, lng] coordinates
+	 * @param options Optional polyline styling options (color, weight, opacity, etc.)
+	 */
+	addPolyline(
+		id: string,
+		coordinates: [number, number][],
+		options?: L.PolylineOptions
+	): L.Polyline {
+		if (!this.#L || !this.#map) throw new Error("LeafletMap not initialized");
+
+		const existing = this.#polylines.get(id);
+		if (existing) {
+			return existing.polyline;
+		}
+
+		const defaultOptions: L.PolylineOptions = {
+			color: "#3b82f6",
+			weight: 3,
+			opacity: 0.7,
+			...options
+		};
+
+		const polyline = this.#L.polyline(coordinates, defaultOptions);
+		polyline.addTo(this.#map);
+		this.#polylines.set(id, { polyline, id });
+		return polyline;
+	}
+
+	/**
+	 * Updates an existing polyline's coordinates.
+	 * If the polyline doesn't exist, it's created.
+	 */
+	upsertPolyline(
+		id: string,
+		coordinates: [number, number][],
+		options?: L.PolylineOptions
+	): L.Polyline {
+		const existing = this.#polylines.get(id);
+		if (existing) {
+			existing.polyline.setLatLngs(coordinates);
+			return existing.polyline;
+		}
+		return this.addPolyline(id, coordinates, options);
+	}
+
+	/**
+	 * Removes a polyline by ID.
+	 */
+	removePolyline(id: string): void {
+		const existing = this.#polylines.get(id);
+		if (existing && this.#map) {
+			this.#map.removeLayer(existing.polyline);
+			this.#polylines.delete(id);
+		}
+	}
+
+	/**
+	 * Clears all polylines.
+	 */
+	clearPolylines(): void {
+		this.#polylines.forEach((entry) => {
+			if (this.#map) {
+				this.#map.removeLayer(entry.polyline);
+			}
+		});
+		this.#polylines.clear();
+	}
+
+	/**
+	 * Clears all audit-related elements (markers and polylines).
+	 * Useful when changing the tracker/car filter.
+	 */
+	clearAuditVisualization(): void {
+		this.clearAuditMarkers();
+		this.clearPolylines();
+	}
+
+	/**
 	 * Pans the map to the given coordinates.
 	 */
 	panTo(lat: number, lng: number): void {
@@ -241,6 +383,8 @@ export class LeafletMap {
 	destroy(): void {
 		this.#trackerMarkers.clear();
 		this.#destinationMarkers.clear();
+		this.#auditMarkers.clear();
+		this.#polylines.clear();
 		if (this.#map) {
 			this.#map.remove();
 			this.#map = null;
