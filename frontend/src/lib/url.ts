@@ -1,5 +1,6 @@
 export type Url =
 	| "/"
+	| "/audit"
 	| "/cars"
 	| "/car-types"
 	| "/trackers"
