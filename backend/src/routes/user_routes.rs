@@ -1,7 +1,7 @@
 use crate::{
     auth_utils,
     error::AppError,
-    models::user::{UserBody, UserDetails},
+    models::user::{GetUsersResponse, UserBody, UserDetails},
     routes::user_role_routes,
     types::{PaginationParams, SuccessResponse},
     AppState,
@@ -51,7 +51,11 @@ pub async fn get_users(
     .fetch_all(&state.db)
     .await?;
 
-    Ok(axum::Json(users))
+    let response = GetUsersResponse {
+        user_count: users.len(),
+        users,
+    };
+    Ok(axum::Json(response))
 }
 
 pub async fn get_user(
@@ -67,6 +71,9 @@ pub async fn get_user(
                 users.full_name,
                 users.user_role_id,
                 user_roles.name AS user_role_name
+                users.created_at,
+                users.updated_at,
+                users.deleted_at
             FROM users
             LEFT JOIN user_roles ON users.user_role_id = user_roles.user_role_id
             WHERE users.user_id = ?
