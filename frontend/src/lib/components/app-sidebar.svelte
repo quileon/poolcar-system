@@ -9,6 +9,8 @@
 	import BookOpenIcon from "@lucide/svelte/icons/book-open";
 	import HistoryIcon from "@lucide/svelte/icons/history";
 	import MapIcon from "@lucide/svelte/icons/map";
+	import UserIcon from "@lucide/svelte/icons/user";
+	import ShieldUserIcon from "@lucide/svelte/icons/shield-user";
 	import BrickWallShieldIcon from "@lucide/svelte/icons/brick-wall-shield";
 	import { resolve } from "$app/paths";
 	import type { Component, ComponentProps } from "svelte";
@@ -74,6 +76,16 @@
 			title: "Activity Types",
 			url: "/activity-types",
 			icon: BookOpenIcon
+		},
+		{
+			title: "Users",
+			url: "/users",
+			icon: UserIcon
+		},
+		{
+			title: "User Roles",
+			url: "/user-roles",
+			icon: ShieldUserIcon
 		}
 	];
 
