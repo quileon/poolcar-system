@@ -4,7 +4,7 @@ import { authFetch } from "./auth.svelte";
 import { config } from "$lib/config";
 import { goto } from "$app/navigation";
 import { resolve } from "$app/paths";
-import type { UserDetails } from "$lib/bindings/UserDetails";
+import type { UserRoleDetails } from "$lib/bindings/UserRoleDetails";
 
 export function useUserRolesQuery(getStatus: () => string | null) {
 	return createQuery<GetUserRolesResponse>(() => {
@@ -28,7 +28,7 @@ export function useUserRolesQuery(getStatus: () => string | null) {
 }
 
 export function useUserRoleQuery(getUserRoleId: () => number) {
-	return createQuery<UserDetails>(() => ({
+	return createQuery<UserRoleDetails>(() => ({
 		queryKey: ["user-role", getUserRoleId()],
 		queryFn: async () => {
 			const userRoleId = getUserRoleId();
@@ -63,7 +63,7 @@ export function useCreateUserRoleMutation() {
 	}));
 }
 
-export function useEditUserRoleMutations(getUserRoleId: () => number) {
+export function useEditUserRoleMutation(getUserRoleId: () => number) {
 	const queryClient = useQueryClient();
 	const userRoleId = getUserRoleId();
 
