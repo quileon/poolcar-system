@@ -62,7 +62,9 @@
 			trackersQuery.data.trackers.forEach((tracker) => {
 				const color = colors[tracker.tracker_id % colors.length];
 				config[tracker.tracker_id.toString()] = {
-					label: tracker.name,
+					label: tracker.car_name
+						? `${tracker.car_police_number} (${tracker.car_name})`
+						: `Tracker ${tracker.name}`,
 					color: `#${color}`
 				};
 			});
@@ -75,7 +77,9 @@
 		return trackersQuery.data.trackers.map((tracker) => {
 			return {
 				key: tracker.tracker_id.toString(),
-				label: tracker.name,
+				label: tracker.car_name
+					? `${tracker.car_police_number} (${tracker.car_name})`
+					: `Tracker ${tracker.name}`,
 				color: chartConfig[tracker.tracker_id.toString()].color
 			};
 		});
@@ -126,7 +130,7 @@
 				if (!trackerDetails) return;
 
 				const iconColor = colors[id % colors.length];
-				const iconName = trackerDetails.car_type_name === "Truck" ? "truck" : "car";
+				const iconName = trackerDetails.car_type_name === "Delivery" ? "truck" : "car";
 				const icon = leaflet.createIcon({
 					iconUrl: new URL(`/src/lib/assets/${iconName}-${iconColor}.png`, import.meta.url).href,
 					iconSize: [15.5, 23],
@@ -140,7 +144,7 @@
 					longitude,
 					icon,
 					trackerDetails.car_name
-						? `Tracker ${trackerDetails.name} (${trackerDetails.car_name})`
+						? `${trackerDetails.car_police_number} (${trackerDetails.car_name})`
 						: `Tracker ${trackerDetails.name}`
 				);
 			} else if (isUpdateActivity(message)) {
@@ -250,7 +254,7 @@
 			if (!trackerDetails) return;
 
 			const iconColor = colors[id % colors.length];
-			const iconName = trackerDetails.car_type_name === "Truck" ? "truck" : "car";
+			const iconName = trackerDetails.car_type_name === "Delivery" ? "truck" : "car";
 			const icon = leaflet.createIcon({
 				iconUrl: new URL(`/src/lib/assets/${iconName}-${iconColor}.png`, import.meta.url).href,
 				iconSize: [15.5, 23],
@@ -264,7 +268,7 @@
 				longitude,
 				icon,
 				trackerDetails.car_name
-					? `Tracker ${trackerDetails.name} (${trackerDetails.car_name})`
+					? `${trackerDetails.car_police_number} (${trackerDetails.car_name})`
 					: `Tracker ${trackerDetails.name}`
 			);
 		});
@@ -380,11 +384,15 @@
 							>
 							<Table.Cell>
 								{#if activity.finished_at}
-									{activity.car_name || "N/A"}
+									{activity.car_name
+										? `${activity.car_police_number} (${activity.car_name})`
+										: `Tracker ${activity.tracker_name}`}
 								{:else}
 									{distancesMap.get(activity.activity_id)
-										? `${distancesMap.get(activity.activity_id)?.car_name} - ${distancesMap.get(activity.activity_id)?.car_police_number}`
-										: "No Car Assigned"}
+										? distancesMap.get(activity.activity_id)?.car_name
+											? `${distancesMap.get(activity.activity_id)?.car_police_number} (${distancesMap.get(activity.activity_id)?.car_name})`
+											: `Tracker ${distancesMap.get(activity.activity_id)?.tracker_name}`
+										: "No Car Exist"}
 								{/if}
 							</Table.Cell>
 							<Table.Cell>

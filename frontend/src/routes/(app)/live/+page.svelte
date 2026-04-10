@@ -50,7 +50,7 @@
 
 	const trackerTrigger = $derived(
 		trackersQuery.data?.trackers.find((tracker) => tracker.tracker_id === selectedTrackerId)
-			?.name ?? "Select Tracker to View"
+			?.name ?? "Select Car to View"
 	);
 
 	function isTrackerMarker(message: WebSocketMessage): boolean {
@@ -100,7 +100,7 @@
 				if (!trackerDetails) return;
 
 				const iconColor = colors[id % colors.length];
-				const iconName = trackerDetails.car_type_name === "Truck" ? "truck" : "car";
+				const iconName = trackerDetails.car_type_name === "Delivery" ? "truck" : "car";
 				const icon = leaflet.createIcon({
 					iconUrl: new URL(`/src/lib/assets/${iconName}-${iconColor}.png`, import.meta.url).href,
 					iconSize: [15.5, 23],
@@ -196,7 +196,7 @@
 			if (!trackerDetails) return;
 
 			const iconColor = colors[id % colors.length];
-			const iconName = trackerDetails.car_type_name === "Truck" ? "truck" : "car";
+			const iconName = trackerDetails.car_type_name === "Delivery" ? "truck" : "car";
 			const icon = leaflet.createIcon({
 				iconUrl: new URL(`/src/lib/assets/${iconName}-${iconColor}.png`, import.meta.url).href,
 				iconSize: [15.5, 23],
@@ -210,7 +210,7 @@
 				longitude,
 				icon,
 				trackerDetails.car_name
-					? `Tracker ${trackerDetails.name} (${trackerDetails.car_name})`
+					? `${trackerDetails.car_police_number} (${trackerDetails.car_name})`
 					: `Tracker ${trackerDetails.name}`
 			);
 		});
@@ -268,8 +268,8 @@
 								value={tracker.tracker_id.toString()}
 								disabled={!leaflet.hasTrackerMarker(tracker.tracker_id)}
 							>
-								{tracker.name}
-								{#if tracker.car_type_name}({tracker.car_name}){/if}
+								{#if tracker.car_police_number}{`${tracker.car_police_number} (${tracker.car_name})`}
+								{:else}Tracker {tracker.name}{/if}
 							</Select.Item>
 						{/each}
 					</Select.Group>
