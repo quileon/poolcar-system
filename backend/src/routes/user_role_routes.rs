@@ -64,7 +64,7 @@ pub async fn get_user_role(
             SELECT
                 user_roles.user_role_id,
                 user_roles.name,
-                COUNT(users.user_id) as user_count
+                COUNT(users.user_id) as user_count,
                 user_roles.created_at,
                 user_roles.updated_at,
                 user_roles.deleted_at
