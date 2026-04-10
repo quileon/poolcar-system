@@ -18,14 +18,14 @@ pub struct CarStatus {
 
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
 #[ts(export)]
-pub struct CarBody {
+pub struct CarStatusBody {
     pub gas_level: f64,
     pub kilometres: f64,
 }
 
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
 #[ts(export)]
-pub struct CarDetails {
+pub struct CarStatusDetails {
     pub car_status_id: i32,
     pub car_id: i32,
     pub car_name: String,
@@ -40,7 +40,7 @@ pub struct CarDetails {
 
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
 #[ts(export)]
-pub struct GetCarsResponse {
-    pub car_statuses: Vec<CarDetails>,
+pub struct GetCarStatusesResponse {
+    pub car_statuses: Vec<CarStatusDetails>,
     pub car_status_count: usize,
 }

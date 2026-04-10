@@ -1,6 +1,6 @@
 use crate::{
     error::AppError,
-    models::car_status::{CarBody, CarDetails, GetCarsResponse},
+    models::car_status::{CarStatusBody, CarStatusDetails, GetCarStatusesResponse},
     types::{PaginationParams, SuccessResponse},
     AppState,
 };
@@ -19,7 +19,7 @@ pub async fn get_car_statuses(
 ) -> Result<impl IntoResponse, AppError> {
     let status = params.status.unwrap_or("active".into());
 
-    let car_statuses: Vec<CarDetails> = sqlx::query_as(
+    let car_statuses: Vec<CarStatusDetails> = sqlx::query_as(
         r#"
             SELECT
                 car_statuses.car_status_id,
@@ -50,7 +50,7 @@ pub async fn get_car_statuses(
     .fetch_all(&state.db)
     .await?;
 
-    let response = GetCarsResponse {
+    let response = GetCarStatusesResponse {
         car_status_count: car_statuses.len(),
         car_statuses,
     };
@@ -62,7 +62,7 @@ pub async fn get_car_status(
     State(state): State<Arc<AppState>>,
     Path(car_status_id): Path<i32>,
 ) -> Result<impl IntoResponse, AppError> {
-    let car_status: CarDetails = sqlx::query_as(
+    let car_status: CarStatusDetails = sqlx::query_as(
         r#"
             SELECT
                 car_statuses.car_status_id,
@@ -90,7 +90,7 @@ pub async fn get_car_status(
 pub async fn create_car_status(
     State(state): State<Arc<AppState>>,
     Path(car_id): Path<i32>,
-    Json(car_status): Json<CarBody>,
+    Json(car_status): Json<CarStatusBody>,
 ) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
@@ -112,7 +112,7 @@ pub async fn create_car_status(
 pub async fn update_car_status(
     State(state): State<Arc<AppState>>,
     Path(car_status_id): Path<i32>,
-    Json(car_status): Json<CarBody>,
+    Json(car_status): Json<CarStatusBody>,
 ) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
@@ -175,7 +175,7 @@ pub async fn restore_car_status(
 pub async fn export_car_statuses(
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, AppError> {
-    let car_statuses: Vec<CarDetails> = sqlx::query_as(
+    let car_statuses: Vec<CarStatusDetails> = sqlx::query_as(
         r#"
             SELECT
                 car_statuses.car_status_id,
