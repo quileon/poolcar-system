@@ -81,7 +81,7 @@
 			<ButtonGroup.Root>
 				<Button
 					href={`${config.apiBaseUrl}/users/roles/export`}
-					download="user-roles.csv"
+					download="user_roles.csv"
 					size="default"
 					variant="outline">Export</Button
 				>
