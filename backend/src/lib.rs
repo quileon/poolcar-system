@@ -9,6 +9,7 @@ mod routes;
 mod state;
 mod tasks;
 mod types;
+mod validate;
 mod websocket;
 
 use crate::{

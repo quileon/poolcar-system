@@ -23,9 +23,9 @@ pub async fn get_activities(
     State(state): State<Arc<AppState>>,
     Query(params): Query<PaginationParams>,
 ) -> Result<Json<GetActivitiesResponse>, AppError> {
-    let status = params.status.unwrap_or("active".into());
+    let status = params.status.as_deref().unwrap_or("active");
 
-    let activities: Vec<ActivityDetails> = sqlx::query_as(
+    let mut query = sqlx::QueryBuilder::new(
         r#"
             SELECT
                 activities.activity_id,
@@ -54,20 +54,24 @@ pub async fn get_activities(
             LEFT JOIN activity_types ON activity_types.activity_type_id = activities.activity_type_id
             LEFT JOIN trackers ON trackers.tracker_id = activities.tracker_id
             WHERE
-                CASE
-                    WHEN ? = 'active' THEN activities.deleted_at IS NULL
-                    WHEN ? = 'deleted' THEN activities.deleted_at IS NOT NULL
-                    WHEN ? = 'all' THEN TRUE
-                    ELSE activities.deleted_at IS NULL
-                END
-            ORDER BY activities.activity_id ASC
-        "#
-    )
-    .bind(&status)
-    .bind(&status)
-    .bind(&status)
-    .fetch_all(&state.db)
-    .await?;
+        "#,
+    );
+
+    match status {
+        "active" => query.push("activities.deleted_at IS NULL"),
+        "deleted" => query.push("activities.deleted_at IS NOT NULL"),
+        "all" => query.push("TRUE"),
+        _ => query.push("activities.deleted_at IS NULL"),
+    };
+
+    if let Some(start) = params.start_date {
+        query.push(" AND DATE(activities.started_at) >= ");
+        query.push_bind(start);
+    }
+
+    query.push(" ORDER BY activities.activity_id ASC");
+
+    let activities: Vec<ActivityDetails> = query.build_query_as().fetch_all(&state.db).await?;
 
     let response = GetActivitiesResponse {
         activity_count: activities.len(),
