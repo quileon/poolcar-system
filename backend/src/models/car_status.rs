@@ -3,6 +3,15 @@ use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
 use ts_rs::TS;
 
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub enum StatusType {
+    #[serde(rename = "DEPARTURE")]
+    Departure,
+    #[serde(rename = "RETURN")]
+    Return,
+}
+
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
 #[ts(export)]
 pub struct CarStatus {
@@ -10,6 +19,8 @@ pub struct CarStatus {
     pub car_id: i32,
     pub gas_level: f64,
     pub kilometres: f64,
+    #[ts(type = "\"DEPARTURE\" | \"RETURN\"")]
+    pub status_type: String,
     pub recorded_at: NaiveDateTime,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
@@ -19,8 +30,11 @@ pub struct CarStatus {
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
 #[ts(export)]
 pub struct CarStatusBody {
+    pub car_id: i32,
     pub gas_level: f64,
     pub kilometres: f64,
+    #[ts(type = "\"DEPARTURE\" | \"RETURN\"")]
+    pub status_type: String,
 }
 
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
@@ -32,6 +46,8 @@ pub struct CarStatusDetails {
     pub car_police_number: String,
     pub gas_level: f64,
     pub kilometres: f64,
+    #[ts(type = "\"DEPARTURE\" | \"RETURN\"")]
+    pub status_type: String,
     pub recorded_at: NaiveDateTime,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,

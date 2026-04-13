@@ -22,26 +22,27 @@ pub async fn get_car_statuses(
     let car_statuses: Vec<CarStatusDetails> = sqlx::query_as(
         r#"
             SELECT
-                car_statuses.car_status_id,
-                car_statuses.car_id,
+                car_status.car_status_id,
+                car_status.car_id,
                 cars.name as car_name,
                 cars.police_number as car_police_number,
-                car_statuses.gas_level,
-                car_statuses.kilometres,
-                car_statuses.recorded_at,
-                car_statuses.created_at,
-                car_statuses.updated_at,
-                car_statuses.deleted_at
-            FROM car_statuses
-            LEFT JOIN cars ON car_statuses.car_id = cars.car_id
+                car_status.gas_level,
+                car_status.kilometres,
+                CAST(car_status.status_type AS CHAR) as status_type,
+                car_status.recorded_at,
+                car_status.created_at,
+                car_status.updated_at,
+                car_status.deleted_at
+            FROM car_status
+            LEFT JOIN cars ON car_status.car_id = cars.car_id
             WHERE
                 CASE
-                    WHEN ? = 'active' THEN car_statuses.deleted_at IS NULL
-                    WHEN ? = 'deleted' THEN car_statuses.deleted_at IS NOT NULL
+                    WHEN ? = 'active' THEN car_status.deleted_at IS NULL
+                    WHEN ? = 'deleted' THEN car_status.deleted_at IS NOT NULL
                     WHEN ? = 'all' THEN TRUE
-                    ELSE car_statuses.deleted_at IS NULL
+                    ELSE car_status.deleted_at IS NULL
                 END
-            ORDER BY car_statuses.car_status_id ASC
+            ORDER BY car_status.car_status_id ASC
         "#,
     )
     .bind(&status)
@@ -65,19 +66,20 @@ pub async fn get_car_status(
     let car_status: CarStatusDetails = sqlx::query_as(
         r#"
             SELECT
-                car_statuses.car_status_id,
-                car_statuses.car_id,
+                car_status.car_status_id,
+                car_status.car_id,
                 cars.name as car_name,
                 cars.police_number as car_police_number,
-                car_statuses.gas_level,
-                car_statuses.kilometres,
-                car_statuses.recorded_at,
-                car_statuses.created_at,
-                car_statuses.updated_at,
-                car_statuses.deleted_at
-            FROM car_statuses
-            LEFT JOIN cars ON car_statuses.car_id = cars.car_id
-            WHERE car_statuses.car_status_id = ?
+                car_status.gas_level,
+                car_status.kilometres,
+                CAST(car_status.status_type AS CHAR) as status_type,
+                car_status.recorded_at,
+                car_status.created_at,
+                car_status.updated_at,
+                car_status.deleted_at
+            FROM car_status
+            LEFT JOIN cars ON car_status.car_id = cars.car_id
+            WHERE car_status.car_status_id = ?
         "#,
     )
     .bind(car_status_id)
@@ -89,18 +91,18 @@ pub async fn get_car_status(
 
 pub async fn create_car_status(
     State(state): State<Arc<AppState>>,
-    Path(car_id): Path<i32>,
     Json(car_status): Json<CarStatusBody>,
 ) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
-            INSERT INTO car_statuses (car_id, gas_level, kilometres, recorded_at)
-            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            INSERT INTO car_status (car_id, gas_level, kilometres, status_type, recorded_at)
+            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
         "#,
     )
-    .bind(car_id)
+    .bind(car_status.car_id)
     .bind(car_status.gas_level)
     .bind(car_status.kilometres)
+    .bind(car_status.status_type)
     .execute(&state.db)
     .await?;
 
@@ -116,13 +118,14 @@ pub async fn update_car_status(
 ) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
-            UPDATE car_statuses
-            SET gas_level = ?, kilometres = ?, recorded_at = CURRENT_TIMESTAMP
+            UPDATE car_status
+            SET gas_level = ?, kilometres = ?, status_type = ?, recorded_at = CURRENT_TIMESTAMP
             WHERE car_status_id = ?
         "#,
     )
     .bind(car_status.gas_level)
     .bind(car_status.kilometres)
+    .bind(car_status.status_type)
     .bind(car_status_id)
     .execute(&state.db)
     .await?;
@@ -138,7 +141,7 @@ pub async fn delete_car_status(
 ) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
-            UPDATE car_statuses
+            UPDATE car_status
             SET deleted_at = CURRENT_TIMESTAMP
             WHERE car_status_id = ?
         "#,
@@ -158,7 +161,7 @@ pub async fn restore_car_status(
 ) -> Result<Json<SuccessResponse>, AppError> {
     sqlx::query(
         r#"
-            UPDATE car_statuses
+            UPDATE car_status
             SET deleted_at = NULL
             WHERE car_status_id = ?
         "#,
@@ -178,19 +181,20 @@ pub async fn export_car_statuses(
     let car_statuses: Vec<CarStatusDetails> = sqlx::query_as(
         r#"
             SELECT
-                car_statuses.car_status_id,
-                car_statuses.car_id,
+                car_status.car_status_id,
+                car_status.car_id,
                 cars.name as car_name,
                 cars.police_number as car_police_number,
-                car_statuses.gas_level,
-                car_statuses.kilometres,
-                car_statuses.recorded_at,
-                car_statuses.created_at,
-                car_statuses.updated_at,
-                car_statuses.deleted_at
-            FROM car_statuses
-            LEFT JOIN cars ON car_statuses.car_id = cars.car_id
-            ORDER BY car_statuses.car_status_id ASC
+                car_status.gas_level,
+                car_status.kilometres,
+                CAST(car_status.status_type AS CHAR) as status_type,
+                car_status.recorded_at,
+                car_status.created_at,
+                car_status.updated_at,
+                car_status.deleted_at
+            FROM car_status
+            LEFT JOIN cars ON car_status.car_id = cars.car_id
+            ORDER BY car_status.car_status_id ASC
         "#,
     )
     .fetch_all(&state.db)
@@ -206,6 +210,7 @@ pub async fn export_car_statuses(
             "Car Police Number",
             "Gas Level",
             "Kilometres",
+            "Status Type",
             "Recorded At",
             "Created At",
             "Updated At",
@@ -224,7 +229,7 @@ pub async fn export_car_statuses(
             (CONTENT_TYPE, "text/csv"),
             (
                 CONTENT_DISPOSITION,
-                "attachment; filename=\"car_statuses.csv\"",
+                "attachment; filename=\"car_status.csv\"",
             ),
         ],
         csv_buffer,
