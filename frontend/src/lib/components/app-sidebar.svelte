@@ -12,6 +12,8 @@
 	import UserIcon from "@lucide/svelte/icons/user";
 	import ShieldUserIcon from "@lucide/svelte/icons/shield-user";
 	import BrickWallShieldIcon from "@lucide/svelte/icons/brick-wall-shield";
+	import KeySquareIcon from "@lucide/svelte/icons/key-square";
+	import RouteIcon from "@lucide/svelte/icons/route";
 	import { resolve } from "$app/paths";
 	import type { Component, ComponentProps } from "svelte";
 	import type { Url } from "$lib/url";
@@ -34,6 +36,11 @@
 			title: "Audit",
 			url: "/audit",
 			icon: BrickWallShieldIcon
+		},
+		{
+			title: "Create New Trip",
+			url: "/trip",
+			icon: RouteIcon
 		}
 	];
 
@@ -51,6 +58,11 @@
 			title: "Car Types",
 			url: "/car-types",
 			icon: CarFrontIcon
+		},
+		{
+			title: "Car Status",
+			url: "/car-status",
+			icon: KeySquareIcon
 		},
 		{
 			title: "Trackers",

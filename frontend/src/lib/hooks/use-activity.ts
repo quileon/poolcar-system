@@ -6,12 +6,19 @@ import { resolve } from "$app/paths";
 import type { GetActivitiesResponse } from "$lib/bindings/GetActivitiesResponse";
 import type { ActivityDetails } from "$lib/bindings/ActivityDetails";
 
-export function useActivitiesQuery(getStatus: () => string | null) {
+export function useActivitiesQuery(
+	getStatus: () => string | null,
+	getStartDate: () => string | null
+) {
 	return createQuery<GetActivitiesResponse>(() => {
 		const status = getStatus();
+		const startDate = getStartDate();
 		const searchParams = new URLSearchParams();
 		if (status) {
 			searchParams.set("status", status);
+		}
+		if (startDate) {
+			searchParams.set("startDate", startDate);
 		}
 
 		return {
