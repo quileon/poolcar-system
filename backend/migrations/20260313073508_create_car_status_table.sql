@@ -4,6 +4,7 @@ CREATE TABLE car_status (
     car_id INT NOT NULL,
     gas_level DOUBLE NOT NULL,
     kilometres DOUBLE NOT NULL,
+    status_type ENUM('DEPARTURE', 'RETURN') NOT NULL,
     recorded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -13,3 +14,4 @@ CREATE TABLE car_status (
 
 CREATE INDEX idx_car_status_car_id ON car_status(car_id);
 CREATE INDEX idx_car_status_recorded_at ON car_status(recorded_at);
+CREATE INDEX idx_car_status_type ON car_status(status_type);
