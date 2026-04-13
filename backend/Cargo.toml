@@ -1,6 +1,6 @@
 [package]
 name = "poolcar_backend"
-version = "0.3.2"
+version = "0.3.3"
 edition = "2021"
 
 [dependencies]
@@ -24,7 +24,7 @@ sqlx = { version = "0.8.6", features = [
     "runtime-tokio",
     "mysql",
     "postgres",
-    "tls-rustls-aws-lc-rs",
+    "tls-rustls-ring",
     "chrono",
 ] }
 thiserror = "2.0.18"
