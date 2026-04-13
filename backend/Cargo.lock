@@ -1540,7 +1540,7 @@ checksum = "b4596b6d070b27117e987119b4dac604f3c58cfb0b191112e24771b2faeac1a6"
 
 [[package]]
 name = "poolcar_backend"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "anyhow",
  "argon2",
@@ -1895,6 +1895,7 @@ dependencies = [
  "aws-lc-rs",
  "log",
  "once_cell",
+ "ring",
  "rustls-pki-types",
  "rustls-webpki 0.103.9",
  "subtle",
