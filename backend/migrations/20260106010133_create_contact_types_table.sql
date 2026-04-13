@@ -8,6 +8,6 @@ CREATE TABLE contact_types (
 );
 
 -- Development
-INSERT INTO contact_types (name) VALUES
-    ('Consumer'),
-    ('Supplier');
+-- INSERT INTO contact_types (name) VALUES
+--     ('Consumer'),
+--     ('Supplier');

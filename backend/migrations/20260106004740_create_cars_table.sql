@@ -18,6 +18,6 @@ CREATE INDEX idx_cars_tracker_id ON cars(tracker_id);
 CREATE INDEX idx_cars_police_number ON cars(police_number);
 
 -- Development
-INSERT INTO cars (name, police_number, car_type_id, tracker_id) VALUES
-    ('Truck', 'A ABC 123', 1, 1),
-    ('Grandmax', 'A DEF 456', 2, NULL);
+-- INSERT INTO cars (name, police_number, car_type_id, tracker_id) VALUES
+--     ('Truck', 'A ABC 123', 1, 1),
+--     ('Grandmax', 'A DEF 456', 2, NULL);

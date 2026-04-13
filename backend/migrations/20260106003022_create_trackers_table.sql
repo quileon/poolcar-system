@@ -8,7 +8,7 @@ CREATE TABLE trackers (
 );
 
 -- Development
-INSERT INTO trackers (name) VALUES
-    ('Alpha'),
-    ('Beta'),
-    ('Gamma');
+-- INSERT INTO trackers (name) VALUES
+--     ('Alpha'),
+--     ('Beta'),
+--     ('Gamma');

@@ -18,5 +18,5 @@ CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_full_name ON users(full_name);
 
 -- Development
-INSERT INTO users (username, email, password, full_name, user_role_id) VALUES
-    ('admin', 'quilavr@gmail.com', '$argon2id$v=19$m=19456,t=2,p=1$0ydYYMdg6UzgEUDpeDFIDw$XRH3+CyVzn+nhCH/lErA4d/E7nnsY3UODU8KlvFHuUk', 'Quilavr', 1);
+-- INSERT INTO users (username, email, password, full_name, user_role_id) VALUES
+--     ('admin', 'quilavr@gmail.com', '$argon2id$v=19$m=19456,t=2,p=1$0ydYYMdg6UzgEUDpeDFIDw$XRH3+CyVzn+nhCH/lErA4d/E7nnsY3UODU8KlvFHuUk', 'Quilavr', 1);
