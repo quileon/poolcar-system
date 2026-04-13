@@ -1,4 +1,4 @@
-mod auth_utils;
+pub mod auth_utils;
 pub mod config;
 mod error;
 mod handlers;
