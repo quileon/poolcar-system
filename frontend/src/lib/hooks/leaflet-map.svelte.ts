@@ -14,6 +14,7 @@ type LeafletMapOptions = {
 	center: [number, number];
 	zoom: number;
 	onDragStart?: () => void;
+	onMapClick?: (lat: number, lng: number) => void;
 };
 
 export class LeafletMap {
@@ -58,6 +59,12 @@ export class LeafletMap {
 
 		if (options.onDragStart) {
 			this.#map.on("dragstart", options.onDragStart);
+		}
+
+		if (options.onMapClick) {
+			this.#map.on("click", (e: L.LeafletMouseEvent) => {
+				options.onMapClick?.(e.latlng.lat, e.latlng.lng);
+			});
 		}
 
 		// Give the map a tick to settle in the DOM before marking ready
@@ -360,6 +367,17 @@ export class LeafletMap {
 	clearAuditVisualization(): void {
 		this.clearAuditMarkers();
 		this.clearPolylines();
+	}
+
+	/**
+	 * Registers a callback for map click events.
+	 * The callback receives the latitude and longitude of the clicked point.
+	 */
+	registerMapClickHandler(callback: (lat: number, lng: number) => void): void {
+		if (!this.#map) throw new Error("LeafletMap not initialized");
+		this.#map.on("click", (e: L.LeafletMouseEvent) => {
+			callback(e.latlng.lat, e.latlng.lng);
+		});
 	}
 
 	/**
