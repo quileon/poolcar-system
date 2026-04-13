@@ -1,13 +1,13 @@
-import type { UserRoleWithDetails } from "$lib/bindings/UserRoleWithDetails";
 import type { GetUserRolesResponse } from "$lib/bindings/GetUserRolesResponse";
 import { createMutation, createQuery, useQueryClient } from "@tanstack/svelte-query";
 import { authFetch } from "./auth.svelte";
 import { config } from "$lib/config";
 import { goto } from "$app/navigation";
 import { resolve } from "$app/paths";
+import type { UserRoleDetails } from "$lib/bindings/UserRoleDetails";
 
 export function useUserRolesQuery(getStatus: () => string | null) {
-	return createQuery<GetUserRolesResponse[]>(() => {
+	return createQuery<GetUserRolesResponse>(() => {
 		const status = getStatus();
 		const searchParams = new URLSearchParams();
 		if (status) {
@@ -28,7 +28,7 @@ export function useUserRolesQuery(getStatus: () => string | null) {
 }
 
 export function useUserRoleQuery(getUserRoleId: () => number) {
-	return createQuery<UserRoleWithDetails>(() => ({
+	return createQuery<UserRoleDetails>(() => ({
 		queryKey: ["user-role", getUserRoleId()],
 		queryFn: async () => {
 			const userRoleId = getUserRoleId();
@@ -57,18 +57,18 @@ export function useCreateUserRoleMutation() {
 			return response.json();
 		},
 		onSuccess: async () => {
-			await goto(resolve("/user-roles"));
 			await queryClient.invalidateQueries({ queryKey: ["user-roles"] });
+			await goto(resolve("/user-roles"));
 		}
 	}));
 }
 
-export function useEditUserRoleMutations(getUserRoleId: () => number) {
+export function useEditUserRoleMutation(getUserRoleId: () => number) {
 	const queryClient = useQueryClient();
+	const userRoleId = getUserRoleId();
 
 	return createMutation(() => ({
 		mutationFn: async (data: { name: string }) => {
-			const userRoleId = getUserRoleId();
 			const response = await authFetch(`${config.apiBaseUrl}/users/roles/${userRoleId}`, {
 				method: "PUT",
 				headers: {
@@ -82,18 +82,19 @@ export function useEditUserRoleMutations(getUserRoleId: () => number) {
 			return response.json();
 		},
 		onSuccess: async () => {
-			await goto(resolve("/user-roles"));
 			await queryClient.invalidateQueries({ queryKey: ["user-roles"] });
+			await queryClient.invalidateQueries({ queryKey: ["user-role", userRoleId] });
+			await goto(resolve("/user-roles"));
 		}
 	}));
 }
 
 export function useDeleteUserRoleMutation(getUserRoleId: () => number) {
 	const queryClient = useQueryClient();
+	const userRoleId = getUserRoleId();
 
 	return createMutation(() => ({
 		mutationFn: async () => {
-			const userRoleId = getUserRoleId();
 			const response = await authFetch(`${config.apiBaseUrl}/users/roles/${userRoleId}`, {
 				method: "DELETE"
 			});
@@ -101,8 +102,29 @@ export function useDeleteUserRoleMutation(getUserRoleId: () => number) {
 			return response.json();
 		},
 		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ["user-roles"] });
+			await queryClient.invalidateQueries({ queryKey: ["user-role", userRoleId] });
 			await goto(resolve("/user-roles"));
-			await queryClient.invalidateQueries({ queryKey: ["users-roles"] });
+		}
+	}));
+}
+
+export function useRestoreUserRoleMutation(getUserRoleId: () => number) {
+	const queryClient = useQueryClient();
+	const userRoleId = getUserRoleId();
+
+	return createMutation(() => ({
+		mutationFn: async () => {
+			const response = await authFetch(`${config.apiBaseUrl}/users/roles/${userRoleId}/restore`, {
+				method: "PUT"
+			});
+			if (!response.ok) throw new Error("Failed to restore user role");
+			return response.json();
+		},
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ["user-roles"] });
+			await queryClient.invalidateQueries({ queryKey: ["user-role", userRoleId] });
+			await goto(resolve("/user-roles"));
 		}
 	}));
 }

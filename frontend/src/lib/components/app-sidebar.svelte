@@ -9,6 +9,11 @@
 	import BookOpenIcon from "@lucide/svelte/icons/book-open";
 	import HistoryIcon from "@lucide/svelte/icons/history";
 	import MapIcon from "@lucide/svelte/icons/map";
+	import UserIcon from "@lucide/svelte/icons/user";
+	import ShieldUserIcon from "@lucide/svelte/icons/shield-user";
+	import BrickWallShieldIcon from "@lucide/svelte/icons/brick-wall-shield";
+	import KeySquareIcon from "@lucide/svelte/icons/key-square";
+	import RouteIcon from "@lucide/svelte/icons/route";
 	import { resolve } from "$app/paths";
 	import type { Component, ComponentProps } from "svelte";
 	import type { Url } from "$lib/url";
@@ -26,6 +31,16 @@
 			title: "Live Tracking",
 			url: "/live",
 			icon: MapIcon
+		},
+		{
+			title: "Audit",
+			url: "/audit",
+			icon: BrickWallShieldIcon
+		},
+		{
+			title: "Create New Trip",
+			url: "/trip",
+			icon: RouteIcon
 		}
 	];
 
@@ -43,6 +58,11 @@
 			title: "Car Types",
 			url: "/car-types",
 			icon: CarFrontIcon
+		},
+		{
+			title: "Car Status",
+			url: "/car-status",
+			icon: KeySquareIcon
 		},
 		{
 			title: "Trackers",
@@ -68,6 +88,16 @@
 			title: "Activity Types",
 			url: "/activity-types",
 			icon: BookOpenIcon
+		},
+		{
+			title: "Users",
+			url: "/users",
+			icon: UserIcon
+		},
+		{
+			title: "User Roles",
+			url: "/user-roles",
+			icon: ShieldUserIcon
 		}
 	];
 
@@ -104,7 +134,7 @@
 						<Sidebar.MenuItem>
 							<Sidebar.MenuButton>
 								{#snippet child({ props })}
-									<a href={resolve(`${sidebar_item.url}`)} {...props}>
+									<a href={resolve(sidebar_item.url)} {...props}>
 										<sidebar_item.icon />
 										<span>{sidebar_item.title}</span>
 									</a>

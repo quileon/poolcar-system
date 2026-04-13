@@ -104,7 +104,7 @@ JsonDocument &GpsClient::toJsonDocument()
         jsonDoc["datetime"]["second"] = gps.time.second();
         jsonDoc["datetime"]["centisecond"] = gps.time.centisecond();
         jsonDoc["datetime"]["age"] = gps.time.age();
-        jsonDoc["datetime"]["valid"] = true;
+        jsonDoc["datetime"]["valid"] = (gps.date.year() > 2000);
     }
     else
     {
@@ -123,29 +123,37 @@ JsonDocument &GpsClient::toJsonDocument()
     // Satellite data
     if (gps.satellites.isValid())
     {
-        jsonDoc["satellites"]["count"] = gps.satellites.value();
+        jsonDoc["satellites"]["visible"] = gps.satellites.value();
+        jsonDoc["satellites"]["used"] = nullptr;
+        jsonDoc["satellites"]["carrier_to_noise"] = nullptr;
         jsonDoc["satellites"]["age"] = gps.satellites.age();
         jsonDoc["satellites"]["valid"] = true;
     }
     else
     {
-        jsonDoc["satellites"]["count"] = nullptr;
+        jsonDoc["satellites"]["visible"] = nullptr;
+        jsonDoc["satellites"]["used"] = nullptr;
+        jsonDoc["satellites"]["carrier_to_noise"] = nullptr;
         jsonDoc["satellites"]["age"] = nullptr;
         jsonDoc["satellites"]["valid"] = false;
     }
 
-    // HDOP (Horizontal Dilution of Precision)
+    // DOP (Dilution of Precision)
     if (gps.hdop.isValid())
     {
-        jsonDoc["hdop"]["value"] = gps.hdop.hdop();
-        jsonDoc["hdop"]["age"] = gps.hdop.age();
-        jsonDoc["hdop"]["valid"] = true;
+        jsonDoc["dop"]["hdop"] = gps.hdop.hdop();
+        jsonDoc["dop"]["pdop"] = nullptr;
+        jsonDoc["dop"]["vdop"] = nullptr;
+        jsonDoc["dop"]["age"] = gps.hdop.age();
+        jsonDoc["dop"]["valid"] = true;
     }
     else
     {
-        jsonDoc["hdop"]["value"] = nullptr;
-        jsonDoc["hdop"]["age"] = nullptr;
-        jsonDoc["hdop"]["valid"] = false;
+        jsonDoc["dop"]["hdop"] = nullptr;
+        jsonDoc["dop"]["pdop"] = nullptr;
+        jsonDoc["dop"]["vdop"] = nullptr;
+        jsonDoc["dop"]["age"] = nullptr;
+        jsonDoc["dop"]["valid"] = false;
     }
 
     // Statistics

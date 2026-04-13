@@ -27,7 +27,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db_pool = MySqlPoolOptions::new()
         .connect(&config.database_url)
         .await
-        .context("Failed to cretae Database pool")?;
+        .context("Failed to connect to the Database pool")?;
     tracing::info!("Database connection established");
 
     // Migrate

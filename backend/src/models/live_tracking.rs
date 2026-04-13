@@ -3,7 +3,7 @@ use sqlx::prelude::FromRow;
 use ts_rs::TS;
 
 use crate::models::mqtt::{
-    PayloadAltitude, PayloadConnection, PayloadCourse, PayloadDateTime, PayloadHdop,
+    PayloadAltitude, PayloadConnection, PayloadCourse, PayloadDateTime, PayloadDop,
     PayloadLocation, PayloadSatellites, PayloadSpeed, PayloadStats,
 };
 
@@ -19,6 +19,6 @@ pub struct GetMqttPayloadHistory {
     pub course: PayloadCourse,
     pub datetime: PayloadDateTime,
     pub satellites: PayloadSatellites,
-    pub hdop: PayloadHdop,
+    pub hdop: PayloadDop,
     pub stats: PayloadStats,
 }

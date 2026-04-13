@@ -39,6 +39,9 @@ pub enum AppError {
     #[error("Missing field")]
     MissingField,
 
+    #[error("Validation error")]
+    ValidationError(String),
+
     #[error("Wrong credentials")]
     WrongCredentials,
 
@@ -68,45 +71,46 @@ impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, error_message) = match &self {
             AppError::DatabaseError(error_message) => {
-                eprintln!("Database error: {:?}", error_message);
+                tracing::error!("Database error: {:?}", error_message);
                 (StatusCode::INTERNAL_SERVER_ERROR, "Database error occurred")
             }
             AppError::RedisPoolError(error_message) => {
-                eprintln!("Redis pool error: {:?}", error_message);
+                tracing::error!("Redis pool error: {:?}", error_message);
                 (StatusCode::INTERNAL_SERVER_ERROR, "Cache service error")
             }
             AppError::RedisError(error_message) => {
-                eprintln!("Redis error: {:?}", error_message);
+                tracing::error!("Redis error: {:?}", error_message);
                 (StatusCode::INTERNAL_SERVER_ERROR, "Cache service error")
             }
             AppError::CsvError(error_message) => {
-                eprintln!("CSV error: {:?}", error_message);
+                tracing::error!("CSV error: {:?}", error_message);
                 (StatusCode::INTERNAL_SERVER_ERROR, "CSV export error")
             }
             AppError::ParseJsonError(error_message) => {
-                eprintln!("JSON parsing error: {:?}", error_message);
+                tracing::error!("JSON parsing error: {:?}", error_message);
                 (StatusCode::BAD_REQUEST, "Invalid JSON format")
             }
             AppError::HashError(error_message) => {
-                eprintln!("Hashing error {:?}", error_message);
+                tracing::error!("Hashing error {:?}", error_message);
                 (StatusCode::INTERNAL_SERVER_ERROR, "Password hashing error")
             }
             AppError::StdIoError(error_message) => {
-                eprintln!("Standard input error {:?}", error_message);
+                tracing::error!("Standard input error {:?}", error_message);
                 (StatusCode::INTERNAL_SERVER_ERROR, "File I/O error")
             }
             AppError::ReqwestError(error_message) => {
-                eprintln!("Reqwest error {:?}", error_message);
+                tracing::error!("Reqwest error {:?}", error_message);
                 (StatusCode::INTERNAL_SERVER_ERROR, "HTTP request error")
             }
 
             AppError::MissingField => (StatusCode::BAD_REQUEST, "Missing required field"),
+            AppError::ValidationError(msg) => (StatusCode::BAD_REQUEST, msg.as_str()),
             AppError::WrongCredentials => (StatusCode::UNAUTHORIZED, "Invalid credentials"),
             AppError::InvalidToken => (StatusCode::UNAUTHORIZED, "Invalid or expired token"),
             AppError::EncodingError => (StatusCode::INTERNAL_SERVER_ERROR, "Token encoding error"),
             AppError::NotFound => (StatusCode::NOT_FOUND, "Resource not found"),
             AppError::Internal(error_message) => {
-                eprintln!("Internal error: {:?}", error_message);
+                tracing::error!("Internal error: {:?}", error_message);
                 (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
             }
         };

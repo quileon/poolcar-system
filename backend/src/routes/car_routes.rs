@@ -1,7 +1,7 @@
 use crate::{
     error::AppError,
     models::car::{CarBody, CarDetails, GetCarsResponse},
-    routes::car_type_routes,
+    routes::{car_status_routes, car_type_routes},
     types::{PaginationParams, SuccessResponse},
     AppState,
 };
@@ -237,6 +237,7 @@ pub fn routes() -> Router<Arc<AppState>> {
         .route("/", get(get_cars).post(create_car))
         .route("/export", get(export_cars))
         .nest("/types", car_type_routes::routes())
+        .nest("/status", car_status_routes::routes())
         .route("/{car_id}", get(get_car).put(update_car).delete(delete_car))
         .route("/{car_id}/restore", put(restore_car))
 }

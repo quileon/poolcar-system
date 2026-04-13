@@ -63,6 +63,7 @@ pub struct GoogleMapLocationBiasCircle {
 #[derive(Debug, Deserialize, Serialize, PartialEq, TS)]
 #[ts(export)]
 pub struct GoogleMapResponse {
+    #[serde(default)]
     places: Vec<Place>,
 }
 

@@ -1,13 +1,13 @@
-import type { UserWithDetails } from "$lib/bindings/UserWithDetails";
 import type { GetUsersResponse } from "$lib/bindings/GetUsersResponse";
 import { createMutation, createQuery, useQueryClient } from "@tanstack/svelte-query";
 import { authFetch } from "./auth.svelte";
 import { config } from "$lib/config";
 import { goto } from "$app/navigation";
 import { resolve } from "$app/paths";
+import type { UserDetails } from "$lib/bindings/UserDetails";
 
 export function useUsersQuery(getStatus: () => string | null) {
-	return createQuery<GetUsersResponse[]>(() => {
+	return createQuery<GetUsersResponse>(() => {
 		const status = getStatus();
 		const searchParams = new URLSearchParams();
 		if (status) {
@@ -26,7 +26,7 @@ export function useUsersQuery(getStatus: () => string | null) {
 }
 
 export function useUserQuery(getUserId: () => number) {
-	return createQuery<UserWithDetails>(() => ({
+	return createQuery<UserDetails>(() => ({
 		queryKey: ["user", getUserId()],
 		queryFn: async () => {
 			const userId = getUserId();
@@ -65,14 +65,15 @@ export function useCreateUserMutation() {
 			return response.json();
 		},
 		onSuccess: async () => {
-			await goto(resolve("/users"));
 			await queryClient.invalidateQueries({ queryKey: ["users"] });
+			await goto(resolve("/users"));
 		}
 	}));
 }
 
 export function useEditUserMutations(getUserId: () => number) {
 	const queryClient = useQueryClient();
+	const userId = getUserId();
 
 	return createMutation(() => ({
 		mutationFn: async (data: {
@@ -82,7 +83,6 @@ export function useEditUserMutations(getUserId: () => number) {
 			fullName: string;
 			userRoleId: number;
 		}) => {
-			const userId = getUserId();
 			const response = await authFetch(`${config.apiBaseUrl}/users/${userId}`, {
 				method: "PUT",
 				headers: {
@@ -100,18 +100,19 @@ export function useEditUserMutations(getUserId: () => number) {
 			return response.json();
 		},
 		onSuccess: async () => {
-			await goto(resolve("/users"));
 			await queryClient.invalidateQueries({ queryKey: ["users"] });
+			await queryClient.invalidateQueries({ queryKey: ["user", userId] });
+			await goto(resolve("/users"));
 		}
 	}));
 }
 
 export function useDeleteUserMutation(getUserId: () => number) {
 	const queryClient = useQueryClient();
+	const userId = getUserId();
 
 	return createMutation(() => ({
 		mutationFn: async () => {
-			const userId = getUserId();
 			const response = await authFetch(`${config.apiBaseUrl}/users/${userId}`, {
 				method: "DELETE"
 			});
@@ -119,8 +120,29 @@ export function useDeleteUserMutation(getUserId: () => number) {
 			return response.json();
 		},
 		onSuccess: async () => {
-			await goto(resolve("/users"));
 			await queryClient.invalidateQueries({ queryKey: ["users"] });
+			await queryClient.invalidateQueries({ queryKey: ["user", userId] });
+			await goto(resolve("/users"));
+		}
+	}));
+}
+
+export function useRestoreUserMutation(getUserId: () => number) {
+	const queryClient = useQueryClient();
+	const userId = getUserId();
+
+	return createMutation(() => ({
+		mutationFn: async () => {
+			const response = await authFetch(`${config.apiBaseUrl}/users/${userId}/restore`, {
+				method: "PUT"
+			});
+			if (!response.ok) throw new Error("Failed to restore user");
+			return response.json();
+		},
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ["users"] });
+			await queryClient.invalidateQueries({ queryKey: ["user", userId] });
+			await goto(resolve("/users"));
 		}
 	}));
 }

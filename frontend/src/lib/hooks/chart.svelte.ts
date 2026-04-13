@@ -19,8 +19,8 @@ export class LatencyChart {
 		};
 
 		for (const [trackerId, payload] of Object.entries(trackersData)) {
-			if (payload) {
-				dataPoint[trackerId] = payload.connection.interval;
+			if (payload && payload.satellites.carrier_to_noise) {
+				dataPoint[trackerId] = payload.satellites.carrier_to_noise;
 			}
 		}
 

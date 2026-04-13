@@ -1,7 +1,9 @@
 pub mod activity_routes;
 pub mod activity_type_routes;
+pub mod audit_routes;
 pub mod auth_routes;
 pub mod car_routes;
+pub mod car_status_routes;
 pub mod car_type_routes;
 pub mod chart_routes;
 pub mod contact_routes;

@@ -3,10 +3,10 @@ import type { PayloadAltitude } from "./PayloadAltitude";
 import type { PayloadConnection } from "./PayloadConnection";
 import type { PayloadCourse } from "./PayloadCourse";
 import type { PayloadDateTime } from "./PayloadDateTime";
-import type { PayloadHdop } from "./PayloadHdop";
+import type { PayloadDop } from "./PayloadDop";
 import type { PayloadLocation } from "./PayloadLocation";
 import type { PayloadSatellites } from "./PayloadSatellites";
 import type { PayloadSpeed } from "./PayloadSpeed";
 import type { PayloadStats } from "./PayloadStats";
 
-export type MqttPayloadWithTrackerCar = { id: number, car_id: number | null, uptime: number, connection: PayloadConnection, location: PayloadLocation, altitude: PayloadAltitude, speed: PayloadSpeed, course: PayloadCourse, datetime: PayloadDateTime, satellites: PayloadSatellites, hdop: PayloadHdop, stats: PayloadStats, };
+export type MqttPayloadWithTrackerCar = { id: number, car_id: number | null, uptime: number, connection: PayloadConnection, location: PayloadLocation, altitude: PayloadAltitude, speed: PayloadSpeed, course: PayloadCourse, datetime: PayloadDateTime, satellites: PayloadSatellites, dop: PayloadDop, stats: PayloadStats, };

@@ -1,7 +1,9 @@
 export type Url =
 	| "/"
+	| "/audit"
 	| "/cars"
 	| "/car-types"
+	| "/car-status"
 	| "/trackers"
 	| "/contacts"
 	| "/contact-types"
@@ -9,4 +11,5 @@ export type Url =
 	| "/activities"
 	| "/live"
 	| "/user-roles"
-	| "/users";
+	| "/users"
+	| "/trip";

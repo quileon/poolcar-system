@@ -1,7 +1,7 @@
 use crate::{
     auth_utils,
     error::AppError,
-    models::user::{UserBody, UserWithDetails, UsersExport},
+    models::user::{GetUsersResponse, UserBody, UserDetails},
     routes::user_role_routes,
     types::{PaginationParams, SuccessResponse},
     AppState,
@@ -10,7 +10,7 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
-    routing::get,
+    routing::{get, put},
     Json, Router,
 };
 use std::sync::Arc;
@@ -21,7 +21,7 @@ pub async fn get_users(
 ) -> Result<impl IntoResponse, AppError> {
     let status = params.status.unwrap_or("active".into());
 
-    let users: Vec<UserWithDetails> = sqlx::query_as(
+    let users: Vec<UserDetails> = sqlx::query_as(
         r#"
             SELECT
                 users.user_id,
@@ -29,7 +29,10 @@ pub async fn get_users(
                 users.email,
                 users.full_name,
                 users.user_role_id,
-                user_roles.name AS user_role_name
+                user_roles.name AS user_role_name,
+                users.created_at,
+                users.updated_at,
+                users.deleted_at
             FROM users
             LEFT JOIN user_roles ON users.user_role_id = user_roles.user_role_id
             WHERE
@@ -48,14 +51,18 @@ pub async fn get_users(
     .fetch_all(&state.db)
     .await?;
 
-    Ok(axum::Json(users))
+    let response = GetUsersResponse {
+        user_count: users.len(),
+        users,
+    };
+    Ok(Json(response))
 }
 
 pub async fn get_user(
     State(state): State<Arc<AppState>>,
     Path(tracker_id): Path<i32>,
 ) -> Result<impl IntoResponse, AppError> {
-    let user: UserWithDetails = sqlx::query_as(
+    let user: UserDetails = sqlx::query_as(
         r#"
             SELECT
                 users.user_id,
@@ -63,18 +70,20 @@ pub async fn get_user(
                 users.email,
                 users.full_name,
                 users.user_role_id,
-                user_roles.name AS user_role_name
+                user_roles.name AS user_role_name,
+                users.created_at,
+                users.updated_at,
+                users.deleted_at
             FROM users
             LEFT JOIN user_roles ON users.user_role_id = user_roles.user_role_id
             WHERE users.user_id = ?
-            AND users.deleted_at IS NULL
         "#,
     )
     .bind(tracker_id)
     .fetch_one(&state.db)
     .await?;
 
-    Ok(axum::Json(user))
+    Ok(Json(user))
 }
 
 pub async fn create_user(
@@ -153,10 +162,28 @@ pub async fn delete_user(
     Ok(Json(SuccessResponse::new("User deleted successfully")))
 }
 
+pub async fn restore_user(
+    State(state): State<Arc<AppState>>,
+    Path(user_id): Path<i32>,
+) -> Result<Json<SuccessResponse>, AppError> {
+    sqlx::query(
+        r#"
+            UPDATE users
+            SET deleted_at = NULL
+            WHERE user_id = ?
+        "#,
+    )
+    .bind(user_id)
+    .execute(&state.db)
+    .await?;
+
+    Ok(Json(SuccessResponse::new("User restored successfully")))
+}
+
 pub async fn export_users(
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, AppError> {
-    let users: Vec<UsersExport> = sqlx::query_as(
+    let users: Vec<UserDetails> = sqlx::query_as(
         r#"
             SELECT
                 users.user_id,
@@ -228,4 +255,5 @@ pub fn routes() -> Router<Arc<AppState>> {
             "/{user_id}",
             get(get_user).put(update_user).delete(delete_user),
         )
+        .route("/{user_id}/restore", put(restore_user))
 }

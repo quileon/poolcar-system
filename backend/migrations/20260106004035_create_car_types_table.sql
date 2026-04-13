@@ -8,6 +8,6 @@ CREATE TABLE car_types (
 );
 
 -- Development
-INSERT INTO car_types (name) VALUES
-    ('Delivery'),
-    ('Passenger');
+-- INSERT INTO car_types (name) VALUES
+--     ('Delivery'),
+--     ('Passenger');

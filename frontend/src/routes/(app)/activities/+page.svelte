@@ -6,6 +6,7 @@
 	import * as Select from "$lib/components/ui/select/index";
 	import * as ButtonGroup from "$lib/components/ui/button-group/index";
 	import Button from "$lib/components/ui/button/button.svelte";
+	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import { config } from "$lib/config";
 	import { resolve } from "$app/paths";
@@ -27,7 +28,10 @@
 		const status = page.url.searchParams.get("status");
 		filterValue = status ?? "";
 	});
-	const activitiesQuery = useActivitiesQuery(() => filterValue || null);
+	const activitiesQuery = useActivitiesQuery(
+		() => filterValue || null,
+		() => null
+	);
 </script>
 
 <h1 class="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl">
@@ -73,6 +77,9 @@
 						</Select.Group>
 					</Select.Content>
 				</Select.Root>
+				<Button variant="outline" aria-label="Send" size="icon">
+					<ArrowRightIcon />
+				</Button>
 			</ButtonGroup.Root>
 			<ButtonGroup.Root>
 				<Button

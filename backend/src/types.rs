@@ -1,3 +1,4 @@
+use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
 use ts_rs::TS;
@@ -8,6 +9,7 @@ pub struct PaginationParams {
     pub page: Option<u32>,
     pub limit: Option<u32>,
     pub status: Option<String>,
+    pub start_date: Option<NaiveDate>,
 }
 
 #[derive(Clone, Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
