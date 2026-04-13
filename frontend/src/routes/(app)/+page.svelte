@@ -29,7 +29,10 @@
 
 	const carsQuery = useCarsQuery(() => "active");
 	const trackersQuery = useTrackersQuery(() => "active");
-	const activitiesQuery = useActivitiesQuery(() => "active");
+	const activitiesQuery = useActivitiesQuery(
+		() => "active",
+		() => null
+	);
 	const mqttPayloadHistoriesQuery = useMqttPayloadHistoriesQuery();
 
 	let mapElement: HTMLElement;
