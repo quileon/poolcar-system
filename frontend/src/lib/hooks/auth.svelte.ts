@@ -19,13 +19,14 @@ export const authState = new AuthState();
  */
 export async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
 	const response = await fetch(input, {
+		credentials: "include",
 		...init
 	});
 
-	if (response.status === 401) {
-		authState.logout();
-		throw new Error("Unauthorized");
-	}
+	// if (response.status === 401) {
+	// 	authState.logout();
+	// 	throw new Error("Unauthorized");
+	// }
 
 	return response;
 }

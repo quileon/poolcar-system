@@ -11,6 +11,7 @@ export function useLoginMutation() {
 		mutationFn: async (data: { username: string; password: string }) => {
 			const response = await fetch(`${config.apiBaseUrl}/auth/login`, {
 				method: "POST",
+				credentials: "include",
 				headers: {
 					"Content-Type": "application/json"
 				},
