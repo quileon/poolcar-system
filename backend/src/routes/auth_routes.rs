@@ -59,7 +59,7 @@ pub async fn login_handler(
     let token = encode_jwt(claims, &state.config.jwt_secret)?;
 
     let cookie = format!(
-        "auth_token={}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=3600",
+        "auth_token={}; Path=/; HttpOnly; SameSite=Lax; Max-Age=3600",
         token
     );
 

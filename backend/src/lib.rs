@@ -22,10 +22,7 @@ use crate::{
 use axum::{http::Method, routing::get, Router};
 use std::sync::Arc;
 use tokio::sync::broadcast;
-use tower_http::{
-    cors::{Any, CorsLayer},
-    trace::TraceLayer,
-};
+use tower_http::{cors::CorsLayer, trace::TraceLayer};
 
 pub fn create_app(
     db_pool: sqlx::MySqlPool,
@@ -42,10 +39,22 @@ pub fn create_app(
         config,
     });
 
+    let origins: Vec<axum::http::HeaderValue> = app_state
+        .config
+        .allowed_origins
+        .split(',')
+        .filter_map(|s| s.trim().parse::<axum::http::HeaderValue>().ok())
+        .collect();
+
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
-        .allow_origin(Any)
-        .allow_headers(Any);
+        .allow_origin(origins)
+        .allow_headers([
+            axum::http::header::AUTHORIZATION,
+            axum::http::header::ACCEPT,
+            axum::http::header::CONTENT_TYPE,
+        ])
+        .allow_credentials(true);
 
     let init_state = app_state.clone();
     tokio::spawn(async move {
