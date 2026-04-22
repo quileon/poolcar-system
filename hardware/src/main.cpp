@@ -2,10 +2,10 @@
 
 #include <Arduino.h>
 #include <TinyGsmClient.h>
-#include <PubSubClient.h>
 #include <SSLClient.h>
+#include <ArduinoHttpClient.h>
 
-#include <MqttClient.h>
+#include <HttpWrapper.h>
 #include <GsmWrapper.h>
 
 #if defined(TINY_GSM_MODEM_SIM808)
@@ -36,19 +36,12 @@ GpsClient gpsClient(gps);
 
 TinyGsmClient client(modem);
 
-#ifdef MQTT_SECURE
+#ifdef USE_SSL
 SSLClient sslClient(&client);
-PubSubClient mqtt(sslClient);
-MqttClient mqttClient(mqtt, MQTT_BROKER, MQTT_PORT, MQTT_TOPIC, MQTT_MESSAGE_SIZE, MQTT_KEEP_ALIVE_TIMEOUT, MQTT_RECONNECT_TIMEOUT, MQTT_USERNAME, MQTT_PASSWORD);
-
-#elif defined(MQTT_USERNAME)
-PubSubClient mqtt(client);
-MqttClient mqttClient(mqtt, MQTT_BROKER, MQTT_PORT, MQTT_TOPIC, MQTT_MESSAGE_SIZE, MQTT_KEEP_ALIVE_TIMEOUT, MQTT_RECONNECT_TIMEOUT, MQTT_USERNAME, MQTT_PASSWORD);
-
+// Assuming you have define or cert logic
+HttpWrapper httpClient(sslClient, TARGET_HOST, TARGET_PORT);
 #else
-PubSubClient mqtt(client);
-MqttClient mqttClient(mqtt, MQTT_BROKER, MQTT_PORT, MQTT_TOPIC, MQTT_MESSAGE_SIZE, MQTT_KEEP_ALIVE_TIMEOUT, MQTT_RECONNECT_TIMEOUT);
-
+HttpWrapper httpClient(client, TARGET_HOST, TARGET_PORT);
 #endif
 
 bool modemConnected = false;
@@ -98,20 +91,19 @@ void setup()
     }
     Serial.println("GPS Serial initialized!");
 
-#ifdef MQTT_SECURE
-    sslClient.setCACert(MQTT_CA_CERTIFICATE);
+#ifdef USE_SSL
+#ifdef USE_INSECURE_SSL
+    sslClient.setInsecure();
+#else
+    sslClient.setCACert(SSL_CA_CERTIFICATE);
+#endif
     Serial.println("SSL client initialized!");
 #endif
+
 
     if (!gsmWrapper.begin())
     {
         Serial.println("Failed to initialize GSM/GPRS modem!");
-        return;
-    }
-
-    if (!mqttClient.connect())
-    {
-        Serial.println("Failed to connect to MQTT broker!");
         return;
     }
 
@@ -136,12 +128,6 @@ void loop()
             Serial.println("Failed to initialize GSM/GPRS modem!");
             return;
         }
-
-        if (!mqttClient.connect())
-        {
-            Serial.println("Failed to connect to MQTT broker!");
-            return;
-        }
         
 #if defined(TINY_GSM_MODEM_SIM808)
         if (!gsmWrapper.enableGPS())
@@ -159,13 +145,6 @@ void loop()
         Serial.println("GPRS connection lost!");
         delay(1000);
         return;
-    }
-
-    mqttClient.loop();
-
-    if (!mqttClient.isConnected())
-    {
-        mqttClient.connect();
     }
 
 #if defined(TINY_GSM_MODEM_SIM900)
@@ -194,7 +173,7 @@ void loop()
             ? Serial.println("Publishing payload: " + payloadString)
             : Serial.println("Publishing unretained payload: " + payloadString);
 
-        const bool isSuccess = mqttClient.publishToDefaultTopic(String(TRACKER_ID).c_str(), payloadString.c_str(), isValid);
+        const bool isSuccess = httpClient.post(TARGET_PATH, "application/json", payloadString.c_str());
         if (isSuccess)
         {
             lastPublish = millis();
