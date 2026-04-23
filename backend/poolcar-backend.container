@@ -1,0 +1,31 @@
+[Unit]
+Description=Old Poolcar Backend System
+After=network-online.target mariadb.service valkey.service
+Wants=mariadb.service valkey.service
+
+[Container]
+Image=gitea.quilavr.top/quilavr/poolcar-backend:0-backend
+ContainerName=poolcar-backend
+Network=dev.network
+Pull=always
+
+Environment=DATABASE_URL=mariadb://poolcar:poolcar@mariadb:3306/old-poolcar
+Environment=REDIS_URL=valkey://valkey:6379
+Environment=MQTT_URL=mqtt.quilavr.top
+Environment=MQTT_PORT=1883
+Environment=MQTT_CLIENT=poolcar_backend
+Environment=MQTT_USERNAME=monitoring
+Environment=MQTT_PASSWORD=rahasia
+Environment=MQTT_CA_CRT=assets/le-ca.crt
+Environment=MQTT_SECURE=false
+Environment=JWT_SECRET=Disclose,Bunkbed,Preshow8,Planner,Heroics,Thinly
+Environment=SQLX_OFFLINE=false
+Environment=RUST_LOG=info
+Environment=GOOGLE_API_KEY=AIzaSyDMFUfePc0DeuoJK6vGEknEJdOnSpRq3X8
+Environment=ALLOWED_ORIGINS=http://localhost,https://localhost,http://localhost:3000,http://localhost:7270,http://localhost:7271,https://poolcar.quilavr.top
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target
