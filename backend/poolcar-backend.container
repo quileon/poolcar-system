@@ -9,7 +9,7 @@ ContainerName=poolcar-backend
 Network=dev.network
 Pull=always
 
-Environment=DATABASE_URL=mariadb://poolcar:poolcar@mariadb:3306/old-poolcar
+Environment=DATABASE_URL=mariadb://poolcar:poolcar@mariadb:3306/old_poolcar
 Environment=REDIS_URL=valkey://valkey:6379
 Environment=MQTT_URL=mqtt.quilavr.top
 Environment=MQTT_PORT=1883
