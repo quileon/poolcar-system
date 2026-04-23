@@ -4,7 +4,7 @@ After=network-online.target mariadb.service valkey.service
 Wants=mariadb.service valkey.service
 
 [Container]
-Image=gitea.quilavr.top/quilavr/poolcar-backend:0-backend
+Image=gitea.quilavr.top/quilavr/old-poolcar:0-backend
 ContainerName=poolcar-backend
 Network=dev.network
 Pull=always
