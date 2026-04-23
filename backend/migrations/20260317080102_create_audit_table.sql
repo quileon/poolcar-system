@@ -1,5 +1,5 @@
-CREATE TABLE car_audit (
-    car_audit_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+CREATE TABLE audit (
+    audit_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     car_id INT NULL,
     tracker_id INT NOT NULL,
     latitude DOUBLE NOT NULL,
@@ -12,6 +12,6 @@ CREATE TABLE car_audit (
     FOREIGN KEY (tracker_id) REFERENCES trackers(tracker_id)
 );
 
-CREATE INDEX idx_car_audit_car_id ON car_audit(car_id);
-CREATE INDEX idx_car_audit_tracker_id ON car_audit(tracker_id);
-CREATE INDEX idx_car_audit_recorded_at ON car_audit(recorded_at);
+CREATE INDEX idx_audit_car_id ON audit(car_id);
+CREATE INDEX idx_audit_tracker_id ON audit(tracker_id);
+CREATE INDEX idx_audit_recorded_at ON audit(recorded_at);
