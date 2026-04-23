@@ -10,10 +10,23 @@ export const load: LayoutServerLoad = async ({ cookies, fetch }) => {
 		throw redirect(302, "/login");
 	}
 
-	const verifyToken = await fetch(`${config.apiBaseUrl}/auth/verify`);
-	const verifyResponse: SuccessDataResponse = await verifyToken.json();
+	let verifyToken;
+	let verifyResponse: SuccessDataResponse;
+
+	try {
+		verifyToken = await fetch(`${config.apiBaseUrl}/auth/verify`, {
+			headers: {
+				Cookie: `auth_token=${token}`
+			}
+		});
+		verifyResponse = await verifyToken.json();
+	} catch (error) {
+		console.error("Fetch error verifying token:", error);
+		throw redirect(302, "/login");
+	}
 
 	if (!verifyToken.ok || verifyResponse.status !== "success" || !verifyResponse.data) {
+		console.error("Verification failed:", { ok: verifyToken.ok, response: verifyResponse });
 		throw redirect(302, "/login");
 	}
 

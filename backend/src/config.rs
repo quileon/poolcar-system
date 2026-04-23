@@ -15,6 +15,7 @@ pub struct Config {
     pub mqtt_port: u16,
     pub jwt_secret: String,
     pub google_api_key: String,
+    pub allowed_origins: String,
 }
 
 impl Config {
@@ -50,6 +51,9 @@ impl Config {
             jwt_secret: std::env::var("JWT_SECRET").context("JWT_SECRET must be set")?,
             google_api_key: std::env::var("GOOGLE_API_KEY")
                 .context("GOOGLE_API_KEY must be set")?,
+            allowed_origins: std::env::var("ALLOWED_ORIGINS").unwrap_or_else(|_| {
+                "http://localhost,https://localhost,http://localhost:3000,http://localhost:7271,http://localhost:7270".to_string()
+            }),
         })
     }
 }

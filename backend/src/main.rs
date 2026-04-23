@@ -10,6 +10,7 @@ use tokio::signal;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let _ = rustls::crypto::ring::default_provider().install_default();
     dotenvy::dotenv().ok();
 
     tracing_subscriber::fmt()
