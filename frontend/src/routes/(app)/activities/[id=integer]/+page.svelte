@@ -44,9 +44,15 @@
 	const trackersQuery = useTrackersQuery(() => "active");
 	const activityQuery = useActivityQuery(() => activityId);
 
-	const editActivityMutation = useEditActivityMutation(() => activityId);
-	const deleteActivityMutation = useDeleteActivityMutation(() => activityId);
-	const restoreActivityMutation = useRestoreActivityMutation(() => activityId);
+	const editActivityMutation = useEditActivityMutation(() => activityId, {
+		navigateTo: "/activities"
+	});
+	const deleteActivityMutation = useDeleteActivityMutation(() => activityId, {
+		navigateTo: "/activities"
+	});
+	const restoreActivityMutation = useRestoreActivityMutation(() => activityId, {
+		navigateTo: "/activities"
+	});
 
 	$effect(() => {
 		if (activityQuery.data && !completedFetching) {
