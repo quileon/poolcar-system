@@ -1,148 +1,224 @@
 <script lang="ts">
+	import "leaflet/dist/leaflet.css";
 	import {
 		useActivitiesQuery,
 		useCreateActivityMutation,
-		useEditActivityMutation
-
-		// useCreateActivityMutation,
-		// useEditActivityMutation
+		useEditActivityMutation,
+		useDeleteActivityMutation
 	} from "$lib/hooks/use-activity";
 	import * as Card from "$lib/components/ui/card/index";
-	import * as Dialog from "$lib/components/ui/dialog/index";
 	import * as Table from "$lib/components/ui/table/index";
 	import * as Field from "$lib/components/ui/field/index";
 	import * as Select from "$lib/components/ui/select/index";
+	import * as Dialog from "$lib/components/ui/dialog/index";
 
+	import homeMarker from "$lib/assets/home.png";
+	import destinationMarker from "$lib/assets/flag.png";
+	import TrashIcon from "@lucide/svelte/icons/trash-2";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import InfoIcon from "@lucide/svelte/icons/info";
 	import Skeleton from "$lib/components/ui/skeleton/skeleton.svelte";
 	import { DateTime } from "luxon";
+
 	import type { ActivityDetails } from "$lib/bindings/ActivityDetails";
-
 	import Button, { buttonVariants } from "$lib/components/ui/button/button.svelte";
-
 	import Input from "$lib/components/ui/input/input.svelte";
-	import { Checkbox } from "$lib/components/ui/checkbox/index";
 	import Textarea from "$lib/components/ui/textarea/textarea.svelte";
 	import { useContactsQuery } from "$lib/hooks/use-contact";
-	import { useCarsQuery } from "$lib/hooks/use-car";
 	import { useActivityTypesQuery } from "$lib/hooks/use-activity-type";
-	import { useTrackersQuery } from "$lib/hooks/use-tracker";
+	import { LeafletMap } from "$lib/hooks/leaflet-map.svelte";
 	import TimerIcon from "@lucide/svelte/icons/timer";
+	import Badge from "$lib/components/ui/badge/badge.svelte";
 
 	let selectedActivityId = $state<number | null>(null);
+	const isEditing = $derived(selectedActivityId !== null);
 
 	const activitiesQuery = useActivitiesQuery(
-		() => "all",
+		() => "active",
 		() => DateTime.now().minus({ days: 7 }).toFormat("yyyy-LL-dd")
 	);
 	const createActivityMutation = useCreateActivityMutation({ navigateTo: null });
 	const editActivityMutation = useEditActivityMutation(() => selectedActivityId, {
 		navigateTo: null
 	});
+	let deleteActivityId = $state<number | null>(null);
+	const deleteActivityMutation = useDeleteActivityMutation(() => {
+		if (deleteActivityId === null) {
+			throw new Error("Missing activity id");
+		}
+		return deleteActivityId;
+	});
 
-	let createContactId = $state("");
-	let createActivityTypeId = $state("");
-	let createStartedDateAt = $state("");
-	let createStartedTimeAt = $state("");
-	let createDescription = $state("");
+	let contactId = $state("");
+	let activityTypeId = $state("");
+	let startedDateAt = $state("");
+	let startedTimeAt = $state("");
+	let description = $state("");
 
-	let editContactId = $state("");
-	let editActivityTypeId = $state("");
-	let editStartedDateAt = $state("");
-	let editStartedTimeAt = $state("");
-	let editDescription = $state("");
+	let mapElement: HTMLElement;
+	const leaflet = new LeafletMap();
+	const initialCoordinates: [number, number] = [-6.382310833, 107.1725405];
+
+	function startCreateMode() {
+		selectedActivityId = null;
+		contactId = "";
+		activityTypeId = "";
+		startedDateAt = "";
+		startedTimeAt = "";
+		description = "";
+
+		if (leaflet.ready && leaflet.hasDestinationMarker(0)) {
+			leaflet.removeDestinationMarker(0);
+			leaflet.map?.setView(initialCoordinates, 12);
+		}
+	}
+
+	function startEditMode(activity: ActivityDetails) {
+		selectedActivityId = activity.activity_id;
+		contactId = activity.contact_id.toString();
+		activityTypeId = activity.activity_type_id.toString();
+		description = activity.description ?? "";
+		startedDateAt = "";
+		startedTimeAt = "";
+
+		if (activity.started_at) {
+			const startedDateTime = DateTime.fromISO(activity.started_at);
+			startedDateAt = startedDateTime.toFormat("yyyy-LL-dd");
+			startedTimeAt = startedDateTime.toFormat("HH:mm:ss");
+		}
+	}
 
 	const contactsQuery = useContactsQuery(() => "active");
 	const activityTypesQuery = useActivityTypesQuery(() => "active");
 
-	function handleCreateSubmit(e: Event) {
+	async function handleSubmit(e: Event) {
 		e.preventDefault();
 
-		if (!createContactId || !createActivityTypeId || !createStartedDateAt || !createStartedTimeAt) {
+		if (!contactId || !activityTypeId || !startedDateAt || !startedTimeAt) {
 			return;
 		}
 
-		const createStartedDateTime = DateTime.fromISO(`${createStartedDateAt}T${createStartedTimeAt}`)
+		const startedDateTime = DateTime.fromISO(`${startedDateAt}T${startedTimeAt}`)
 			.toUTC()
 			.toFormat("yyyy-LL-dd'T'HH:mm:ss");
 
-		createActivityMutation.mutate({
-			carId: null,
-			contactId: Number.parseInt(createContactId, 10),
-			activityTypeId: Number.parseInt(createActivityTypeId, 10),
-			trackerId: null,
-			startedAt: createStartedDateTime,
-			finishedAt: null,
-			finishedLatitude: null,
-			finishedLongitude: null,
-			description: createDescription
-		});
-	}
-
-	function setCreateStartedCurrent() {
-		const currentTime = DateTime.now();
-		createStartedDateAt = currentTime.toFormat("yyyy-LL-dd");
-		createStartedTimeAt = currentTime.toFormat("HH:mm:ss");
-	}
-
-	function openEditDialog(activity: ActivityDetails) {
-		selectedActivityId = activity.activity_id;
-		editContactId = activity.contact_id.toString();
-		editActivityTypeId = activity.activity_type_id.toString();
-
-		if (activity.started_at) {
-			const startedDateTime = DateTime.fromISO(activity.started_at);
-			editStartedDateAt = startedDateTime.toFormat("yyyy-LL-dd");
-			editStartedTimeAt = startedDateTime.toFormat("HH:mm:ss");
+		try {
+			if (isEditing) {
+				if (selectedActivityId === null) {
+					return;
+				}
+				await editActivityMutation.mutateAsync({
+					carId: null,
+					contactId: Number.parseInt(contactId, 10),
+					activityTypeId: Number.parseInt(activityTypeId, 10),
+					trackerId: null,
+					startedAt: startedDateTime,
+					finishedAt: null,
+					finishedLatitude: null,
+					finishedLongitude: null,
+					description: description
+				});
+				startCreateMode();
+			} else {
+				await createActivityMutation.mutateAsync({
+					carId: null,
+					contactId: Number.parseInt(contactId, 10),
+					activityTypeId: Number.parseInt(activityTypeId, 10),
+					trackerId: null,
+					startedAt: startedDateTime,
+					finishedAt: null,
+					finishedLatitude: null,
+					finishedLongitude: null,
+					description: description
+				});
+				startCreateMode();
+			}
+		} catch (err) {
+			console.error("Failed to submit activity", err);
 		}
 	}
 
-	function handleEditSubmit(e: Event) {
-		e.preventDefault();
+	async function handleDelete(activity: ActivityDetails) {
+		const confirmed = window.confirm(`Delete activity #${activity.activity_id}?`);
+		if (!confirmed) {
+			return;
+		}
 
-		const editStartedDateTime = DateTime.fromISO(`${editStartedDateAt}T${editStartedTimeAt}`)
-			.toUTC()
-			.toFormat("yyyy-MM-dd'T'HH:mm:ss");
-
-		editActivityMutation.mutate({
-			carId: null,
-			contactId: Number.parseInt(editContactId, 10),
-			activityTypeId: Number.parseInt(editActivityTypeId, 10),
-			trackerId: null,
-			startedAt: editStartedDateTime,
-			finishedAt: null,
-			finishedLatitude: null,
-			finishedLongitude: null,
-			description: editDescription
-		});
+		deleteActivityId = activity.activity_id;
+		try {
+			await deleteActivityMutation.mutateAsync();
+		} catch (err) {
+			console.error("Failed to delete activity", err);
+		} finally {
+			deleteActivityId = null;
+			startCreateMode();
+		}
 	}
 
-	function setEditStartedCurrent() {
+	function setCurrent() {
 		const currentTime = DateTime.now();
-		editStartedDateAt = currentTime.toISODate();
-		editStartedTimeAt = currentTime.toFormat("HH:mm:ss");
+		startedDateAt = currentTime.toFormat("yyyy-LL-dd");
+		startedTimeAt = currentTime.toFormat("HH:mm:ss");
 	}
 
 	const contactTrigger = $derived(
-		contactsQuery.data?.contacts.find(
-			(contact) => contact.contact_id.toString() === createContactId
-		)?.name ?? "Select Contact"
+		contactsQuery.data?.contacts.find((contact) => contact.contact_id.toString() === contactId)
+			?.name ?? "Select Contact"
 	);
 	const activityTypeTrigger = $derived(
 		activityTypesQuery.data?.activity_types.find(
-			(activityType) => activityType.activity_type_id.toString() === createActivityTypeId
+			(activityType) => activityType.activity_type_id.toString() === activityTypeId
 		)?.name ?? "Select Activity Type"
 	);
-	const editContactTrigger = $derived(
-		contactsQuery.data?.contacts.find((contact) => contact.contact_id.toString() === editContactId)
-			?.name ?? "Select Contact"
+
+	const selectedContact = $derived(
+		contactsQuery.data?.contacts.find((contact) => contact.contact_id.toString() === contactId)
 	);
-	const editActivityTypeTrigger = $derived(
-		activityTypesQuery.data?.activity_types.find(
-			(activityType) => activityType.activity_type_id.toString() === editActivityTypeId
-		)?.name ?? "Select Activity Type"
-	);
+
+	$effect(() => {
+		if (!activitiesQuery.isSuccess) return;
+		if (leaflet.ready) return;
+		leaflet.init(mapElement, {
+			center: initialCoordinates,
+			zoom: 12
+		});
+	});
+
+	$effect(() => {
+		if (!leaflet.ready) return;
+
+		const homeIcon = leaflet.createIcon({
+			iconUrl: homeMarker,
+			iconSize: [21, 21],
+			iconAnchor: [10.5, 10.5],
+			popupAnchor: [0, -7.5]
+		});
+		leaflet.addStaticMarker(initialCoordinates[0], initialCoordinates[1], homeIcon);
+	});
+
+	$effect(() => {
+		if (!leaflet.ready) return;
+		if (!selectedContact) return;
+
+		const lat = selectedContact.latitude;
+		const lng = selectedContact.longitude;
+		if (Number.isNaN(lat) || Number.isNaN(lng)) return;
+
+		const icon = leaflet.createIcon({
+			iconUrl: destinationMarker,
+			iconSize: [15.5, 23],
+			iconAnchor: [7.75, 21],
+			popupAnchor: [0, -20]
+		});
+		leaflet.upsertDestinationMarker(0, lat, lng, icon, selectedContact.name);
+		leaflet.map?.fitBounds(
+			[
+				[initialCoordinates[0], initialCoordinates[1]],
+				[lat, lng]
+			],
+			{ padding: [24, 24] }
+		);
+	});
 </script>
 
 {#if activitiesQuery.isLoading}
@@ -190,246 +266,220 @@
 			</Card.Root>
 		</div>
 
-		<Dialog.Root>
-			<Dialog.Trigger type="button" class={buttonVariants({ variant: "outline" })}>
-				Create New Trip
-			</Dialog.Trigger>
-			<Dialog.Content class="sm:max-w-lg">
-				<form onsubmit={handleCreateSubmit}>
-					<Dialog.Header>
-						<Dialog.Title>Create New Trip</Dialog.Title>
-						<Dialog.Description>Create new trip to contact.</Dialog.Description>
-					</Dialog.Header>
-					<Field.Set class="py-4">
+		<div class="flex gap-4">
+			<!-- Create/Edit -->
+			<Card.Root class="w-full max-w-md p-4">
+				<form class="w-full" onsubmit={handleSubmit}>
+					<Field.Set class="w-full">
+						<Field.Legend>{isEditing ? "Edit Trip" : "Create New Trip"}</Field.Legend>
+						<Field.Description
+							>{isEditing
+								? "Update activity details."
+								: "Create new trip to contact."}</Field.Description
+						>
+						<!-- Contact -->
 						<Field.Field>
 							<Field.Label for="contact_id">Contact</Field.Label>
-							<Select.Root type="single" bind:value={createContactId}>
-								<Select.Trigger id="contact_id">{contactTrigger}</Select.Trigger>
+							<Select.Root type="single" bind:value={contactId}>
+								<Select.Trigger id="contact_id" class="relative z-10 w-full">
+									{contactTrigger}
+								</Select.Trigger>
 								<Select.Content>
 									{#if contactsQuery.data?.contacts}
-										{#each contactsQuery.data?.contacts as contact (contact.contact_id)}
-											<Select.Item value={contact.contact_id.toString()}>{contact.name}</Select.Item
-											>
+										{#each contactsQuery.data.contacts as contact (contact.contact_id)}
+											<Select.Item value={contact.contact_id.toString()}>
+												{contact.name}
+											</Select.Item>
 										{/each}
 									{/if}
 								</Select.Content>
 							</Select.Root>
-							<Field.Description>Enter the destination contact.</Field.Description>
+							<Field.Description>Enter the destiantion contact.</Field.Description>
+							<!-- Contact Map -->
+							<div class="relative z-0 mt-3 h-52">
+								<div
+									bind:this={mapElement}
+									class="h-full w-full overflow-hidden rounded-lg border border-border"
+								></div>
+							</div>
 						</Field.Field>
+						<!-- Activity Type -->
 						<Field.Field>
 							<Field.Label for="activity_type_id">Activity Type</Field.Label>
-							<Select.Root type="single" bind:value={createActivityTypeId}>
-								<Select.Trigger id="activity_type_id">{activityTypeTrigger}</Select.Trigger>
+							<Select.Root type="single" bind:value={activityTypeId}>
+								<Select.Trigger id="contact_id" class="w-full">{activityTypeTrigger}</Select.Trigger
+								>
 								<Select.Content>
 									{#if activityTypesQuery.data?.activity_types}
-										{#each activityTypesQuery.data?.activity_types as activityType (activityType.activity_type_id)}
-											<Select.Item value={activityType.activity_type_id.toString()}
-												>{activityType.name}</Select.Item
-											>
+										{#each activityTypesQuery.data.activity_types as activityType (activityType.activity_type_id)}
+											<Select.Item value={activityType.activity_type_id.toString()}>
+												{activityType.name}
+											</Select.Item>
 										{/each}
 									{/if}
 								</Select.Content>
 							</Select.Root>
 							<Field.Description>Enter the type of activity.</Field.Description>
 						</Field.Field>
+						<!-- Started At -->
 						<Field.Field>
 							<Field.Label for="started_at">Started At</Field.Label>
-							<div class="flex items-center gap-2">
-								<Input
-									type="date"
-									id="started_at"
-									bind:value={createStartedDateAt}
-									class="flex-6"
-								/>
+							<div class="flex w-full items-center gap-2">
+								<Input type="date" id="started_at" bind:value={startedDateAt} class="flex-6" />
 								<Input
 									type="time"
 									step="1"
 									id="started_time_at"
-									bind:value={createStartedTimeAt}
+									bind:value={startedTimeAt}
 									class="flex-5"
 								/>
 								<Button
 									type="button"
 									variant="outline"
 									size="icon"
-									onclick={setCreateStartedCurrent}
+									onclick={setCurrent}
 									class="flex-1"
 								>
 									<TimerIcon />
 								</Button>
 							</div>
 						</Field.Field>
+						<!-- Description -->
 						<Field.Field>
 							<Field.Label for="description">Description</Field.Label>
-							<Textarea placeholder="Additional description." bind:value={createDescription} />
+							<Textarea id="description" bind:value={description} class="w-full" />
 						</Field.Field>
+						<!-- Submit -->
+						<div class="flex items-center justify-end gap-2">
+							{#if isEditing}
+								<Button type="button" variant="outline" onclick={startCreateMode}>Cancel</Button>
+							{/if}
+							<Button
+								type="submit"
+								disabled={createActivityMutation.isPending || editActivityMutation.isPending}
+							>
+								{isEditing ? "Save Changes" : "Create Trip"}
+							</Button>
+						</div>
 					</Field.Set>
-					<Dialog.Footer>
-						<Dialog.Close
-							type="button"
-							class={buttonVariants({ variant: "outline" })}
-							disabled={createActivityMutation.isPending}
-						>
-							Cancel
-						</Dialog.Close>
-						<Button type="submit" disabled={createActivityMutation.isPending}>Create Trip</Button>
-					</Dialog.Footer>
 				</form>
-			</Dialog.Content>
-		</Dialog.Root>
+			</Card.Root>
 
-		<div class="flex flex-1 gap-4 overflow-hidden">
-			<Table.Root>
-				<Table.Caption>A list of activity.</Table.Caption>
-				<Table.Header>
-					<Table.Row>
-						<Table.Head>#</Table.Head>
-						<Table.Head>Car Name</Table.Head>
-						<Table.Head>Car Police Number</Table.Head>
-						<Table.Head>Contact Name</Table.Head>
-						<Table.Head>Activity Type</Table.Head>
-						<Table.Head>Tracker Name</Table.Head>
-						<Table.Head>Started At</Table.Head>
-						<Table.Head>Finished At</Table.Head>
-						<Table.Head>Finished Latitude</Table.Head>
-						<Table.Head>Finished Longitude</Table.Head>
-						<Table.Head>Actions</Table.Head>
-					</Table.Row>
-				</Table.Header>
-				<Table.Body>
-					{#each activitiesQuery.data.activities as activity (activity.activity_id)}
-						<Table.Row class={activity.deleted_at ? "text-red-700" : ""}>
-							<Table.Cell>{activity.activity_id}</Table.Cell>
-							<Table.Cell>{activity.car_name || "-"}</Table.Cell>
-							<Table.Cell>{activity.car_police_number || "-"}</Table.Cell>
-							<Table.Cell>{activity.contact_name}</Table.Cell>
-							<Table.Cell>{activity.activity_type_name}</Table.Cell>
-							<Table.Cell>{activity.tracker_name || "-"}</Table.Cell>
-							<Table.Cell
-								>{activity.started_at
-									? DateTime.fromISO(activity.started_at).toLocaleString(DateTime.DATETIME_MED)
-									: "-"}</Table.Cell
-							>
-							<Table.Cell
-								>{activity.finished_at
-									? DateTime.fromISO(activity.finished_at).toLocaleString(DateTime.DATETIME_MED)
-									: "-"}</Table.Cell
-							>
-							<Table.Cell>{activity.finished_latitude || "-"}</Table.Cell>
-							<Table.Cell>{activity.finished_longitude || "-"}</Table.Cell>
-							<Table.Cell>
-								<Button size="icon" variant="outline">
-									<InfoIcon />
-								</Button>
-								<Dialog.Root>
-									<Dialog.Trigger
-										type="button"
-										class={buttonVariants({ variant: "outline", size: "icon" })}
-										onclick={() => openEditDialog(activity)}
-									>
-										<PencilIcon />
-									</Dialog.Trigger>
-									<Dialog.Content class="sm:max-w-lg">
-										<form onsubmit={handleEditSubmit}>
-											<Dialog.Header>
-												<Dialog.Title>Edit Trip</Dialog.Title>
-												<Dialog.Description>Update activity details.</Dialog.Description>
-											</Dialog.Header>
-											<Field.Set class="py-4">
-												<Field.Field>
-													<Field.Label for="edit_contact_id">Contact</Field.Label>
-													<Select.Root type="single" bind:value={editContactId}>
-														<Select.Trigger id="edit_contact_id"
-															>{editContactTrigger}</Select.Trigger
-														>
-														<Select.Content>
-															{#if contactsQuery.data?.contacts}
-																{#each contactsQuery.data?.contacts as contact (contact.contact_id)}
-																	<Select.Item value={contact.contact_id.toString()}>
-																		{contact.name}
-																	</Select.Item>
-																{/each}
-															{/if}
-														</Select.Content>
-													</Select.Root>
-													<Field.Description>Enter the destination contact.</Field.Description>
-												</Field.Field>
-
-												<Field.Field>
-													<Field.Label for="edit_activity_type_id">Activity Type</Field.Label>
-													<Select.Root type="single" bind:value={editActivityTypeId}>
-														<Select.Trigger id="edit_activity_type_id">
-															{editActivityTypeTrigger}
-														</Select.Trigger>
-														<Select.Content>
-															{#if activityTypesQuery.data?.activity_types}
-																{#each activityTypesQuery.data?.activity_types as activityType (activityType.activity_type_id)}
-																	<Select.Item value={activityType.activity_type_id.toString()}>
-																		{activityType.name}
-																	</Select.Item>
-																{/each}
-															{/if}
-														</Select.Content>
-													</Select.Root>
-													<Field.Description>Enter the type of activity.</Field.Description>
-												</Field.Field>
-
-												<Field.Field>
-													<Field.Label for="edit_started_at">Started At</Field.Label>
-													<div class="flex items-center gap-2">
-														<Input
-															type="date"
-															id="edit_started_at"
-															bind:value={editStartedDateAt}
-															class="flex-6"
-														/>
-														<Input
-															type="time"
-															step="1"
-															id="edit_started_time_at"
-															bind:value={editStartedTimeAt}
-															class="flex-5"
-														/>
-														<Button
-															type="button"
-															variant="outline"
-															size="icon"
-															onclick={setEditStartedCurrent}
-															class="flex-1"
-														>
-															<TimerIcon />
-														</Button>
-													</div>
-												</Field.Field>
-
-												<Field.Field>
-													<Field.Label for="edit_description">Description</Field.Label>
-													<Textarea
-														placeholder="Additional description."
-														bind:value={editDescription}
-													/>
-												</Field.Field>
-											</Field.Set>
-											<Dialog.Footer>
-												<Dialog.Close
-													type="button"
-													class={buttonVariants({ variant: "outline" })}
-													disabled={editActivityMutation.isPending}
-												>
-													Cancel
-												</Dialog.Close>
-												<Button type="submit" disabled={editActivityMutation.isPending}>
-													Save Changes
-												</Button>
-											</Dialog.Footer>
-										</form>
-									</Dialog.Content>
-								</Dialog.Root>
-							</Table.Cell>
+			<!-- Table -->
+			<div class="flex min-w-0 flex-1">
+				<Table.Root>
+					<Table.Caption>A list of activity.</Table.Caption>
+					<Table.Header>
+						<Table.Row>
+							<Table.Head>#</Table.Head>
+							<Table.Head>Contact Name</Table.Head>
+							<Table.Head>Activity Type</Table.Head>
+							<Table.Head>Started At</Table.Head>
+							<Table.Head>Status</Table.Head>
+							<Table.Head>Actions</Table.Head>
 						</Table.Row>
-					{/each}
-				</Table.Body>
-			</Table.Root>
+					</Table.Header>
+					<Table.Body>
+						{#each activitiesQuery.data.activities as activity (activity.activity_id)}
+							<Table.Row class={activity.deleted_at ? "text-red-700" : ""}>
+								<Table.Cell>{activity.activity_id}</Table.Cell>
+								<Table.Cell>{activity.contact_name}</Table.Cell>
+								<Table.Cell>{activity.activity_type_name}</Table.Cell>
+								<Table.Cell
+									>{activity.started_at
+										? DateTime.fromISO(activity.started_at).toLocaleString(DateTime.DATETIME_MED)
+										: "-"}</Table.Cell
+								>
+								<Table.Cell>
+									{#if activity.finished_at}
+										<Badge variant="default">Finished</Badge>
+									{:else}
+										<Badge variant="outline">Pending</Badge>
+									{/if}
+								</Table.Cell>
+								<Table.Cell>
+									<Dialog.Root>
+										<Dialog.Trigger class={buttonVariants({ variant: "outline", size: "icon" })}>
+											<InfoIcon />
+										</Dialog.Trigger>
+										<Dialog.Content class="sm:max-w-md">
+											<Dialog.Header>
+												<Dialog.Title>Trip Details</Dialog.Title>
+												<Dialog.Description>Activity information summary.</Dialog.Description>
+											</Dialog.Header>
+											<div class="mt-4 space-y-3">
+												<div class="flex items-center justify-between">
+													<span class="text-sm text-muted-foreground">Activity ID</span>
+													<span class="text-sm font-medium">{activity.activity_id}</span>
+												</div>
+												<div class="flex items-center justify-between">
+													<span class="text-sm text-muted-foreground">Contact</span>
+													<span class="text-sm font-medium">{activity.contact_name}</span>
+												</div>
+												<div class="flex items-center justify-between">
+													<span class="text-sm text-muted-foreground">Activity Type</span>
+													<span class="text-sm font-medium">{activity.activity_type_name}</span>
+												</div>
+												<div class="flex items-center justify-between">
+													<span class="text-sm text-muted-foreground">Tracker</span>
+													<span class="text-sm font-medium">{activity.tracker_name || "-"}</span>
+												</div>
+												<div class="flex items-center justify-between">
+													<span class="text-sm text-muted-foreground">Started At</span>
+													<span class="text-sm font-medium">
+														{activity.started_at
+															? DateTime.fromISO(activity.started_at).toLocaleString(
+																	DateTime.DATETIME_MED
+																)
+															: "-"}
+													</span>
+												</div>
+												<div class="flex items-center justify-between">
+													<span class="text-sm text-muted-foreground">Finished At</span>
+													<span class="text-sm font-medium">
+														{activity.finished_at
+															? DateTime.fromISO(activity.finished_at).toLocaleString(
+																	DateTime.DATETIME_MED
+																)
+															: "-"}
+													</span>
+												</div>
+												<div class="flex items-center justify-between">
+													<span class="text-sm text-muted-foreground">Finished Lat</span>
+													<span class="text-sm font-medium"
+														>{activity.finished_latitude ?? "-"}</span
+													>
+												</div>
+												<div class="flex items-center justify-between">
+													<span class="text-sm text-muted-foreground">Finished Lng</span>
+													<span class="text-sm font-medium"
+														>{activity.finished_longitude ?? "-"}</span
+													>
+												</div>
+												<div class="space-y-1">
+													<span class="text-sm text-muted-foreground">Description</span>
+													<p class="text-sm">{activity.description || "-"}</p>
+												</div>
+											</div>
+										</Dialog.Content>
+									</Dialog.Root>
+									<Button size="icon" variant="outline" onclick={() => startEditMode(activity)}>
+										<PencilIcon />
+									</Button>
+									<Button
+										size="icon"
+										variant="destructive"
+										onclick={() => handleDelete(activity)}
+										disabled={deleteActivityMutation.isPending}
+									>
+										<TrashIcon />
+									</Button>
+								</Table.Cell>
+							</Table.Row>
+						{/each}
+					</Table.Body>
+				</Table.Root>
+			</div>
 		</div>
 	</div>
 {/if}
