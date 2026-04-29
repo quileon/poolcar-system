@@ -2,7 +2,6 @@ import { createMutation, createQuery, useQueryClient } from "@tanstack/svelte-qu
 import { authFetch } from "./auth.svelte";
 import { config } from "$lib/config";
 import { goto } from "$app/navigation";
-import { resolve } from "$app/paths";
 import type { GetActivitiesResponse } from "$lib/bindings/GetActivitiesResponse";
 import type { ActivityDetails } from "$lib/bindings/ActivityDetails";
 
@@ -86,7 +85,7 @@ export function useCreateActivityMutation(options?: { navigateTo?: string | null
 		onSuccess: async () => {
 			await queryClient.invalidateQueries({ queryKey: ["activities"] });
 			if (options?.navigateTo) {
-				await goto(resolve(options.navigateTo));
+				await goto(options.navigateTo);
 			}
 		}
 	}));
@@ -139,7 +138,7 @@ export function useEditActivityMutation(
 				await queryClient.invalidateQueries({ queryKey: ["activity", activityId] });
 			}
 			if (options?.navigateTo) {
-				await goto(resolve(options.navigateTo));
+				await goto(options.navigateTo);
 			}
 		}
 	}));
@@ -150,10 +149,10 @@ export function useDeleteActivityMutation(
 	options?: { navigateTo?: string | null }
 ) {
 	const queryClient = useQueryClient();
-	const activityId = getActivityId();
 
 	return createMutation(() => ({
 		mutationFn: async () => {
+			const activityId = getActivityId();
 			const response = await authFetch(`${config.apiBaseUrl}/activities/${activityId}`, {
 				method: "DELETE"
 			});
@@ -161,10 +160,11 @@ export function useDeleteActivityMutation(
 			return response.json();
 		},
 		onSuccess: async () => {
+			const activityId = getActivityId();
 			await queryClient.invalidateQueries({ queryKey: ["activities"] });
 			await queryClient.invalidateQueries({ queryKey: ["activity", activityId] });
 			if (options?.navigateTo) {
-				await goto(resolve(options.navigateTo));
+				await goto(options.navigateTo);
 			}
 		}
 	}));
@@ -189,7 +189,7 @@ export function useRestoreActivityMutation(
 			await queryClient.invalidateQueries({ queryKey: ["activities"] });
 			await queryClient.invalidateQueries({ queryKey: ["activity", activityId] });
 			if (options?.navigateTo) {
-				await goto(resolve(options.navigateTo));
+				await goto(options.navigateTo);
 			}
 		}
 	}));
