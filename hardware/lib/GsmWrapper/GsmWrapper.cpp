@@ -49,6 +49,20 @@ bool GsmWrapper::connectGprs()
     return false;
 }
 
+bool GsmWrapper::isActive()
+{
+    unsigned short retries = 0;
+    while (retries < 10)
+    {
+        if (gsmModem.testAT(1000))
+        {
+            return true;
+        }
+        retries++;
+    }
+    return false;
+}
+
 bool GsmWrapper::begin()
 {
     unsigned short retries = 0;
@@ -59,7 +73,7 @@ bool GsmWrapper::begin()
         {
             Serial.println("Retry initializing modem...");
             retries++;
-            delay(2000);
+            delay(500);
             continue;
         }
 
@@ -69,7 +83,7 @@ bool GsmWrapper::begin()
             // Check later on!
             this->gsmModem.gprsDisconnect();
             retries++;
-            delay(2000);
+            delay(500);
             continue;
         }
 

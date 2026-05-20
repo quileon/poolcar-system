@@ -1,5 +1,3 @@
-#include <../../include/main.h>
-
 #if !defined(GSM_WRAPPER_H)
 #define GSM_WRAPPER_H
 
@@ -38,6 +36,7 @@ public:
     ~GsmWrapper();
 
     bool begin();
+    bool isActive();
     bool isConnected();
     bool ensureConnection();
     int getSignalStrength();
