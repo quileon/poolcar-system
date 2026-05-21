@@ -7,8 +7,8 @@ CREATE TABLE activity_types (
     deleted_at DATETIME NULL
 );
 
--- Development
--- INSERT INTO activity_types (name) VALUES
---     ('Delivery'),
---     ('Meeting'),
---     ('Trial T1');
+-- Insert
+INSERT INTO activity_types (name) VALUES
+    ('Delivery'),
+    ('Meeting'),
+    ('Trial T1');

@@ -7,7 +7,7 @@ CREATE TABLE car_types (
     deleted_at DATETIME NULL
 );
 
--- Development
--- INSERT INTO car_types (name) VALUES
---     ('Delivery'),
---     ('Passenger');
+-- Insert
+INSERT INTO car_types (name) VALUES
+    ('Delivery'),
+    ('Passenger');

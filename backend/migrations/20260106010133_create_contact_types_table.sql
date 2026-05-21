@@ -7,7 +7,7 @@ CREATE TABLE contact_types (
     deleted_at DATETIME NULL
 );
 
--- Development
--- INSERT INTO contact_types (name) VALUES
---     ('Consumer'),
---     ('Supplier');
+-- Insert
+INSERT INTO contact_types (name) VALUES
+    ('Consumer'),
+    ('Supplier');

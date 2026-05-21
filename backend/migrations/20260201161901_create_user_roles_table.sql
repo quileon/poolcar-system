@@ -7,6 +7,7 @@ CREATE TABLE user_roles (
     deleted_at DATETIME NULL
 );
 
+-- Insert
 INSERT INTO user_roles (name) VALUES
     ('Admin'),
     ('Security'),
