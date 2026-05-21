@@ -1,9 +1,12 @@
+use crate::middleware::{require_admin, require_employee};
 use crate::{
     error::AppError,
     models::contact_type::{ContactTypeBody, ContactTypeDetails, GetContactTypesResponse},
     types::{PaginationParams, SuccessResponse},
     AppState,
 };
+use axum::middleware::from_fn;
+use axum::routing::post;
 use axum::{
     extract::{Path, Query, State},
     http::header::{CONTENT_DISPOSITION, CONTENT_TYPE},
@@ -216,14 +219,20 @@ pub async fn export_contact_types(
 }
 
 pub fn routes() -> Router<Arc<AppState>> {
-    Router::new()
-        .route("/", get(get_contact_types).post(create_contact_type))
+    let employee_routes = Router::new()
+        .route("/", get(get_contact_types))
+        .route("/{contact_type_id}", get(get_contact_type))
         .route("/export", get(export_contact_types))
+        .route_layer(from_fn(require_employee));
+
+    let admin_routes = Router::new()
+        .route("/", post(create_contact_type))
         .route(
             "/{contact_type_id}",
-            get(get_contact_type)
-                .put(update_contact_type)
-                .delete(delete_contact_type),
+            put(update_contact_type).delete(delete_contact_type),
         )
         .route("/{contact_type_id}/restore", put(restore_contact_type))
+        .route_layer(from_fn(require_admin));
+
+    Router::new().merge(employee_routes).merge(admin_routes)
 }

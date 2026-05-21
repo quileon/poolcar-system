@@ -1,9 +1,12 @@
+use crate::middleware::require_security;
 use crate::{
     error::AppError,
     models::car_status::{CarStatusBody, CarStatusDetails, GetCarStatusesResponse},
     types::{PaginationParams, SuccessResponse},
     AppState,
 };
+use axum::middleware::from_fn;
+use axum::routing::post;
 use axum::{
     extract::{Path, Query, State},
     http::header::{CONTENT_DISPOSITION, CONTENT_TYPE},
@@ -28,7 +31,7 @@ pub async fn get_car_statuses(
                 cars.police_number as car_police_number,
                 car_status.gas_level,
                 car_status.kilometres,
-                CAST(car_status.status_type AS CHAR) as status_type,
+                car_status.status_type,
                 car_status.recorded_at,
                 car_status.created_at,
                 car_status.updated_at,
@@ -72,7 +75,7 @@ pub async fn get_car_status(
                 cars.police_number as car_police_number,
                 car_status.gas_level,
                 car_status.kilometres,
-                CAST(car_status.status_type AS CHAR) as status_type,
+                car_status.status_type,
                 car_status.recorded_at,
                 car_status.created_at,
                 car_status.updated_at,
@@ -187,7 +190,7 @@ pub async fn export_car_statuses(
                 cars.police_number as car_police_number,
                 car_status.gas_level,
                 car_status.kilometres,
-                CAST(car_status.status_type AS CHAR) as status_type,
+                car_status.status_type,
                 car_status.recorded_at,
                 car_status.created_at,
                 car_status.updated_at,
@@ -237,14 +240,19 @@ pub async fn export_car_statuses(
 }
 
 pub fn routes() -> Router<Arc<AppState>> {
-    Router::new()
-        .route("/", get(get_car_statuses).post(create_car_status))
-        .route("/export", get(export_car_statuses))
+    let all_routes = Router::new()
+        .route("/", get(get_car_statuses))
+        .route("/{car_status_id}", get(get_car_status))
+        .route("/export", get(export_car_statuses));
+
+    let security_routes = Router::new()
+        .route("/", post(create_car_status))
         .route(
             "/{car_status_id}",
-            get(get_car_status)
-                .put(update_car_status)
-                .delete(delete_car_status),
+            put(update_car_status).delete(delete_car_status),
         )
         .route("/{car_status_id}/restore", put(restore_car_status))
+        .route_layer(from_fn(require_security));
+
+    Router::new().merge(all_routes).merge(security_routes)
 }

@@ -1,17 +1,19 @@
-use axum::{
-    extract::{Query, State},
-    response::IntoResponse,
-    routing::get,
-    Json, Router,
-};
-use std::sync::Arc;
-
+use crate::middleware::require_employee;
 use crate::{
     error::AppError,
     models::audit::{AuditQueryParams, CarAudit, GetAuditResponse},
     state::AppState,
     validate::{is_valid_date, is_within_30_days},
 };
+use axum::middleware::from_fn;
+use axum::{
+    extract::{Query, State}
+    ,
+    response::IntoResponse,
+    routing::get,
+    Json, Router,
+};
+use std::sync::Arc;
 
 pub async fn get_audit(
     State(state): State<Arc<AppState>>,
@@ -110,5 +112,9 @@ pub async fn get_audit(
 }
 
 pub fn routes() -> Router<Arc<AppState>> {
-    Router::new().route("/", get(get_audit))
+    let employee_routes = Router::new()
+        .route("/", get(get_audit))
+        .route_layer(from_fn(require_employee));
+
+    employee_routes
 }

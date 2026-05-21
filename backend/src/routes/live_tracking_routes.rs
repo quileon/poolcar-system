@@ -1,4 +1,6 @@
+use crate::middleware::require_employee;
 use crate::{error::AppError, models::mqtt::MqttPayloadWithId, AppState};
+use axum::middleware::from_fn;
 use axum::{extract::State, response::IntoResponse, routing::get, Router};
 use deadpool_redis::redis::AsyncTypedCommands;
 use std::sync::Arc;
@@ -33,5 +35,7 @@ pub async fn get_mqtt_payload_history(
 }
 
 pub fn routes() -> Router<Arc<AppState>> {
-    Router::new().route("/", get(get_mqtt_payload_history))
+    Router::new()
+        .route("/", get(get_mqtt_payload_history))
+        .route_layer(from_fn(require_employee))
 }

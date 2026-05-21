@@ -1,12 +1,16 @@
+use crate::middleware::{require_admin, require_employee};
 use crate::{
     error::AppError,
     models::activity_type::{ActivityTypeBody, ActivityTypeDetails, GetActivityTypesResponse},
     types::{PaginationParams, SuccessResponse},
     AppState,
 };
+use axum::middleware::from_fn;
+use axum::routing::post;
 use axum::{
     extract::{Path, Query, State},
-    http::header::{CONTENT_DISPOSITION, CONTENT_TYPE},
+    http::header::{CONTENT_DISPOSITION, CONTENT_TYPE}
+    ,
     response::IntoResponse,
     routing::{get, put},
     Json, Router,
@@ -216,14 +220,20 @@ pub async fn export_activities(
 }
 
 pub fn routes() -> Router<Arc<AppState>> {
-    Router::new()
-        .route("/", get(get_activity_types).post(create_activity_type))
+    let employee_routes = Router::new()
+        .route("/", get(get_activity_types))
+        .route("/{activity_id}", get(get_activity_type))
         .route("/export", get(export_activities))
+        .route_layer(from_fn(require_employee));
+
+    let admin_routes = Router::new()
+        .route("/", post(create_activity_type))
         .route(
             "/{activity_id}",
-            get(get_activity_type)
-                .put(update_activity_type)
-                .delete(delete_activity_type),
+            put(update_activity_type).delete(delete_activity_type),
         )
         .route("/{activity_id}/restore", put(restore_activity_type))
+        .route_layer(from_fn(require_admin));
+
+    Router::new().merge(employee_routes).merge(admin_routes)
 }

@@ -1,9 +1,12 @@
+use crate::middleware::{require_admin, require_employee};
 use crate::{
     error::AppError,
     models::tracker::{GetTrackerResponse, TrackerBody, TrackerDetails},
     types::{PaginationParams, SuccessResponse},
     AppState,
 };
+use axum::middleware::from_fn;
+use axum::routing::post;
 use axum::{
     extract::{Path, Query, State},
     http::header::{CONTENT_DISPOSITION, CONTENT_TYPE},
@@ -220,12 +223,17 @@ pub async fn export_trackers(
 }
 
 pub fn routes() -> Router<Arc<AppState>> {
-    Router::new()
-        .route("/", get(get_trackers).post(create_tracker))
+    let employee_routes = Router::new()
+        .route("/", get(get_trackers))
+        .route("/{tracker_id}", get(get_tracker))
         .route("/export", get(export_trackers))
-        .route(
-            "/{tracker_id}",
-            get(get_tracker).put(update_tracker).delete(delete_tracker),
-        )
+        .route_layer(from_fn(require_employee));
+
+    let admin_routes = Router::new()
+        .route("/", post(create_tracker))
+        .route("/{tracker_id}", put(update_tracker).delete(delete_tracker))
         .route("/{tracker_id}/restore", put(restore_tracker))
+        .route_layer(from_fn(require_admin));
+
+    Router::new().merge(employee_routes).merge(admin_routes)
 }

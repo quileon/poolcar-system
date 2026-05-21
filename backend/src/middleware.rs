@@ -1,4 +1,8 @@
-use crate::{auth_utils::decode_jwt, error::AppError, AppState};
+use crate::{
+    auth_utils::{decode_jwt, extract_token},
+    error::AppError,
+    AppState,
+};
 use axum::{
     extract::{Request, State},
     middleware::Next,
@@ -11,25 +15,50 @@ pub async fn auth_middleware(
     mut req: Request,
     next: Next,
 ) -> Result<Response, AppError> {
-    let token = req
-        .headers()
-        .get("cookie")
-        .and_then(|h| h.to_str().ok())
-        .and_then(|cookies| {
-            cookies.split(';').find_map(|cookie| {
-                let cookie = cookie.trim();
-                if cookie.starts_with("auth_token=") {
-                    cookie.strip_prefix("auth_token=")
-                } else {
-                    None
-                }
-            })
-        })
-        .ok_or(AppError::InvalidToken)?;
+    let token = extract_token(req.headers()).ok_or(AppError::InvalidToken)?;
 
-    let token_data = decode_jwt(token, &state.config.jwt_secret)?;
+    let token_data = decode_jwt(&token, &state.config.jwt_secret)?;
 
     req.extensions_mut().insert(token_data.claims);
+
+    Ok(next.run(req).await)
+}
+
+pub async fn require_admin(req: Request, next: Next) -> Result<Response, AppError> {
+    let claims = req
+        .extensions()
+        .get::<crate::types::Claims>()
+        .ok_or(AppError::Unauthorized)?;
+
+    if claims.role_name != "Admin" {
+        return Err(AppError::Forbidden);
+    }
+
+    Ok(next.run(req).await)
+}
+
+pub async fn require_security(req: Request, next: Next) -> Result<Response, AppError> {
+    let claims = req
+        .extensions()
+        .get::<crate::types::Claims>()
+        .ok_or(AppError::Unauthorized)?;
+
+    if claims.role_name != "Admin" && claims.role_name != "Security" {
+        return Err(AppError::Forbidden);
+    }
+
+    Ok(next.run(req).await)
+}
+
+pub async fn require_employee(req: Request, next: Next) -> Result<Response, AppError> {
+    let claims = req
+        .extensions()
+        .get::<crate::types::Claims>()
+        .ok_or(AppError::Unauthorized)?;
+
+    if claims.role_name != "Admin" && claims.role_name != "Employee" {
+        return Err(AppError::Forbidden);
+    }
 
     Ok(next.run(req).await)
 }

@@ -1,9 +1,12 @@
+use crate::middleware::{require_admin, require_employee};
 use crate::{
     error::AppError,
     models::car_type::{CarTypeBody, CarTypeDetails, GetCarTypesResponse},
     types::{PaginationParams, SuccessResponse},
     AppState,
 };
+use axum::middleware::from_fn;
+use axum::routing::post;
 use axum::{
     extract::{Path, Query, State},
     http::header::{CONTENT_DISPOSITION, CONTENT_TYPE},
@@ -207,14 +210,20 @@ pub async fn export_car_types(
 }
 
 pub fn routes() -> Router<Arc<AppState>> {
-    Router::new()
-        .route("/", get(get_car_types).post(create_car_type))
+    let employee_routes = Router::new()
+        .route("/", get(get_car_types))
+        .route("/{car_type_id}", get(get_car_type))
         .route("/export", get(export_car_types))
+        .route_layer(from_fn(require_employee));
+
+    let admin_routes = Router::new()
+        .route("/", post(create_car_type))
         .route(
             "/{car_type_id}",
-            get(get_car_type)
-                .put(update_car_type)
-                .delete(delete_car_type),
+            put(update_car_type).delete(delete_car_type),
         )
         .route("/{car_type_id}/restore", put(restore_car_type))
+        .route_layer(from_fn(require_admin));
+
+    Router::new().merge(employee_routes).merge(admin_routes)
 }
