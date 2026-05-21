@@ -24,8 +24,8 @@ pub struct PayloadLocation {
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
 #[ts(export)]
 pub struct PayloadAltitude {
-    pub meters: Option<f32>,
-    pub feet: Option<f32>,
+    pub meters: Option<f64>,
+    pub feet: Option<f64>,
     pub age: Option<u32>,
     pub valid: bool,
 }
@@ -33,10 +33,10 @@ pub struct PayloadAltitude {
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
 #[ts(export)]
 pub struct PayloadSpeed {
-    pub kmph: Option<f32>,
-    pub mph: Option<f32>,
-    pub mps: Option<f32>,
-    pub knots: Option<f32>,
+    pub kmph: Option<f64>,
+    pub mph: Option<f64>,
+    pub mps: Option<f64>,
+    pub knots: Option<f64>,
     pub age: Option<u32>,
     pub valid: bool,
 }
@@ -44,7 +44,7 @@ pub struct PayloadSpeed {
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
 #[ts(export)]
 pub struct PayloadCourse {
-    pub degrees: Option<f32>,
+    pub degrees: Option<f64>,
     pub age: Option<u32>,
     pub valid: bool,
 }
@@ -77,9 +77,9 @@ pub struct PayloadSatellites {
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
 #[ts(export)]
 pub struct PayloadDop {
-    pub hdop: Option<f32>,
-    pub pdop: Option<f32>,
-    pub vdop: Option<f32>,
+    pub hdop: Option<f64>,
+    pub pdop: Option<f64>,
+    pub vdop: Option<f64>,
     pub age: Option<u32>,
     pub valid: bool,
 }

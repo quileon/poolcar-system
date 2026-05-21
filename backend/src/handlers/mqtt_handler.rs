@@ -51,6 +51,7 @@ pub async fn mqtt_handler(state: Arc<AppState>, payload: Bytes) -> Result<(), Mq
         tracker_payload.stats.chars_processed, tracker_payload.stats.sentences_with_fix, tracker_payload.stats.failed_checksum, tracker_payload.stats.passed_checksum,
         now
     ).execute(&state.db).await?;
+    tracing::debug!("MQTT payload is saved for testing into database");
 
     if tracker_payload.location.latitude.is_none() || tracker_payload.location.longitude.is_none() {
         return Err(MqttError::InvalidLocation);
