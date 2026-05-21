@@ -2,6 +2,7 @@ use argon2::{
     password_hash::{rand_core::OsRng, SaltString},
     Argon2, PasswordHash, PasswordHasher, PasswordVerifier,
 };
+use axum::http::HeaderMap;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
 
 use crate::{error::AppError, types::Claims};
@@ -26,6 +27,30 @@ pub fn verify_password(password: &str, stored_hash: &str) -> bool {
     Argon2::default()
         .verify_password(password.as_bytes(), &parsed_hash)
         .is_ok()
+}
+
+/// Extract JWT token from Authorization header or cookie.
+pub fn extract_token(headers: &HeaderMap) -> Option<String> {
+    headers
+        .get(axum::http::header::AUTHORIZATION)
+        .and_then(|h| h.to_str().ok())
+        .and_then(|h| h.strip_prefix("Bearer "))
+        .map(|s| s.to_string())
+        .or_else(|| {
+            headers
+                .get(axum::http::header::COOKIE)
+                .and_then(|h| h.to_str().ok())
+                .and_then(|cookies| {
+                    cookies.split(';').find_map(|cookie| {
+                        let cookie = cookie.trim();
+                        if cookie.starts_with("auth_token=") {
+                            Some(cookie.strip_prefix("auth_token=").unwrap().to_string())
+                        } else {
+                            None
+                        }
+                    })
+                })
+        })
 }
 
 /// Decode JWT token back into claim.

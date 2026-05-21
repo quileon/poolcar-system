@@ -2,7 +2,6 @@ import { createMutation, createQuery, useQueryClient } from "@tanstack/svelte-qu
 import { authFetch } from "./auth.svelte";
 import { config } from "$lib/config";
 import { goto } from "$app/navigation";
-import { resolve } from "$app/paths";
 import type { GetActivitiesResponse } from "$lib/bindings/GetActivitiesResponse";
 import type { ActivityDetails } from "$lib/bindings/ActivityDetails";
 
@@ -47,7 +46,7 @@ export function useActivityQuery(getActivityId: () => number) {
 	}));
 }
 
-export function useCreateActivityMutation() {
+export function useCreateActivityMutation(options?: { navigateTo?: string | null }) {
 	const queryClient = useQueryClient();
 
 	return createMutation(() => ({
@@ -85,14 +84,18 @@ export function useCreateActivityMutation() {
 		},
 		onSuccess: async () => {
 			await queryClient.invalidateQueries({ queryKey: ["activities"] });
-			await goto(resolve("/activities"));
+			if (options?.navigateTo) {
+				await goto(options.navigateTo);
+			}
 		}
 	}));
 }
 
-export function useEditActivityMutation(getActivityId: () => number) {
+export function useEditActivityMutation(
+	getActivityId: () => number | null,
+	options?: { navigateTo?: string | null }
+) {
 	const queryClient = useQueryClient();
-	const activityId = getActivityId();
 
 	return createMutation(() => ({
 		mutationFn: async (data: {
@@ -106,6 +109,8 @@ export function useEditActivityMutation(getActivityId: () => number) {
 			finishedLongitude: number | null;
 			description: string | null;
 		}) => {
+			const activityId = getActivityId();
+			if (!activityId) throw new Error("Missing activity id");
 			const response = await authFetch(`${config.apiBaseUrl}/activities/${activityId}`, {
 				method: "PUT",
 				headers: {
@@ -127,19 +132,27 @@ export function useEditActivityMutation(getActivityId: () => number) {
 			return response.json();
 		},
 		onSuccess: async () => {
+			const activityId = getActivityId();
 			await queryClient.invalidateQueries({ queryKey: ["activities"] });
-			await queryClient.invalidateQueries({ queryKey: ["activity", activityId] });
-			await goto(resolve("/activities"));
+			if (activityId) {
+				await queryClient.invalidateQueries({ queryKey: ["activity", activityId] });
+			}
+			if (options?.navigateTo) {
+				await goto(options.navigateTo);
+			}
 		}
 	}));
 }
 
-export function useDeleteActivityMutation(getActivityId: () => number) {
+export function useDeleteActivityMutation(
+	getActivityId: () => number,
+	options?: { navigateTo?: string | null }
+) {
 	const queryClient = useQueryClient();
-	const activityId = getActivityId();
 
 	return createMutation(() => ({
 		mutationFn: async () => {
+			const activityId = getActivityId();
 			const response = await authFetch(`${config.apiBaseUrl}/activities/${activityId}`, {
 				method: "DELETE"
 			});
@@ -147,14 +160,20 @@ export function useDeleteActivityMutation(getActivityId: () => number) {
 			return response.json();
 		},
 		onSuccess: async () => {
+			const activityId = getActivityId();
 			await queryClient.invalidateQueries({ queryKey: ["activities"] });
 			await queryClient.invalidateQueries({ queryKey: ["activity", activityId] });
-			await goto(resolve("/activities"));
+			if (options?.navigateTo) {
+				await goto(options.navigateTo);
+			}
 		}
 	}));
 }
 
-export function useRestoreActivityMutation(getActivityId: () => number) {
+export function useRestoreActivityMutation(
+	getActivityId: () => number,
+	options?: { navigateTo?: string | null }
+) {
 	const queryClient = useQueryClient();
 	const activityId = getActivityId();
 
@@ -169,7 +188,9 @@ export function useRestoreActivityMutation(getActivityId: () => number) {
 		onSuccess: async () => {
 			await queryClient.invalidateQueries({ queryKey: ["activities"] });
 			await queryClient.invalidateQueries({ queryKey: ["activity", activityId] });
-			await goto(resolve("/activities"));
+			if (options?.navigateTo) {
+				await goto(options.navigateTo);
+			}
 		}
 	}));
 }

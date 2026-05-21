@@ -1,4 +1,6 @@
+use crate::middleware::require_employee;
 use crate::{error::AppError, models::mqtt::MqttPayloadWithId, AppState};
+use axum::middleware::from_fn;
 use axum::{extract::State, response::IntoResponse, routing::get, Router};
 use deadpool_redis::redis::AsyncTypedCommands;
 use serde::{Deserialize, Serialize};
@@ -57,5 +59,7 @@ pub async fn get_chart_history(
 }
 
 pub fn routes() -> Router<Arc<AppState>> {
-    Router::new().route("/", get(get_chart_history))
+    Router::new()
+        .route("/", get(get_chart_history))
+        .route_layer(from_fn(require_employee))
 }

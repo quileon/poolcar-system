@@ -1,3 +1,4 @@
+use crate::middleware::require_employee;
 use crate::{
     error::AppError,
     models::{
@@ -10,6 +11,7 @@ use crate::{
     types::{PaginationParams, SuccessResponse},
     AppState,
 };
+use axum::middleware::from_fn;
 use axum::{
     extract::{Path, Query, State},
     http::header::{CONTENT_DISPOSITION, CONTENT_TYPE},
@@ -470,10 +472,9 @@ pub async fn export_activities(
 }
 
 pub fn routes() -> Router<Arc<AppState>> {
-    Router::new()
+    let employee_routes = Router::new()
         .route("/", get(get_activities).post(create_activity))
         .route("/export", get(export_activities))
-        .nest("/types", activity_type_routes::routes())
         .route(
             "/{activity_id}",
             get(get_activity)
@@ -481,4 +482,9 @@ pub fn routes() -> Router<Arc<AppState>> {
                 .delete(delete_activity),
         )
         .route("/{activity_id}/restore", put(restore_activity))
+        .route_layer(from_fn(require_employee));
+
+    Router::new()
+        .merge(employee_routes)
+        .nest("/types", activity_type_routes::routes())
 }

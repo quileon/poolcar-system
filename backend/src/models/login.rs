@@ -14,4 +14,5 @@ pub struct LoginRequest {
 pub struct LoginResponse {
     pub username: String,
     pub role: String,
+    pub token: String,
 }

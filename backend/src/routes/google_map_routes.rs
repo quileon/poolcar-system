@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use axum::middleware::from_fn;
 use axum::{
     extract::{Query, State},
     routing::get,
@@ -7,6 +8,7 @@ use axum::{
 };
 use reqwest::{header::CONTENT_TYPE, Client};
 
+use crate::middleware::require_employee;
 use crate::{
     error::AppError,
     models::google_map::{GoogleMapPayload, GoogleMapResponse, GoogleMapSearchParams},
@@ -47,5 +49,7 @@ async fn search_places(
 }
 
 pub fn routes() -> Router<Arc<AppState>> {
-    Router::new().route("/", get(search_places))
+    Router::new()
+        .route("/", get(search_places))
+        .route_layer(from_fn(require_employee))
 }

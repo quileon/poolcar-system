@@ -51,6 +51,12 @@ pub enum AppError {
     #[error("Internal server error")]
     EncodingError,
 
+    #[error("Unauthorized")]
+    Unauthorized,
+
+    #[error("Forbidden")]
+    Forbidden,
+
     #[error("Not found")]
     NotFound,
 
@@ -107,6 +113,8 @@ impl IntoResponse for AppError {
             AppError::ValidationError(msg) => (StatusCode::BAD_REQUEST, msg.as_str()),
             AppError::WrongCredentials => (StatusCode::UNAUTHORIZED, "Invalid credentials"),
             AppError::InvalidToken => (StatusCode::UNAUTHORIZED, "Invalid or expired token"),
+            AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized access"),
+            AppError::Forbidden => (StatusCode::FORBIDDEN, "Forbidden: insufficient permissions"),
             AppError::EncodingError => (StatusCode::INTERNAL_SERVER_ERROR, "Token encoding error"),
             AppError::NotFound => (StatusCode::NOT_FOUND, "Resource not found"),
             AppError::Internal(error_message) => {

@@ -9,7 +9,7 @@ use axum::{
 use chrono::{Duration, Utc};
 use std::sync::Arc;
 
-use crate::auth_utils::decode_jwt;
+use crate::auth_utils::{decode_jwt, extract_token};
 use crate::types::{SuccessDataResponse, SuccessResponse};
 use crate::{
     auth_utils::{encode_jwt, verify_password},
@@ -68,12 +68,13 @@ pub async fn login_handler(
         Json(SuccessDataResponse::new(LoginResponse {
             username: payload.username,
             role: user.user_role_name,
+            token,
         })?),
     ))
 }
 
 pub async fn logout_handler() -> Result<impl IntoResponse, AppError> {
-    let cookie = format!("auth_token=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0",);
+    let cookie = "auth_token=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0".to_string();
 
     Ok((
         [(SET_COOKIE, cookie)],
@@ -85,27 +86,14 @@ pub async fn verify_handler(
     State(state): State<Arc<AppState>>,
     req: Request,
 ) -> Result<Json<SuccessDataResponse>, AppError> {
-    let token = req
-        .headers()
-        .get("cookie")
-        .and_then(|h| h.to_str().ok())
-        .and_then(|cookies| {
-            cookies.split(';').find_map(|cookie| {
-                let cookie = cookie.trim();
-                if cookie.starts_with("auth_token=") {
-                    cookie.strip_prefix("auth_token=")
-                } else {
-                    None
-                }
-            })
-        })
-        .ok_or(AppError::InvalidToken)?;
+    let token = extract_token(req.headers()).ok_or(AppError::InvalidToken)?;
 
-    let token_data = decode_jwt(token, &state.config.jwt_secret)?;
+    let token_data = decode_jwt(&token, &state.config.jwt_secret)?;
 
     Ok(Json(SuccessDataResponse::new(LoginResponse {
         username: token_data.claims.username,
         role: token_data.claims.role_name,
+        token,
     })?))
 }
 

@@ -4,7 +4,6 @@
 #include <Arduino.h>
 
 // TinyGSM config
-// #define TINY_GSM_MODEM_SIM900
 #define TINY_GSM_MODEM_SIM808
 #define TINY_GSM_RX_BUFFER 1024
 // #define TINY_GSM_AUTOBAUD
@@ -13,6 +12,10 @@
 
 // Stream Debugger config
 // #define DUMP_AT_COMMANDS
+
+// GPS config
+// Use TinyGPS++ NMEA parsing from the GPS serial pins.
+// #define GPS_USE_NMEA
 
 constexpr short GSM_MAX_RETRIES = 3;
 
@@ -53,9 +56,11 @@ MrY=
 // Pin Configuration
 constexpr int GSM_RX_PIN = 16; // Connect to TX of GSM module
 constexpr int GSM_TX_PIN = 17; // Connect to RX of GSM module
-constexpr int GPS_RX_PIN = 22; // Connect to TX of GPS module
-constexpr int GPS_TX_PIN = 23; // Connect to RX of GPS module
 constexpr int ESP32_COMMUNICATION_BAUD_RATE = 9600;
+
+// SIM808 Power (PWRKEY wired to GPIO22 & GPIO23)
+constexpr int SIM808_POWER_PIN_PRIMARY = 22;
+constexpr int SIM808_POWER_PIN_SECONDARY = 23;
 
 // App Configuration
 constexpr timer_t PUBLISH_INTERVAL = 1000;

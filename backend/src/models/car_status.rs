@@ -3,15 +3,6 @@ use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
 use ts_rs::TS;
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, TS)]
-#[ts(export)]
-pub enum StatusType {
-    #[serde(rename = "DEPARTURE")]
-    Departure,
-    #[serde(rename = "RETURN")]
-    Return,
-}
-
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
 #[ts(export)]
 pub struct CarStatus {

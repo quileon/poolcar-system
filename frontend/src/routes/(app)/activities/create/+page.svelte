@@ -34,7 +34,9 @@
 	const activityTypesQuery = useActivityTypesQuery(() => "active");
 	const trackersQuery = useTrackersQuery(() => "active");
 
-	const createActivityMutation = useCreateActivityMutation();
+	const createActivityMutation = useCreateActivityMutation({
+		navigateTo: "/activities"
+	});
 
 	function handleSubmit(e: Event) {
 		e.preventDefault();

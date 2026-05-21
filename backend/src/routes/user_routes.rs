@@ -1,3 +1,4 @@
+use crate::middleware::require_employee;
 use crate::{
     auth_utils,
     error::AppError,
@@ -6,6 +7,8 @@ use crate::{
     types::{PaginationParams, SuccessResponse},
     AppState,
 };
+use axum::middleware::from_fn;
+use axum::routing::post;
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
@@ -247,13 +250,20 @@ pub async fn export_users(
 }
 
 pub fn routes() -> Router<Arc<AppState>> {
-    Router::new()
-        .route("/", get(get_users).post(create_user))
+    let employee_routes = Router::new()
+        .route("/", get(get_users))
+        .route("/{user_id}", get(get_user))
         .route("/export", get(export_users))
-        .nest("/roles", user_role_routes::routes())
-        .route(
-            "/{user_id}",
-            get(get_user).put(update_user).delete(delete_user),
-        )
+        .route_layer(from_fn(require_employee));
+
+    let admin_routes = Router::new()
+        .route("/", post(create_user))
+        .route("/{user_id}", put(update_user).delete(delete_user))
         .route("/{user_id}/restore", put(restore_user))
+        .route_layer(from_fn(require_employee));
+
+    Router::new()
+        .merge(employee_routes)
+        .merge(admin_routes)
+        .nest("/roles", user_role_routes::routes())
 }
