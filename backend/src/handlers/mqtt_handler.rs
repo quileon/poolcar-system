@@ -21,7 +21,7 @@ pub async fn mqtt_handler(state: Arc<AppState>, payload: Bytes) -> Result<(), Mq
     let tracker_payload: MqttPayloadWithId = serde_json::from_slice(&payload)?;
 
     let now = chrono::Utc::now().naive_utc();
-    sqlx::query!(
+    sqlx::query(
         r#"
         INSERT INTO hardware_test (
             tracker_id, uptime, 
@@ -38,19 +38,58 @@ pub async fn mqtt_handler(state: Arc<AppState>, payload: Bytes) -> Result<(), Mq
         ) VALUES (
             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         )
-        "#,
-        tracker_payload.id, tracker_payload.uptime,
-        tracker_payload.connection.interval, tracker_payload.connection.retries, tracker_payload.connection.sequence_id, tracker_payload.connection.iteration_id, tracker_payload.connection.strength,
-        tracker_payload.location.latitude, tracker_payload.location.longitude, tracker_payload.location.age, tracker_payload.location.valid,
-        tracker_payload.altitude.meters, tracker_payload.altitude.feet, tracker_payload.altitude.age, tracker_payload.altitude.valid,
-        tracker_payload.speed.kmph, tracker_payload.speed.mph, tracker_payload.speed.mps, tracker_payload.speed.knots, tracker_payload.speed.age, tracker_payload.speed.valid,
-        tracker_payload.course.degrees, tracker_payload.course.age, tracker_payload.course.valid,
-        tracker_payload.datetime.iso8601, tracker_payload.datetime.year, tracker_payload.datetime.month, tracker_payload.datetime.day, tracker_payload.datetime.hour, tracker_payload.datetime.minute, tracker_payload.datetime.second, tracker_payload.datetime.centisecond, tracker_payload.datetime.age, tracker_payload.datetime.valid,
-        tracker_payload.satellites.visible, tracker_payload.satellites.used, tracker_payload.satellites.carrier_to_noise, tracker_payload.satellites.age, tracker_payload.satellites.valid,
-        tracker_payload.dop.hdop, tracker_payload.dop.pdop, tracker_payload.dop.vdop, tracker_payload.dop.age, tracker_payload.dop.valid,
-        tracker_payload.stats.chars_processed, tracker_payload.stats.sentences_with_fix, tracker_payload.stats.failed_checksum, tracker_payload.stats.passed_checksum,
-        now
-    ).execute(&state.db).await?;
+        "#
+    )
+    .bind(&tracker_payload.id)
+    .bind(&tracker_payload.uptime)
+    .bind(&tracker_payload.connection.interval)
+    .bind(&tracker_payload.connection.retries)
+    .bind(&tracker_payload.connection.sequence_id)
+    .bind(&tracker_payload.connection.iteration_id)
+    .bind(&tracker_payload.connection.strength)
+    .bind(&tracker_payload.location.latitude)
+    .bind(&tracker_payload.location.longitude)
+    .bind(&tracker_payload.location.age)
+    .bind(&tracker_payload.location.valid)
+    .bind(&tracker_payload.altitude.meters)
+    .bind(&tracker_payload.altitude.feet)
+    .bind(&tracker_payload.altitude.age)
+    .bind(&tracker_payload.altitude.valid)
+    .bind(&tracker_payload.speed.kmph)
+    .bind(&tracker_payload.speed.mph)
+    .bind(&tracker_payload.speed.mps)
+    .bind(&tracker_payload.speed.knots)
+    .bind(&tracker_payload.speed.age)
+    .bind(&tracker_payload.speed.valid)
+    .bind(&tracker_payload.course.degrees)
+    .bind(&tracker_payload.course.age)
+    .bind(&tracker_payload.course.valid)
+    .bind(&tracker_payload.datetime.iso8601)
+    .bind(&tracker_payload.datetime.year)
+    .bind(&tracker_payload.datetime.month)
+    .bind(&tracker_payload.datetime.day)
+    .bind(&tracker_payload.datetime.hour)
+    .bind(&tracker_payload.datetime.minute)
+    .bind(&tracker_payload.datetime.second)
+    .bind(&tracker_payload.datetime.centisecond)
+    .bind(&tracker_payload.datetime.age)
+    .bind(&tracker_payload.datetime.valid)
+    .bind(&tracker_payload.satellites.visible)
+    .bind(&tracker_payload.satellites.used)
+    .bind(&tracker_payload.satellites.carrier_to_noise)
+    .bind(&tracker_payload.satellites.age)
+    .bind(&tracker_payload.satellites.valid)
+    .bind(&tracker_payload.dop.hdop)
+    .bind(&tracker_payload.dop.pdop)
+    .bind(&tracker_payload.dop.vdop)
+    .bind(&tracker_payload.dop.age)
+    .bind(&tracker_payload.dop.valid)
+    .bind(&tracker_payload.stats.chars_processed)
+    .bind(&tracker_payload.stats.sentences_with_fix)
+    .bind(&tracker_payload.stats.failed_checksum)
+    .bind(&tracker_payload.stats.passed_checksum)
+    .bind(now)
+    .execute(&state.db).await?;
     tracing::debug!("MQTT payload is saved for testing into database");
 
     if tracker_payload.location.latitude.is_none() || tracker_payload.location.longitude.is_none() {
