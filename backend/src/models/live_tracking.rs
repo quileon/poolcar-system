@@ -4,7 +4,7 @@ use ts_rs::TS;
 
 use crate::models::mqtt::{
     PayloadAltitude, PayloadConnection, PayloadCourse, PayloadDateTime, PayloadDop,
-    PayloadLocation, PayloadSatellites, PayloadSpeed, PayloadStats,
+    PayloadLocation, PayloadNetwork, PayloadSatellites, PayloadSpeed, PayloadStats,
 };
 
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
@@ -19,6 +19,7 @@ pub struct GetMqttPayloadHistory {
     pub course: PayloadCourse,
     pub datetime: PayloadDateTime,
     pub satellites: PayloadSatellites,
-    pub hdop: PayloadDop,
+    pub dop: PayloadDop,
     pub stats: PayloadStats,
+    pub network: PayloadNetwork,
 }

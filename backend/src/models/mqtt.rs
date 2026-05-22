@@ -9,7 +9,6 @@ pub struct PayloadConnection {
     pub retries: u32,
     pub sequence_id: u32,
     pub iteration_id: u32,
-    pub strength: u32,
 }
 
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
@@ -95,6 +94,14 @@ pub struct PayloadStats {
 
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
 #[ts(export)]
+pub struct PayloadNetwork {
+    pub rssi: Option<u32>,
+    pub lac: Option<u32>,
+    pub ci: Option<u32>,
+}
+
+#[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
+#[ts(export)]
 pub struct MqttPayload {
     pub uptime: u32,
     pub connection: PayloadConnection,
@@ -106,6 +113,7 @@ pub struct MqttPayload {
     pub satellites: PayloadSatellites,
     pub dop: PayloadDop,
     pub stats: PayloadStats,
+    pub network: PayloadNetwork,
 }
 
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
@@ -122,6 +130,7 @@ pub struct MqttPayloadWithId {
     pub satellites: PayloadSatellites,
     pub dop: PayloadDop,
     pub stats: PayloadStats,
+    pub network: PayloadNetwork,
 }
 
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
@@ -139,4 +148,5 @@ pub struct MqttPayloadWithTrackerCar {
     pub satellites: PayloadSatellites,
     pub dop: PayloadDop,
     pub stats: PayloadStats,
+    pub network: PayloadNetwork,
 }

@@ -25,7 +25,8 @@ pub async fn mqtt_handler(state: Arc<AppState>, payload: Bytes) -> Result<(), Mq
         r#"
         INSERT INTO hardware_test (
             tracker_id, uptime, 
-            connection_interval, connection_retries, connection_sequence_id, connection_iteration_id, connection_strength,
+            connection_interval, connection_retries, connection_sequence_id, connection_iteration_id,
+            network_rssi, network_lac, network_ci,
             location_latitude, location_longitude, location_age, location_valid,
             altitude_meters, altitude_feet, altitude_age, altitude_valid,
             speed_kmph, speed_mph, speed_mps, speed_knots, speed_age, speed_valid,
@@ -36,7 +37,7 @@ pub async fn mqtt_handler(state: Arc<AppState>, payload: Bytes) -> Result<(), Mq
             stats_chars_processed, stats_sentences_with_fix, stats_failed_checksum, stats_passed_checksum,
             received_at
         ) VALUES (
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         )
         "#
     )
@@ -46,7 +47,9 @@ pub async fn mqtt_handler(state: Arc<AppState>, payload: Bytes) -> Result<(), Mq
     .bind(&tracker_payload.connection.retries)
     .bind(&tracker_payload.connection.sequence_id)
     .bind(&tracker_payload.connection.iteration_id)
-    .bind(&tracker_payload.connection.strength)
+    .bind(&tracker_payload.network.rssi)
+    .bind(&tracker_payload.network.lac)
+    .bind(&tracker_payload.network.ci)
     .bind(&tracker_payload.location.latitude)
     .bind(&tracker_payload.location.longitude)
     .bind(&tracker_payload.location.age)
