@@ -40,6 +40,7 @@ public:
     bool isConnected();
     bool ensureConnection();
     int getSignalStrength();
+    bool getNetworkInfo(String &lac, String &ci);
     String getLocalIP();
     void disconnect();
 

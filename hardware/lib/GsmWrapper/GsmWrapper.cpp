@@ -141,6 +141,51 @@ int GsmWrapper::getSignalStrength()
     return this->gsmModem.getSignalQuality();
 }
 
+bool GsmWrapper::getNetworkInfo(String &lac, String &ci)
+{
+    this->gsmModem.sendAT(GF("+CREG=2"));
+    this->gsmModem.waitResponse();
+
+    this->gsmModem.sendAT(GF("+CREG?"));
+    String response;
+    if (this->gsmModem.waitResponse(10000L, response) == 1) {
+        int idx = response.indexOf("+CREG:");
+        if (idx != -1) {
+            int firstComma = response.indexOf(',', idx);
+            if (firstComma != -1) {
+                int secondComma = response.indexOf(',', firstComma + 1);
+                if (secondComma != -1) {
+                    int thirdComma = response.indexOf(',', secondComma + 1);
+                    if (thirdComma != -1) {
+                        lac = response.substring(secondComma + 1, thirdComma);
+                        lac.replace("\"", "");
+                        lac.trim();
+
+                        int fourthComma = response.indexOf(',', thirdComma + 1);
+                        int endIdx;
+                        if (fourthComma != -1) {
+                            endIdx = fourthComma;
+                        } else {
+                            endIdx = response.indexOf('\r', thirdComma + 1);
+                            if (endIdx == -1) endIdx = response.indexOf('\n', thirdComma + 1);
+                            if (endIdx == -1) endIdx = response.length();
+                        }
+
+                        ci = response.substring(thirdComma + 1, endIdx);
+                        ci.replace("\"", "");
+                        ci.trim();
+
+                        if (lac.length() > 0 && ci.length() > 0) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
+
 String GsmWrapper::getLocalIP()
 {
     return this->gsmModem.getLocalIP();
