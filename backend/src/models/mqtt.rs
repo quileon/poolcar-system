@@ -96,8 +96,8 @@ pub struct PayloadStats {
 #[ts(export)]
 pub struct PayloadNetwork {
     pub rssi: Option<u32>,
-    pub lac: Option<u32>,
-    pub ci: Option<u32>,
+    pub lac: Option<String>,
+    pub ci: Option<String>,
 }
 
 #[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
