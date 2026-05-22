@@ -10,7 +10,7 @@
 
 #include <GpsGsmClient.h>
 
-HardwareSerial gsmSerial(2);
+HardwareSerial gsmSerial(1);
 
 #ifdef DUMP_AT_COMMANDS
 #include <StreamDebugger.h>
@@ -132,8 +132,20 @@ void loop()
         payload["connection"]["retries"] = retryCount;
         payload["connection"]["sequence_id"] = sequence;
         payload["connection"]["iteration_id"] = iteration;
-        payload["connection"]["strength"] = gsmWrapper.getSignalStrength();
+        payload["network"]["rssi"] = gsmWrapper.getSignalStrength();
         payload["id"] = TRACKER_ID;
+
+        String lac, ci;
+        if (gsmWrapper.getNetworkInfo(lac, ci))
+        {
+            payload["network"]["lac"] = lac;
+            payload["network"]["ci"] = ci;
+        }
+        else
+        {
+            payload["network"]["lac"] = nullptr;
+            payload["network"]["ci"] = nullptr;
+        }
 
         const bool isValid = payload["location"]["valid"];
         String payloadString;
