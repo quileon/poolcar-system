@@ -135,16 +135,16 @@ impl IntoResponse for AppError {
 /// Error types for MQTT handler tasks.
 #[derive(Error, Debug)]
 pub enum MqttError {
-    #[error("Database error")]
+    #[error("Database error: {0}")]
     DatabaseError(#[from] sqlx::Error),
 
-    #[error("Redis pool error")]
+    #[error("Redis pool error: {0}")]
     RedisPoolError(#[from] deadpool_redis::PoolError),
 
-    #[error("Redis error")]
+    #[error("Redis error: {0}")]
     RedisError(#[from] deadpool_redis::redis::RedisError),
 
-    #[error("Failed to parse MQTT payload to JSON")]
+    #[error("Failed to parse MQTT payload to JSON: {0}")]
     ParseJsonError(#[from] serde_json::Error),
 
     #[error("Location is not valid")]
@@ -154,15 +154,15 @@ pub enum MqttError {
 /// Error types for other spawn tasks
 #[derive(Error, Debug)]
 pub enum TasksError {
-    #[error("Database error")]
+    #[error("Database error: {0}")]
     DatabaseError(#[from] sqlx::Error),
 
-    #[error("Redis pool error")]
+    #[error("Redis pool error: {0}")]
     RedisPoolError(#[from] deadpool_redis::PoolError),
 
-    #[error("Redis error")]
+    #[error("Redis error: {0}")]
     RedisError(#[from] deadpool_redis::redis::RedisError),
 
-    #[error("Failed to parse JSON")]
+    #[error("Failed to parse JSON: {0}")]
     ParseJsonError(#[from] serde_json::Error),
 }

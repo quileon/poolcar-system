@@ -56,7 +56,7 @@ pub async fn get_audit(
         sqlx::query_as::<_, CarAudit>(
             r#"
             SELECT
-                car_audit_id,
+                audit_id,
                 car_id,
                 tracker_id,
                 latitude,
@@ -65,7 +65,7 @@ pub async fn get_audit(
                 created_at,
                 updated_at,
                 deleted_at
-            FROM car_audit
+            FROM audit
             WHERE DATE(recorded_at) = ? AND car_id = ?
             ORDER BY recorded_at DESC
             "#,
@@ -79,7 +79,7 @@ pub async fn get_audit(
         sqlx::query_as::<_, CarAudit>(
             r#"
             SELECT
-                car_audit_id,
+                audit_id,
                 car_id,
                 tracker_id,
                 latitude,
@@ -88,7 +88,7 @@ pub async fn get_audit(
                 created_at,
                 updated_at,
                 deleted_at
-            FROM car_audit
+            FROM audit
             WHERE DATE(recorded_at) = ? AND tracker_id = ?
             ORDER BY recorded_at DESC
             "#,

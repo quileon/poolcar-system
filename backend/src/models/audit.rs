@@ -6,7 +6,7 @@ use ts_rs::TS;
 #[derive(Debug, Clone, FromRow, Deserialize, Serialize, TS)]
 #[ts(export)]
 pub struct CarAudit {
-    pub car_audit_id: i64,
+    pub audit_id: i64,
     pub car_id: Option<i32>,
     pub tracker_id: i32,
     pub latitude: f64,

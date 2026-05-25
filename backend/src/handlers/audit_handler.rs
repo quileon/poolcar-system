@@ -82,7 +82,7 @@ pub async fn audit_handler(state: Arc<AppState>) -> Result<(), TasksError> {
         if let (_, Some(payload)) = payload {
             sqlx::query(
                 r#"
-                INSERT INTO car_audit (
+                INSERT INTO audit (
                     car_id,
                     tracker_id,
                     latitude,
