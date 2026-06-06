@@ -26,8 +26,8 @@ JsonDocument &GpsGsmClient::toJsonDocument()
     int gnssRunStatus = 0;  // Index 0
     bool fixStatus = 0;     // Index 1
     String iso8601 = "";    // Index 2
-    float latitude = 0;     // Index 3
-    float longitude = 0;    // Index 4
+    double latitude = 0;    // Index 3
+    double longitude = 0;   // Index 4
     float altitude = 0;     // Index 5
     float speed = 0;        // Index 6
     float course = 0;       // Index 7
