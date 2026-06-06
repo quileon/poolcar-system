@@ -8,18 +8,19 @@
 #include <ArduinoJson.h>
 #include <TinyGSM.h>
 
-#define _GPS_MPH_PER_KNOT 1.15077945
-#define _GPS_MPS_PER_KNOT 0.51444444
-#define _GPS_KMPH_PER_KNOT 1.852
-#define _GPS_MILES_PER_METER 0.00062137112
-#define _GPS_KM_PER_METER 0.001
-#define _GPS_FEET_PER_METER 3.2808399
-#define _GPS_MAX_FIELD_SIZE 15
 #define _GPS_EARTH_MEAN_RADIUS 6371009 // old: 6372795
 
 class GpsGsmClient
 {
 private:
+    static constexpr double _GPS_MPH_PER_KNOT = 1.15077945;
+    static constexpr double _GPS_MPS_PER_KNOT = 0.51444444;
+    static constexpr double _GPS_KMPH_PER_KNOT = 1.852;
+    static constexpr double _GPS_MILES_PER_METER = 0.00062137112;
+    static constexpr double _GPS_KM_PER_METER = 0.001;
+    static constexpr double _GPS_FEET_PER_METER = 3.2808399;
+    static constexpr int _GPS_MAX_FIELD_SIZE = 15;
+
     TinyGsm &gsmModem;
     JsonDocument jsonDoc;
 
