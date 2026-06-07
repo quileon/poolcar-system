@@ -1,12 +1,45 @@
 use anyhow::Context;
+use clap::{Parser, Subcommand};
 use deadpool_redis::Runtime;
 use dotenvy;
-use poolcar_backend::{config::Config, create_app};
+use poolcar::{auth_utils::hash_password, config::Config, create_app};
 use rand::{distr, Rng};
 use rumqttc::{MqttOptions, Transport};
 use sqlx::mysql::MySqlPoolOptions;
 use std::time::Duration;
 use tokio::signal;
+
+#[derive(Parser)]
+#[command(name = "poolcar")]
+#[command(about = "Poolcar Backend CLI", long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    command: Option<Commands>,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Run the Axum web server (default)
+    Run,
+    /// Create an initial admin user
+    Createsuperuser {
+        /// Username for the new admin account
+        #[arg(short, long, default_value = "admin")]
+        username: String,
+
+        /// Password for the new admin account
+        #[arg(short, long, default_value = "admin")]
+        password: String,
+
+        /// Email address for the new admin account
+        #[arg(short, long, default_value = "admin@example.com")]
+        email: String,
+
+        /// Full name of the admin user
+        #[arg(short, long, default_value = "Admin User")]
+        full_name: String,
+    },
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -21,6 +54,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .compact()
         .init();
 
+    let cli = Cli::parse();
     let config = Config::from_env()?;
     tracing::info!("Environment configuration loaded");
 
@@ -38,6 +72,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .context("Failed to run migrations")?;
     tracing::info!("Migrations completed");
 
+    match cli.command.unwrap_or(Commands::Run) {
+        Commands::Run => run_server(db_pool, config).await?,
+        Commands::Createsuperuser {
+            username,
+            password,
+            email,
+            full_name,
+        } => {
+            tracing::info!("Creating admin user: {}", username);
+
+            let hashed_password =
+                hash_password(&password).context("Failed to hash password")?;
+            sqlx::query(
+                "INSERT INTO users (username, email, password, full_name, user_role_id) VALUES (?, ?, ?, ?, ?)"
+            )
+            .bind(&username)
+            .bind(&email)
+            .bind(&hashed_password)
+            .bind(&full_name)
+            .bind(1)
+            .execute(&db_pool)
+            .await
+            .context("Failed to create admin user!")?;
+
+            tracing::info!("Admin user '{}' created successfully!", username);
+        }
+    }
+
+    Ok(())
+}
+
+async fn run_server(
+    db_pool: sqlx::MySqlPool,
+    config: Config,
+) -> Result<(), Box<dyn std::error::Error>> {
     // Redis
     let redis_cfg = deadpool_redis::Config::from_url(&config.redis_url);
     let redis_pool = redis_cfg

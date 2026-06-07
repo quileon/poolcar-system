@@ -1,5 +1,5 @@
 use jsonwebtoken::{encode, EncodingKey, Header};
-use poolcar_backend::{config::Config, create_app};
+use poolcar::{config::Config, create_app};
 use reqwest::{Client, RequestBuilder};
 use serde::{Deserialize, Serialize};
 use sqlx::MySqlPool;

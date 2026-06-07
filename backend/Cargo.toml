@@ -1,8 +1,7 @@
 [package]
-name = "poolcar_backend"
+name = "poolcar"
 version = "0.3.7"
 edition = "2021"
-default-run = "poolcar_backend"
 
 [dependencies]
 anyhow = "1.0.100"

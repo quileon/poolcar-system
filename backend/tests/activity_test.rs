@@ -1,5 +1,5 @@
 use anyhow::Context;
-use poolcar_backend::{config::Config, create_app};
+use poolcar::{config::Config, create_app};
 use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, MySqlPool};
 use tokio::{net::TcpListener, task::JoinHandle};
