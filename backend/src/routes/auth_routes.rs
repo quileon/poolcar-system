@@ -74,7 +74,7 @@ pub async fn login_handler(
 }
 
 pub async fn logout_handler() -> Result<impl IntoResponse, AppError> {
-    let cookie = "auth_token=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0".to_string();
+    let cookie = "auth_token=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0".to_string();
 
     Ok((
         [(SET_COOKIE, cookie)],

@@ -17,6 +17,7 @@
 	import { resolve } from "$app/paths";
 	import type { Component, ComponentProps } from "svelte";
 	import type { Url } from "$lib/url";
+	import { page } from "$app/state";
 	const primary_items: {
 		title: string;
 		url: Url;
@@ -126,25 +127,27 @@
 				</Sidebar.Menu>
 			</Sidebar.GroupContent>
 		</Sidebar.Group>
-		<Sidebar.Group>
-			<Sidebar.GroupLabel>Management</Sidebar.GroupLabel>
-			<Sidebar.GroupContent>
-				<Sidebar.Menu>
-					{#each crud_items as sidebar_item (sidebar_item.title)}
-						<Sidebar.MenuItem>
-							<Sidebar.MenuButton>
-								{#snippet child({ props })}
-									<a href={resolve(sidebar_item.url)} {...props}>
-										<sidebar_item.icon />
-										<span>{sidebar_item.title}</span>
-									</a>
-								{/snippet}
-							</Sidebar.MenuButton>
-						</Sidebar.MenuItem>
-					{/each}
-				</Sidebar.Menu>
-			</Sidebar.GroupContent>
-		</Sidebar.Group>
+		{#if page.data.userData?.role === "Admin"}
+			<Sidebar.Group>
+				<Sidebar.GroupLabel>Management</Sidebar.GroupLabel>
+				<Sidebar.GroupContent>
+					<Sidebar.Menu>
+						{#each crud_items as sidebar_item (sidebar_item.title)}
+							<Sidebar.MenuItem>
+								<Sidebar.MenuButton>
+									{#snippet child({ props })}
+										<a href={resolve(sidebar_item.url)} {...props}>
+											<sidebar_item.icon />
+											<span>{sidebar_item.title}</span>
+										</a>
+									{/snippet}
+								</Sidebar.MenuButton>
+							</Sidebar.MenuItem>
+						{/each}
+					</Sidebar.Menu>
+				</Sidebar.GroupContent>
+			</Sidebar.Group>
+		{/if}
 	</Sidebar.Content>
 	<Sidebar.Footer />
 </Sidebar.Root>

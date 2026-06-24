@@ -52,8 +52,11 @@ pub async fn get_all_redis_activities(
     redis: &deadpool_redis::Pool,
 ) -> Result<Vec<ActivityDetails>, MqttError> {
     let mut conn = redis.get().await?;
-    let active_activities: String = conn.get("activities").await?;
-    let active_activities: Vec<ActivityDetails> = serde_json::from_str(&active_activities)?;
+    let active_activities: Option<String> = conn.get("activities").await?;
+    let active_activities: Vec<ActivityDetails> = match active_activities {
+        Some(s) => serde_json::from_str(&s)?,
+        None => vec![],
+    };
 
     Ok(active_activities)
 }

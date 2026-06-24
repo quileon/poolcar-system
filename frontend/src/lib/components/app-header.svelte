@@ -3,6 +3,9 @@
 	import * as Breadcrumb from "$lib/components/ui/breadcrumb";
 	import { page } from "$app/state";
 	import type { Url } from "$lib/url";
+	import Button from "$lib/components/ui/button/button.svelte";
+	import LogOutIcon from "@lucide/svelte/icons/log-out";
+	import { authState } from "$lib/hooks/auth.svelte";
 
 	interface BreadcrumbItem {
 		title: string;
@@ -76,4 +79,18 @@
 			{/if}
 		</Breadcrumb.List>
 	</Breadcrumb.Root>
+
+	<div class="ms-auto flex items-center gap-4">
+		{#if page.data.userData}
+			<span class="hidden text-sm text-muted-foreground sm:inline">
+				Logged in as <strong class="font-medium text-foreground"
+					>{page.data.userData.username}</strong
+				>
+			</span>
+		{/if}
+		<Button variant="outline" size="sm" onclick={() => authState.logout()} class="gap-1.5">
+			<LogOutIcon class="size-4" />
+			<span>Log out</span>
+		</Button>
+	</div>
 </header>

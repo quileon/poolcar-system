@@ -16,6 +16,7 @@
 	import { buttonVariants } from "$lib/components/ui/button/button.svelte";
 	import ScrollArea from "$lib/components/ui/scroll-area/scroll-area.svelte";
 	import TimerIcon from "@lucide/svelte/icons/timer";
+	import { config } from "$lib/config";
 
 	let filterType = $state<"tracker" | "car">("tracker");
 	let comboboxValue = $state<number | null>(null);
@@ -25,6 +26,7 @@
 	let selectedDate = $state<string>("");
 	let mapElement: HTMLElement;
 
+	const initialCoordinates: [number, number] = [-6.3709188, 106.8220167];
 	const trackersQuery = useTrackersQuery(() => "active");
 	const carsQuery = useCarsQuery(() => "active");
 	const auditQuery = useAuditQuery(
@@ -38,8 +40,8 @@
 	onMount(() => {
 		if (mapElement) {
 			leaflet.init(mapElement, {
-				center: [-6.382310833, 107.1725405],
-				zoom: 12
+				center: initialCoordinates,
+				zoom: 13
 			});
 		}
 
@@ -107,7 +109,7 @@
 	</Card.Root>
 	<div class="flex flex-1 flex-col gap-4">
 		<!-- Select Car or Tracker to Audit -->
-		<Card.Root class="flex flex-1 flex-col gap-4 p-4">
+		<Card.Root class="flex-none flex flex-col gap-4 p-4">
 			<div>
 				<h3 class="text-md mb-3 font-medium">Filter by</h3>
 				<RadioGroup.Root bind:value={filterType} onValueChange={refreshCombobox}>
@@ -212,11 +214,19 @@
 					<TimerIcon />
 				</Button>
 			</div>
+			<Button
+				href={`${config.apiBaseUrl}/audit/export`}
+				download="audit.csv"
+				variant="outline"
+				class="w-full"
+			>
+				Export
+			</Button>
 		</Card.Root>
 		<!-- Audit Data -->
-		<Card.Root class="flex flex-3 flex-col gap-3 p-4">
+		<Card.Root class="flex-1 min-h-0 flex flex-col gap-3 p-4">
 			<h4 class="text-medium font-medium">Audit Data</h4>
-			<ScrollArea class="h-140 w-full">
+			<ScrollArea class="flex-1 w-full min-h-0">
 				{#if auditQuery.data}
 					<div class="space-y-2 pr-4">
 						{#each auditQuery.data.audit_records as audit (audit)}

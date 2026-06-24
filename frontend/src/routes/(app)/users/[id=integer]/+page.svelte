@@ -107,6 +107,17 @@
 					</Field.Field>
 
 					<Field.Field>
+						<Field.Label for="fullName">Full Name</Field.Label>
+						<Input
+							id="fullName"
+							bind:value={fullName}
+							type="text"
+							placeholder="Enter full name"
+							required
+						/>
+					</Field.Field>
+
+					<Field.Field>
 						<Field.Label for="userRoleId">User Role</Field.Label>
 						<Select.Root type="single" bind:value={userRoleId} required>
 							<Select.Trigger id="userRoleId" disabled={userQuery.isPending}

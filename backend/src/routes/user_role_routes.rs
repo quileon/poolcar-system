@@ -1,4 +1,4 @@
-use crate::middleware::require_employee;
+use crate::middleware::{require_admin, require_employee};
 use crate::{
     error::AppError,
     models::user_role::{GetUserRolesResponse, UserRoleBody, UserRoleDetails},
@@ -227,7 +227,7 @@ pub fn routes() -> Router<Arc<AppState>> {
             put(update_user_role).delete(delete_user_role),
         )
         .route("/{user_role_id}/restore", put(restore_user_role))
-        .route_layer(from_fn(require_employee));
+        .route_layer(from_fn(require_admin));
 
     Router::new().merge(employee_routes).merge(admin_routes)
 }

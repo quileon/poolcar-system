@@ -26,7 +26,7 @@
 	let mapElement: HTMLElement;
 	const leaflet = new LeafletMap();
 	const sidebar = useSidebar();
-	const initialCoordinates: [number, number] = [-6.382310833, 107.1725405];
+	const initialCoordinates: [number, number] = [-6.3709188, 106.8220167];
 
 	const contactTypesQuery = useContactTypesQuery(() => "active");
 	const createContactMutation = useCreateContactMutation();
@@ -50,7 +50,7 @@
 	onMount(() => {
 		leaflet.init(mapElement, {
 			center: initialCoordinates,
-			zoom: 12,
+			zoom: 13,
 			onMapClick: (lat, lng) => {
 				latitude = lat.toString();
 				longitude = lng.toString();

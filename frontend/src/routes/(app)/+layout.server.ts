@@ -4,7 +4,7 @@ import { config } from "$lib/config";
 import type { LoginResponse } from "$lib/bindings/LoginResponse";
 import type { SuccessDataResponse } from "$lib/bindings/SuccessDataResponse";
 
-export const load: LayoutServerLoad = async ({ cookies, fetch }) => {
+export const load: LayoutServerLoad = async ({ cookies, fetch, url }) => {
 	const token = cookies.get("auth_token");
 	if (!token) {
 		throw redirect(302, "/login");
@@ -31,6 +31,28 @@ export const load: LayoutServerLoad = async ({ cookies, fetch }) => {
 	}
 
 	const userData = verifyResponse.data as LoginResponse;
+
+	const managementPaths = [
+		"/cars",
+		"/car-types",
+		"/car-status",
+		"/trackers",
+		"/contacts",
+		"/contact-types",
+		"/activities",
+		"/activity-types",
+		"/users",
+		"/user-roles"
+	];
+
+	if (userData.role !== "Admin") {
+		const isManagementPath = managementPaths.some(
+			(path) => url.pathname === path || url.pathname.startsWith(path + "/")
+		);
+		if (isManagementPath) {
+			throw redirect(302, "/");
+		}
+	}
 
 	return { userData };
 };

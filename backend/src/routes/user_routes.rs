@@ -1,4 +1,4 @@
-use crate::middleware::require_employee;
+use crate::middleware::{require_admin, require_employee};
 use crate::{
     auth_utils,
     error::AppError,
@@ -260,7 +260,7 @@ pub fn routes() -> Router<Arc<AppState>> {
         .route("/", post(create_user))
         .route("/{user_id}", put(update_user).delete(delete_user))
         .route("/{user_id}/restore", put(restore_user))
-        .route_layer(from_fn(require_employee));
+        .route_layer(from_fn(require_admin));
 
     Router::new()
         .merge(employee_routes)

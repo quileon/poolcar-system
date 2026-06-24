@@ -45,8 +45,11 @@ pub async fn distance_handler(state: Arc<AppState>) -> Result<(), TasksError> {
     }
 
     // Get all activities and get the tracker with the closest distance for each activity
-    let active_activities_string: String = conn.get("activities").await?;
-    let active_activities: Vec<ActivityDetails> = serde_json::from_str(&active_activities_string)?;
+    let active_activities_string: Option<String> = conn.get("activities").await?;
+    let active_activities: Vec<ActivityDetails> = match active_activities_string {
+        Some(s) => serde_json::from_str(&s)?,
+        None => vec![],
+    };
 
     let mut distances_map: HashMap<i32, Distances> = HashMap::new();
 
