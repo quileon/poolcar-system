@@ -8,6 +8,7 @@ use crate::{
 use axum::middleware::from_fn;
 use axum::{
     extract::{Query, State},
+    http::header::{CONTENT_DISPOSITION, CONTENT_TYPE},
     response::IntoResponse,
     routing::get,
     Json, Router,
@@ -124,9 +125,67 @@ pub async fn get_audit(
     Ok(Json(response))
 }
 
+pub async fn export_audit(
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, AppError> {
+    let audit_records: Vec<CarAudit> = sqlx::query_as(
+        r#"
+        SELECT
+            audit_id,
+            car_id,
+            tracker_id,
+            latitude,
+            longitude,
+            recorded_at,
+            created_at,
+            updated_at,
+            deleted_at
+        FROM audit
+        WHERE recorded_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) AND deleted_at IS NULL
+        ORDER BY recorded_at DESC
+        "#,
+    )
+    .fetch_all(&state.db)
+    .await?;
+
+    let mut csv_buffer = Vec::new();
+    {
+        let mut writer = csv::Writer::from_writer(&mut csv_buffer);
+        writer.write_record([
+            "Audit ID",
+            "Car ID",
+            "Tracker ID",
+            "Latitude",
+            "Longitude",
+            "Recorded At",
+            "Created At",
+            "Updated At",
+            "Deleted At",
+        ])?;
+
+        for record in audit_records {
+            writer.serialize(record)?;
+        }
+
+        writer.flush()?;
+    }
+
+    Ok((
+        [
+            (CONTENT_TYPE, "text/csv"),
+            (
+                CONTENT_DISPOSITION,
+                "attachment; filename=\"audit.csv\"",
+            ),
+        ],
+        csv_buffer,
+    ))
+}
+
 pub fn routes() -> Router<Arc<AppState>> {
     let employee_routes = Router::new()
         .route("/", get(get_audit))
+        .route("/export", get(export_audit))
         .route_layer(from_fn(require_employee));
 
     employee_routes
