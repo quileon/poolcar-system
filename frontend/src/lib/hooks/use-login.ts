@@ -21,8 +21,19 @@ export function useLoginMutation() {
 				})
 			});
 			if (!response.ok) {
-				const errorMessage = await response.text();
-				throw new Error(errorMessage || `Login failed (${response.status})`);
+				const responseText = await response.text();
+				let errorMessage = `Login failed (${response.status})`;
+				try {
+					const errorData = JSON.parse(responseText);
+					if (errorData && typeof errorData.message === "string") {
+						errorMessage = errorData.message;
+					} else {
+						errorMessage = responseText || errorMessage;
+					}
+				} catch {
+					errorMessage = responseText || errorMessage;
+				}
+				throw new Error(errorMessage);
 			}
 
 			const dataResponse: LoginResponse = await response.json();
