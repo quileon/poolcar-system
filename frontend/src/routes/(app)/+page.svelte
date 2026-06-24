@@ -37,7 +37,7 @@
 
 	let mapElement: HTMLElement;
 	let distancesMap = new SvelteMap<number, Distances>();
-	const initialCoordinates: [number, number] = [-6.382310833, 107.1725405];
+	const initialCoordinates: [number, number] = [-6.3709188, 106.8220167];
 	const wsData = new LiveData<WebSocketMessage>(`${config.wsBaseUrl}/live`);
 	const latencyChart = new LatencyChart();
 	const leaflet = new LeafletMap();
@@ -108,7 +108,7 @@
 	onMount(() => {
 		leaflet.init(mapElement, {
 			center: initialCoordinates,
-			zoom: 12
+			zoom: 13
 		});
 
 		wsData.connect();

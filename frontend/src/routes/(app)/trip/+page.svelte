@@ -57,7 +57,7 @@
 
 	let mapElement: HTMLElement;
 	const leaflet = new LeafletMap();
-	const initialCoordinates: [number, number] = [-6.382310833, 107.1725405];
+	const initialCoordinates: [number, number] = [-6.3709188, 106.8220167];
 
 	function startCreateMode() {
 		selectedActivityId = null;
@@ -69,7 +69,7 @@
 
 		if (leaflet.ready && leaflet.hasDestinationMarker(0)) {
 			leaflet.removeDestinationMarker(0);
-			leaflet.map?.setView(initialCoordinates, 12);
+			leaflet.map?.setView(initialCoordinates, 13);
 		}
 	}
 
@@ -180,7 +180,7 @@
 		if (leaflet.ready) return;
 		leaflet.init(mapElement, {
 			center: initialCoordinates,
-			zoom: 12
+			zoom: 13
 		});
 	});
 

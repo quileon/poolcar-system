@@ -21,7 +21,7 @@
 	import homeMarker from "$lib/assets/home.png";
 	import destinationMarker from "$lib/assets/flag.png";
 
-	const initialCoordinates: [number, number] = [-6.382310833, 107.1725405];
+	const initialCoordinates: [number, number] = [-6.3709188, 106.8220167];
 
 	const wsData = new LiveData<WebSocketMessage>(`${config.wsBaseUrl}/live`);
 	const leaflet = new LeafletMap();

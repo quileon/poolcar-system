@@ -25,6 +25,7 @@
 	let selectedDate = $state<string>("");
 	let mapElement: HTMLElement;
 
+	const initialCoordinates: [number, number] = [-6.3709188, 106.8220167];
 	const trackersQuery = useTrackersQuery(() => "active");
 	const carsQuery = useCarsQuery(() => "active");
 	const auditQuery = useAuditQuery(
@@ -38,8 +39,8 @@
 	onMount(() => {
 		if (mapElement) {
 			leaflet.init(mapElement, {
-				center: [-6.382310833, 107.1725405],
-				zoom: 12
+				center: initialCoordinates,
+				zoom: 13
 			});
 		}
 
