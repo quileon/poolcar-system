@@ -1,5 +1,6 @@
 <script lang="ts">
 	import "leaflet/dist/leaflet.css";
+	import { onMount } from "svelte";
 	import {
 		useActivitiesQuery,
 		useCreateActivityMutation,
@@ -11,13 +12,14 @@
 	import * as Field from "$lib/components/ui/field/index";
 	import * as Select from "$lib/components/ui/select/index";
 	import * as Dialog from "$lib/components/ui/dialog/index";
+	import * as Alert from "$lib/components/ui/alert/index";
+	import AlertCircleIcon from "@lucide/svelte/icons/alert-circle";
 
 	import homeMarker from "$lib/assets/home.png";
 	import destinationMarker from "$lib/assets/flag.png";
 	import TrashIcon from "@lucide/svelte/icons/trash-2";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import InfoIcon from "@lucide/svelte/icons/info";
-	import Skeleton from "$lib/components/ui/skeleton/skeleton.svelte";
 	import { DateTime } from "luxon";
 
 	import type { ActivityDetails } from "$lib/bindings/ActivityDetails";
@@ -175,9 +177,7 @@
 		contactsQuery.data?.contacts.find((contact) => contact.contact_id.toString() === contactId)
 	);
 
-	$effect(() => {
-		if (!activitiesQuery.isSuccess) return;
-		if (leaflet.ready) return;
+	onMount(() => {
 		leaflet.init(mapElement, {
 			center: initialCoordinates,
 			zoom: 13
@@ -221,265 +221,247 @@
 	});
 </script>
 
-{#if activitiesQuery.isLoading}
-	<div class="flex h-full w-full flex-col gap-4">
-		<div class="flex flex-row gap-4">
-			<Card.Root class="flex flex-1 flex-row items-center justify-between p-8">
-				<Skeleton class="h-7 w-full flex-11" />
-				<Skeleton class="h-8 w-full flex-1" />
-			</Card.Root>
-			<Card.Root class="flex flex-1 flex-row items-center justify-between p-8">
-				<Skeleton class="h-7 w-full flex-11" />
-				<Skeleton class="h-8 w-full flex-1" />
-			</Card.Root>
-			<Card.Root class="flex flex-1 flex-row items-center justify-between p-8">
-				<Skeleton class="h-7 w-full flex-11" />
-				<Skeleton class="h-8 w-full flex-1" />
-			</Card.Root>
-		</div>
-		<div class="flex flex-1 gap-4 overflow-hidden">
-			<Skeleton class="h-full w-full rounded-xl" />
-		</div>
+{#if activitiesQuery.isError}
+	<div class="mb-4">
+		<Alert.Root variant="destructive">
+			<AlertCircleIcon class="size-4" />
+			<Alert.Title>Error</Alert.Title>
+			<Alert.Description>
+				<p>Error getting Activities: {activitiesQuery.error.message}</p>
+			</Alert.Description>
+		</Alert.Root>
 	</div>
 {/if}
 
-{#if activitiesQuery.isSuccess}
-	<div class="flex h-full w-full flex-col gap-4">
-		<div class="flex flex-row gap-4">
-			<Card.Root class="flex flex-1 flex-row items-center justify-between p-8">
-				<p class="text-xl">Total Activities this Week</p>
-				<p class="text-2xl font-bold">{activitiesQuery.data.activity_count}</p>
-			</Card.Root>
-			<Card.Root class="flex flex-1 flex-row items-center justify-between p-8">
-				<p class="text-xl">Total Pending Trip this Week</p>
-				<p class="text-2xl font-bold">
-					{activitiesQuery.data.activities.filter((activity) => activity.finished_at === null)
-						.length}
-				</p>
-			</Card.Root>
-			<Card.Root class="flex flex-1 flex-row items-center justify-between p-8">
-				<p class="text-xl">Total Finished Trip this Week</p>
-				<p class="text-2xl font-bold">
-					{activitiesQuery.data.activities.filter((activity) => activity.finished_at !== null)
-						.length}
-				</p>
-			</Card.Root>
-		</div>
+<div class="flex h-full w-full flex-col gap-4">
+	<div class="flex flex-row gap-4">
+		<Card.Root class="flex flex-1 flex-row items-center justify-between p-8">
+			<p class="text-xl">Total Activities this Week</p>
+			<p class="text-2xl font-bold">{activitiesQuery.data?.activity_count ?? 0}</p>
+		</Card.Root>
+		<Card.Root class="flex flex-1 flex-row items-center justify-between p-8">
+			<p class="text-xl">Total Pending Trip this Week</p>
+			<p class="text-2xl font-bold">
+				{activitiesQuery.data?.activities.filter((activity) => activity.finished_at === null)
+					.length ?? 0}
+			</p>
+		</Card.Root>
+		<Card.Root class="flex flex-1 flex-row items-center justify-between p-8">
+			<p class="text-xl">Total Finished Trip this Week</p>
+			<p class="text-2xl font-bold">
+				{activitiesQuery.data?.activities.filter((activity) => activity.finished_at !== null)
+					.length ?? 0}
+			</p>
+		</Card.Root>
+	</div>
 
-		<div class="flex gap-4">
-			<!-- Create/Edit -->
-			<Card.Root class="w-full max-w-md p-4">
-				<form class="w-full" onsubmit={handleSubmit}>
-					<Field.Set class="w-full">
-						<Field.Legend>{isEditing ? "Edit Trip" : "Create New Trip"}</Field.Legend>
-						<Field.Description
-							>{isEditing
-								? "Update activity details."
-								: "Create new trip to contact."}</Field.Description
-						>
-						<!-- Contact -->
-						<Field.Field>
-							<Field.Label for="contact_id">Contact</Field.Label>
-							<Select.Root type="single" bind:value={contactId}>
-								<Select.Trigger id="contact_id" class="relative z-10 w-full">
-									{contactTrigger}
-								</Select.Trigger>
-								<Select.Content>
-									{#if contactsQuery.data?.contacts}
-										{#each contactsQuery.data.contacts as contact (contact.contact_id)}
-											<Select.Item value={contact.contact_id.toString()}>
-												{contact.name}
-											</Select.Item>
-										{/each}
-									{/if}
-								</Select.Content>
-							</Select.Root>
-							<Field.Description>Enter the destiantion contact.</Field.Description>
-							<!-- Contact Map -->
-							<div class="relative z-0 mt-3 h-52">
-								<div
-									bind:this={mapElement}
-									class="h-full w-full overflow-hidden rounded-lg border border-border"
-								></div>
-							</div>
-						</Field.Field>
-						<!-- Activity Type -->
-						<Field.Field>
-							<Field.Label for="activity_type_id">Activity Type</Field.Label>
-							<Select.Root type="single" bind:value={activityTypeId}>
-								<Select.Trigger id="contact_id" class="w-full">{activityTypeTrigger}</Select.Trigger
-								>
-								<Select.Content>
-									{#if activityTypesQuery.data?.activity_types}
-										{#each activityTypesQuery.data.activity_types as activityType (activityType.activity_type_id)}
-											<Select.Item value={activityType.activity_type_id.toString()}>
-												{activityType.name}
-											</Select.Item>
-										{/each}
-									{/if}
-								</Select.Content>
-							</Select.Root>
-							<Field.Description>Enter the type of activity.</Field.Description>
-						</Field.Field>
-						<!-- Started At -->
-						<Field.Field>
-							<Field.Label for="started_at">Started At</Field.Label>
-							<div class="flex w-full items-center gap-2">
-								<Input type="date" id="started_at" bind:value={startedDateAt} class="flex-6" />
-								<Input
-									type="time"
-									step="1"
-									id="started_time_at"
-									bind:value={startedTimeAt}
-									class="flex-5"
-								/>
-								<Button
-									type="button"
-									variant="outline"
-									size="icon"
-									onclick={setCurrent}
-									class="flex-1"
-								>
-									<TimerIcon />
-								</Button>
-							</div>
-						</Field.Field>
-						<!-- Description -->
-						<Field.Field>
-							<Field.Label for="description">Description</Field.Label>
-							<Textarea id="description" bind:value={description} class="w-full" />
-						</Field.Field>
-						<!-- Submit -->
-						<div class="flex items-center justify-end gap-2">
-							{#if isEditing}
-								<Button type="button" variant="outline" onclick={startCreateMode}>Cancel</Button>
-							{/if}
+	<div class="flex gap-4">
+		<!-- Create/Edit -->
+		<Card.Root class="w-full max-w-md p-4">
+			<form class="w-full" onsubmit={handleSubmit}>
+				<Field.Set class="w-full">
+					<Field.Legend>{isEditing ? "Edit Trip" : "Create New Trip"}</Field.Legend>
+					<Field.Description
+						>{isEditing
+							? "Update activity details."
+							: "Create new trip to contact."}</Field.Description
+					>
+					<!-- Contact -->
+					<Field.Field>
+						<Field.Label for="contact_id">Destination Contact</Field.Label>
+						<Select.Root type="single" bind:value={contactId}>
+							<Select.Trigger id="contact_id" class="relative z-10 w-full">
+								{contactTrigger}
+							</Select.Trigger>
+							<Select.Content>
+								{#if contactsQuery.data?.contacts}
+									{#each contactsQuery.data.contacts as contact (contact.contact_id)}
+										<Select.Item value={contact.contact_id.toString()}>
+											{contact.name}
+										</Select.Item>
+									{/each}
+								{/if}
+							</Select.Content>
+						</Select.Root>
+						<!-- Contact Map -->
+						<div class="relative z-0 mt-3 h-52">
+							<div
+								bind:this={mapElement}
+								class="h-full w-full overflow-hidden rounded-lg border border-border"
+							></div>
+						</div>
+					</Field.Field>
+					<!-- Activity Type -->
+					<Field.Field>
+						<Field.Label for="activity_type_id">Activity Type</Field.Label>
+						<Select.Root type="single" bind:value={activityTypeId}>
+							<Select.Trigger id="contact_id" class="w-full">{activityTypeTrigger}</Select.Trigger>
+							<Select.Content>
+								{#if activityTypesQuery.data?.activity_types}
+									{#each activityTypesQuery.data.activity_types as activityType (activityType.activity_type_id)}
+										<Select.Item value={activityType.activity_type_id.toString()}>
+											{activityType.name}
+										</Select.Item>
+									{/each}
+								{/if}
+							</Select.Content>
+						</Select.Root>
+					</Field.Field>
+					<!-- Started At -->
+					<Field.Field>
+						<Field.Label for="started_at">Started At</Field.Label>
+						<div class="flex w-full items-center gap-2">
+							<Input type="date" id="started_at" bind:value={startedDateAt} class="flex-6" />
+							<Input
+								type="time"
+								step="1"
+								id="started_time_at"
+								bind:value={startedTimeAt}
+								class="flex-5"
+							/>
 							<Button
-								type="submit"
-								disabled={createActivityMutation.isPending || editActivityMutation.isPending}
+								type="button"
+								variant="outline"
+								size="icon"
+								onclick={setCurrent}
+								class="flex-1"
 							>
-								{isEditing ? "Save Changes" : "Create Trip"}
+								<TimerIcon />
 							</Button>
 						</div>
-					</Field.Set>
-				</form>
-			</Card.Root>
+					</Field.Field>
+					<!-- Description -->
+					<Field.Field>
+						<Field.Label for="description">Description</Field.Label>
+						<Textarea id="description" bind:value={description} class="w-full" />
+					</Field.Field>
+					<!-- Submit -->
+					<div class="flex items-center justify-end gap-2">
+						{#if isEditing}
+							<Button type="button" variant="outline" onclick={startCreateMode}>Cancel</Button>
+						{/if}
+						<Button
+							type="submit"
+							disabled={createActivityMutation.isPending || editActivityMutation.isPending}
+						>
+							{isEditing ? "Save Changes" : "Create Trip"}
+						</Button>
+					</div>
+				</Field.Set>
+			</form>
+		</Card.Root>
 
-			<!-- Table -->
-			<div class="flex min-w-0 flex-1">
-				<Table.Root>
-					<Table.Caption>A list of activity.</Table.Caption>
-					<Table.Header>
-						<Table.Row>
-							<Table.Head>#</Table.Head>
-							<Table.Head>Contact Name</Table.Head>
-							<Table.Head>Activity Type</Table.Head>
-							<Table.Head>Started At</Table.Head>
-							<Table.Head>Status</Table.Head>
-							<Table.Head>Actions</Table.Head>
-						</Table.Row>
-					</Table.Header>
-					<Table.Body>
-						{#each activitiesQuery.data.activities as activity (activity.activity_id)}
-							<Table.Row class={activity.deleted_at ? "text-red-700" : ""}>
-								<Table.Cell>{activity.activity_id}</Table.Cell>
-								<Table.Cell>{activity.contact_name}</Table.Cell>
-								<Table.Cell>{activity.activity_type_name}</Table.Cell>
-								<Table.Cell
-									>{activity.started_at
-										? DateTime.fromISO(activity.started_at).toLocaleString(DateTime.DATETIME_MED)
-										: "-"}</Table.Cell
-								>
-								<Table.Cell>
-									{#if activity.finished_at}
-										<Badge variant="default">Finished</Badge>
-									{:else}
-										<Badge variant="outline">Pending</Badge>
-									{/if}
-								</Table.Cell>
-								<Table.Cell>
-									<Dialog.Root>
-										<Dialog.Trigger class={buttonVariants({ variant: "outline", size: "icon" })}>
-											<InfoIcon />
-										</Dialog.Trigger>
-										<Dialog.Content class="sm:max-w-md">
-											<Dialog.Header>
-												<Dialog.Title>Trip Details</Dialog.Title>
-												<Dialog.Description>Activity information summary.</Dialog.Description>
-											</Dialog.Header>
-											<div class="mt-4 space-y-3">
-												<div class="flex items-center justify-between">
-													<span class="text-sm text-muted-foreground">Activity ID</span>
-													<span class="text-sm font-medium">{activity.activity_id}</span>
-												</div>
-												<div class="flex items-center justify-between">
-													<span class="text-sm text-muted-foreground">Contact</span>
-													<span class="text-sm font-medium">{activity.contact_name}</span>
-												</div>
-												<div class="flex items-center justify-between">
-													<span class="text-sm text-muted-foreground">Activity Type</span>
-													<span class="text-sm font-medium">{activity.activity_type_name}</span>
-												</div>
-												<div class="flex items-center justify-between">
-													<span class="text-sm text-muted-foreground">Tracker</span>
-													<span class="text-sm font-medium">{activity.tracker_name || "-"}</span>
-												</div>
-												<div class="flex items-center justify-between">
-													<span class="text-sm text-muted-foreground">Started At</span>
-													<span class="text-sm font-medium">
-														{activity.started_at
-															? DateTime.fromISO(activity.started_at).toLocaleString(
-																	DateTime.DATETIME_MED
-																)
-															: "-"}
-													</span>
-												</div>
-												<div class="flex items-center justify-between">
-													<span class="text-sm text-muted-foreground">Finished At</span>
-													<span class="text-sm font-medium">
-														{activity.finished_at
-															? DateTime.fromISO(activity.finished_at).toLocaleString(
-																	DateTime.DATETIME_MED
-																)
-															: "-"}
-													</span>
-												</div>
-												<div class="flex items-center justify-between">
-													<span class="text-sm text-muted-foreground">Finished Lat</span>
-													<span class="text-sm font-medium"
-														>{activity.finished_latitude ?? "-"}</span
-													>
-												</div>
-												<div class="flex items-center justify-between">
-													<span class="text-sm text-muted-foreground">Finished Lng</span>
-													<span class="text-sm font-medium"
-														>{activity.finished_longitude ?? "-"}</span
-													>
-												</div>
-												<div class="space-y-1">
-													<span class="text-sm text-muted-foreground">Description</span>
-													<p class="text-sm">{activity.description || "-"}</p>
-												</div>
+		<!-- Table -->
+		<div class="flex min-w-0 flex-1">
+			<Table.Root>
+				<Table.Caption>A list of activity.</Table.Caption>
+				<Table.Header>
+					<Table.Row>
+						<Table.Head>#</Table.Head>
+						<Table.Head>Contact Name</Table.Head>
+						<Table.Head>Activity Type</Table.Head>
+						<Table.Head>Started At</Table.Head>
+						<Table.Head>Status</Table.Head>
+						<Table.Head>Actions</Table.Head>
+					</Table.Row>
+				</Table.Header>
+				<Table.Body>
+					{#each activitiesQuery.data?.activities ?? [] as activity (activity.activity_id)}
+						<Table.Row class={activity.deleted_at ? "text-red-700" : ""}>
+							<Table.Cell>{activity.activity_id}</Table.Cell>
+							<Table.Cell>{activity.contact_name}</Table.Cell>
+							<Table.Cell>{activity.activity_type_name}</Table.Cell>
+							<Table.Cell
+								>{activity.started_at
+									? DateTime.fromISO(activity.started_at).toLocaleString(DateTime.DATETIME_MED)
+									: "-"}</Table.Cell
+							>
+							<Table.Cell>
+								{#if activity.finished_at}
+									<Badge variant="default">Finished</Badge>
+								{:else}
+									<Badge variant="outline">Pending</Badge>
+								{/if}
+							</Table.Cell>
+							<Table.Cell>
+								<Dialog.Root>
+									<Dialog.Trigger class={buttonVariants({ variant: "outline", size: "icon" })}>
+										<InfoIcon />
+									</Dialog.Trigger>
+									<Dialog.Content class="sm:max-w-md">
+										<Dialog.Header>
+											<Dialog.Title>Trip Details</Dialog.Title>
+											<Dialog.Description>Activity information summary.</Dialog.Description>
+										</Dialog.Header>
+										<div class="mt-4 space-y-3">
+											<div class="flex items-center justify-between">
+												<span class="text-sm text-muted-foreground">Activity ID</span>
+												<span class="text-sm font-medium">{activity.activity_id}</span>
 											</div>
-										</Dialog.Content>
-									</Dialog.Root>
-									<Button size="icon" variant="outline" onclick={() => startEditMode(activity)}>
-										<PencilIcon />
-									</Button>
-									<Button
-										size="icon"
-										variant="destructive"
-										onclick={() => handleDelete(activity)}
-										disabled={deleteActivityMutation.isPending}
-									>
-										<TrashIcon />
-									</Button>
-								</Table.Cell>
-							</Table.Row>
-						{/each}
-					</Table.Body>
-				</Table.Root>
-			</div>
+											<div class="flex items-center justify-between">
+												<span class="text-sm text-muted-foreground">Contact</span>
+												<span class="text-sm font-medium">{activity.contact_name}</span>
+											</div>
+											<div class="flex items-center justify-between">
+												<span class="text-sm text-muted-foreground">Activity Type</span>
+												<span class="text-sm font-medium">{activity.activity_type_name}</span>
+											</div>
+											<div class="flex items-center justify-between">
+												<span class="text-sm text-muted-foreground">Tracker</span>
+												<span class="text-sm font-medium">{activity.tracker_name || "-"}</span>
+											</div>
+											<div class="flex items-center justify-between">
+												<span class="text-sm text-muted-foreground">Started At</span>
+												<span class="text-sm font-medium">
+													{activity.started_at
+														? DateTime.fromISO(activity.started_at).toLocaleString(
+																DateTime.DATETIME_MED
+															)
+														: "-"}
+												</span>
+											</div>
+											<div class="flex items-center justify-between">
+												<span class="text-sm text-muted-foreground">Finished At</span>
+												<span class="text-sm font-medium">
+													{activity.finished_at
+														? DateTime.fromISO(activity.finished_at).toLocaleString(
+																DateTime.DATETIME_MED
+															)
+														: "-"}
+												</span>
+											</div>
+											<div class="flex items-center justify-between">
+												<span class="text-sm text-muted-foreground">Finished Lat</span>
+												<span class="text-sm font-medium">{activity.finished_latitude ?? "-"}</span>
+											</div>
+											<div class="flex items-center justify-between">
+												<span class="text-sm text-muted-foreground">Finished Lng</span>
+												<span class="text-sm font-medium">{activity.finished_longitude ?? "-"}</span
+												>
+											</div>
+											<div class="space-y-1">
+												<span class="text-sm text-muted-foreground">Description</span>
+												<p class="text-sm">{activity.description || "-"}</p>
+											</div>
+										</div>
+									</Dialog.Content>
+								</Dialog.Root>
+								<Button size="icon" variant="outline" onclick={() => startEditMode(activity)}>
+									<PencilIcon />
+								</Button>
+								<Button
+									size="icon"
+									variant="destructive"
+									onclick={() => handleDelete(activity)}
+									disabled={deleteActivityMutation.isPending}
+								>
+									<TrashIcon />
+								</Button>
+							</Table.Cell>
+						</Table.Row>
+					{/each}
+				</Table.Body>
+			</Table.Root>
 		</div>
 	</div>
-{/if}
+</div>
