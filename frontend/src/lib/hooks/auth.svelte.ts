@@ -1,11 +1,21 @@
 import { browser } from "$app/environment";
 import { goto } from "$app/navigation";
 import { resolve } from "$app/paths";
+import { config } from "$lib/config";
 
 class AuthState {
-	logout() {
+	async logout() {
 		if (browser) {
-			goto(resolve("/login"));
+			try {
+				await fetch(`${config.apiBaseUrl}/auth/logout`, {
+					method: "POST",
+					credentials: "include"
+				});
+			} catch (error) {
+				console.error("Logout error:", error);
+			} finally {
+				goto(resolve("/login"));
+			}
 		}
 	}
 }
