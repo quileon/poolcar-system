@@ -1,4 +1,5 @@
 use deadpool_redis::redis::AsyncCommands;
+use haversine_rs::{distance, point::Point, units::Unit};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -80,23 +81,55 @@ pub async fn audit_handler(state: Arc<AppState>) -> Result<(), TasksError> {
     // Save all into database
     for payload in &tracker_payloads {
         if let (_, Some(payload)) = payload {
-            sqlx::query(
-                r#"
-                INSERT INTO audit (
-                    car_id,
-                    tracker_id,
-                    latitude,
-                    longitude
+            // Compare with last audit location to avoid duplicate audits
+            if let (Some(lat), Some(long)) = (payload.location.latitude, payload.location.longitude)
+            {
+                let last_location_key = format!("tracker:{}:last_audit_location", payload.id);
+                let last_location: Option<String> = conn.get(&last_location_key).await?;
+
+                if let Some(last_location) = last_location {
+                    let last_location: serde_json::Value = serde_json::from_str(&last_location)?;
+                    let last_lat = last_location["latitude"].as_f64().unwrap_or(0.0);
+                    let last_long = last_location["longitude"].as_f64().unwrap_or(0.0);
+                    let last_point = Point::new(last_lat, last_long);
+                    let current_point = Point::new(lat, long);
+                    let distance = distance(last_point, current_point, Unit::Meters);
+
+                    if distance < 10.0 {
+                        tracing::debug!(
+                            "Tracker {} is within 10 meters of last audit location, skipping audit",
+                            payload.id
+                        );
+                        continue;
+                    }
+                }
+
+                // Update last audit location in Redis
+                let new_location = serde_json::json!({
+                    "latitude": lat,
+                    "longitude": long
+                });
+                conn.set::<_, _, ()>(&last_location_key, serde_json::to_string(&new_location)?)
+                    .await?;
+
+                sqlx::query(
+                    r#"
+                    INSERT INTO audit (
+                        car_id,
+                        tracker_id,
+                        latitude,
+                        longitude
+                    )
+                    VALUES (?, ?, ?, ?)
+                "#,
                 )
-                VALUES (?, ?, ?, ?)
-            "#,
-            )
-            .bind(payload.car_id.map(|id| id as i32))
-            .bind(payload.id as i32)
-            .bind(payload.location.latitude)
-            .bind(payload.location.longitude)
-            .execute(&state.db)
-            .await?;
+                .bind(payload.car_id.map(|id| id as i32))
+                .bind(payload.id as i32)
+                .bind(lat)
+                .bind(long)
+                .execute(&state.db)
+                .await?;
+            }
         }
     }
 

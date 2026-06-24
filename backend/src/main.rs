@@ -82,8 +82,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         } => {
             tracing::info!("Creating admin user: {}", username);
 
-            let hashed_password =
-                hash_password(&password).context("Failed to hash password")?;
+            let hashed_password = hash_password(&password).context("Failed to hash password")?;
             sqlx::query(
                 "INSERT INTO users (username, email, password, full_name, user_role_id) VALUES (?, ?, ?, ?, ?)"
             )
