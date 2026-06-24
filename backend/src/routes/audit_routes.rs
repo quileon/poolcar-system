@@ -7,8 +7,7 @@ use crate::{
 };
 use axum::middleware::from_fn;
 use axum::{
-    extract::{Query, State}
-    ,
+    extract::{Query, State},
     response::IntoResponse,
     routing::get,
     Json, Router,
@@ -47,8 +46,20 @@ pub async fn get_audit(
         }
         date_str
     } else {
-        chrono::Local::now().format("%Y-%m-%d").to_string()
+        let wib_now = chrono::Utc::now() + chrono::Duration::hours(7);
+        wib_now.format("%Y-%m-%d").to_string()
     };
+
+    let parsed_date = chrono::NaiveDate::parse_from_str(&target_date, "%Y-%m-%d")
+        .map_err(|_| AppError::ValidationError("Invalid date parsing".to_string()))?;
+
+    let start_wib = parsed_date.and_hms_opt(0, 0, 0).unwrap();
+    let end_wib = (parsed_date + chrono::Duration::days(1))
+        .and_hms_opt(0, 0, 0)
+        .unwrap();
+
+    let start_utc = start_wib - chrono::Duration::hours(7);
+    let end_utc = end_wib - chrono::Duration::hours(7);
 
     // Build the query based on which filter is provided
     let audit_records: Vec<CarAudit> = if let Some(car_id) = params.car_id {
@@ -66,11 +77,12 @@ pub async fn get_audit(
                 updated_at,
                 deleted_at
             FROM audit
-            WHERE DATE(recorded_at) = ? AND car_id = ?
+            WHERE recorded_at >= ? AND recorded_at < ? AND car_id = ?
             ORDER BY recorded_at DESC
             "#,
         )
-        .bind(&target_date)
+        .bind(start_utc)
+        .bind(end_utc)
         .bind(car_id)
         .fetch_all(&state.db)
         .await?
@@ -89,11 +101,12 @@ pub async fn get_audit(
                 updated_at,
                 deleted_at
             FROM audit
-            WHERE DATE(recorded_at) = ? AND tracker_id = ?
+            WHERE recorded_at >= ? AND recorded_at < ? AND tracker_id = ?
             ORDER BY recorded_at DESC
             "#,
         )
-        .bind(&target_date)
+        .bind(start_utc)
+        .bind(end_utc)
         .bind(tracker_id)
         .fetch_all(&state.db)
         .await?
