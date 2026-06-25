@@ -32,6 +32,11 @@ export const load: LayoutServerLoad = async ({ cookies, fetch, url }) => {
 
 	const userData = verifyResponse.data as LoginResponse;
 
+	if (userData.role === "Security") {
+		cookies.delete("auth_token", { path: "/" });
+		throw redirect(302, "/login");
+	}
+
 	const managementPaths = [
 		"/cars",
 		"/car-types",

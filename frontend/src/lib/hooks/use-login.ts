@@ -37,6 +37,17 @@ export function useLoginMutation() {
 			}
 
 			const dataResponse: LoginResponse = await response.json();
+			if (dataResponse.role === "Security") {
+				try {
+					await fetch(`${config.apiBaseUrl}/auth/logout`, {
+						method: "POST",
+						credentials: "include"
+					});
+				} catch (e) {
+					console.error("Failed to clear cookie:", e);
+				}
+				throw new Error("Security personnel are not authorized to access the system.");
+			}
 			return dataResponse;
 		},
 		onSuccess: () => {
