@@ -1,6 +1,5 @@
 <script lang="ts">
 	import "leaflet/dist/leaflet.css";
-	import * as Card from "$lib/components/ui/card/index";
 	import * as RadioGroup from "$lib/components/ui/radio-group/index";
 	import * as Popover from "$lib/components/ui/popover/index";
 	import * as Command from "$lib/components/ui/command/index";
@@ -103,13 +102,13 @@
 	}
 </script>
 
-<div class="flex h-full w-full flex-row gap-4">
-	<Card.Root class="flex-2 p-0">
-		<div bind:this={mapElement} class="h-full w-full rounded-xl"></div>
-	</Card.Root>
-	<div class="flex flex-1 flex-col gap-4">
+<div class="flex h-[calc(100vh-7.5rem)] w-full flex-row gap-4">
+	<div class="flex-2 rounded-xl border border-border overflow-hidden bg-card text-card-foreground shadow-sm h-full w-full">
+		<div bind:this={mapElement} class="h-full w-full"></div>
+	</div>
+	<div class="flex flex-1 flex-col gap-4 h-full min-h-0">
 		<!-- Select Car or Tracker to Audit -->
-		<Card.Root class="flex-none flex flex-col gap-4 p-4">
+		<div class="flex-none flex flex-col gap-4 p-4 rounded-xl border border-border bg-card text-card-foreground shadow-sm">
 			<div>
 				<h3 class="text-md mb-3 font-medium">Filter by</h3>
 				<RadioGroup.Root bind:value={filterType} onValueChange={refreshCombobox}>
@@ -222,9 +221,9 @@
 			>
 				Export
 			</Button>
-		</Card.Root>
+		</div>
 		<!-- Audit Data -->
-		<Card.Root class="flex-1 min-h-0 flex flex-col gap-3 p-4">
+		<div class="flex-1 min-h-0 flex flex-col gap-3 p-4 rounded-xl border border-border bg-card text-card-foreground shadow-sm">
 			<h4 class="text-medium font-medium">Audit Data</h4>
 			<ScrollArea class="flex-1 w-full min-h-0">
 				{#if auditQuery.data}
@@ -249,6 +248,6 @@
 					</div>
 				{/if}
 			</ScrollArea>
-		</Card.Root>
+		</div>
 	</div>
 </div>
