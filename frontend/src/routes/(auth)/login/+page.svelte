@@ -4,7 +4,7 @@
 	import * as Field from "$lib/components/ui/field/index";
 	import * as Card from "$lib/components/ui/card/index";
 	import Input from "$lib/components/ui/input/input.svelte";
-	import placeholderImage from "$lib/assets/placeholder.svg";
+	import logo from "$lib/assets/logo.png";
 	import { useLoginMutation } from "$lib/hooks/use-login";
 	import * as Alert from "$lib/components/ui/alert/index";
 	import AlertCircleIcon from "@lucide/svelte/icons/alert-circle";
@@ -87,11 +87,11 @@
 					</div>
 				{/if}
 			</form>
-			<div class="relative hidden bg-muted md:block">
+			<div class="relative hidden bg-neutral-50 dark:bg-neutral-950 md:flex items-center justify-center p-8 border-s border-border">
 				<img
-					src={placeholderImage}
-					alt="Login Placeholder"
-					class="dark:brigtness-[0.2] absolute inset-0 h-full object-cover dark:grayscale"
+					src={logo}
+					alt="Poolcar Logo"
+					class="max-h-64 max-w-xs object-contain"
 				/>
 			</div>
 		</Card.Content>
