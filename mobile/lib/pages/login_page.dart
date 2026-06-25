@@ -58,6 +58,20 @@ class _LoginPageState extends State<LoginPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Image.asset(
+              'Poolcar Icon.png',
+              height: 120,
+              width: 120,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Poolcar',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 32),
             TextField(
               controller: _usernameController,
               decoration: const InputDecoration(labelText: 'Username'),

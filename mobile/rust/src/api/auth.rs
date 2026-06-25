@@ -61,7 +61,7 @@ pub async fn verify(token: String) -> AuthResult {
             if let Ok(json) = response.json::<LoginResponse>().await {
                 if json.status == "success" {
                     if let Some(data) = json.data {
-                        if data.role == "Security" {
+                        if data.role == "Security" || data.role == "Admin" {
                             return AuthResult {
                                 success: true,
                                 error_message: None,
@@ -136,7 +136,7 @@ pub async fn login(username: String, password: String) -> AuthResult {
             if let Ok(json) = response.json::<LoginResponse>().await {
                 if json.status == "success" {
                     if let Some(data) = json.data {
-                        if data.role == "Security" {
+                        if data.role == "Security" || data.role == "Admin" {
                             return AuthResult {
                                 success: true,
                                 error_message: None,
