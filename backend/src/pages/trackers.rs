@@ -123,7 +123,7 @@ pub async fn delete_tracker(
     id: i32,
     db: &State<DatabaseConnection>,
     user: AuthenticatedUser,
-) -> Result<(), Status> {
+) -> Result<Redirect, Status> {
     if user.role != "Admin" {
         return Err(Status::Forbidden);
     }
@@ -134,5 +134,5 @@ pub async fn delete_tracker(
         .await
         .map_err(|_| Status::InternalServerError)?;
 
-    Ok(())
+    Ok(Redirect::to("/crud/trackers"))
 }

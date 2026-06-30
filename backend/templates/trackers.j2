@@ -55,15 +55,15 @@
 											{{ car.name }} ({{ car.police_number }})
 										</span>
 									{% else %}
-                                        <span class="badge bg-warning px-2 py-1 rounded-pill">
+                                        <span class="badge bg-secondary px-2 py-1 rounded-pill">
                                             Unassigned
                                         </span>
 									{% endif %}
 								</td>
-								<td class="text-muted" style="font-size: 0.9rem;">
+								<td class="text-muted">
 									{{ item.tracker.created_at.format("%Y-%m-%d %H:%M:%S") }}
 								</td>
-								<td class="text-muted" style="font-size: 0.9rem;">
+								<td class="text-muted">
 									{{ item.tracker.updated_at.format("%Y-%m-%d %H:%M:%S") }}
 								</td>
 								<td class="text-end">
@@ -74,8 +74,8 @@
 										</a>
 										<button class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1.5"
 											hx-delete="/crud/trackers/{{ item.tracker.tracker_id }}"
-											hx-target="#tracker-row-{{ item.tracker.tracker_id }}"
-											hx-swap="outerHTML"
+											hx-target="body"
+											hx-swap="innerHTML"
 											hx-confirm="Are you sure you want to delete tracker '{{ item.tracker.name }}'?"
 											title="Delete">
 											<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor" style="width: 16px; height: 16px;"><path d="M292.31-140q-29.83 0-51.07-21.24Q220-182.48 220-212.31V-720h-10q-12.75 0-21.37-8.63-8.63-8.63-8.63-21.38 0-12.76 8.63-21.37Q197.25-780 210-780h150q0-14.69 10.35-25.04 10.34-10.34 25.03-10.34h169.24q14.69 0 25.03 10.34Q600-794.69 600-780h150q12.75 0 21.37 8.63 8.63 8.63 8.63 21.38 0 12.76-8.63 21.37Q762.75-720 750-720h-10v507.69q0 29.83-21.24 51.07Q697.52-140 667.69-140H292.31ZM680-720H280v507.69q0 5.39 3.46 8.85t8.85 3.46h375.38q5.39 0 8.85-3.46t3.46-8.85V-720ZM427.54-288.62q8.61-8.63 8.61-21.38v-300q0-12.75-8.63-21.38-8.62-8.62-21.38-8.62-12.75 0-21.37 8.62-8.61 8.63-8.61 21.38v300q0 12.75 8.62 21.38 8.63 8.62 21.39 8.62 12.75 0 21.37-8.62Zm147.69 0q8.61-8.63 8.61-21.38v-300q0-12.75-8.62-21.38-8.63-8.62-21.39-8.62-12.75 0-21.37 8.62-8.61 8.63-8.61 21.38v300q0 12.75 8.63 21.38 8.62 8.62 21.38 8.62 12.75 0 21.37-8.62ZM280-720v520-520Z"/></svg>
@@ -104,7 +104,7 @@
 				<form hx-put="/crud/trackers/{{ editing.tracker_id }}" hx-target="body" hx-swap="innerHTML">
 					<div class="mb-3">
 						<label for="tracker-name" class="form-label fw-semibold text-muted">Tracker Name / Serial</label>
-						<input type="text" class="form-control form-control-lg" id="tracker-name" name="name" value="{{ editing.name }}" placeholder="Tracker Alpha" required>
+						<input type="text" class="form-control form-control-lg" id="tracker-name" name="name" value="{{ editing.name }}" placeholder="e.g. Tracker Alpha" required>
 					</div>
 					<div class="d-grid gap-2">
 						<button type="submit" class="btn btn-primary btn-lg fs-6">Save Changes</button>
@@ -117,7 +117,7 @@
 				<form action="/crud/trackers" method="post">
 					<div class="mb-3">
 						<label for="tracker-name" class="form-label fw-semibold text-muted">Tracker Name / Serial</label>
-						<input type="text" class="form-control form-control-lg" id="tracker-name" name="name" placeholder="Tracker Alpha" required>
+						<input type="text" class="form-control form-control-lg" id="tracker-name" name="name" placeholder="e.g. Tracker Alpha" required>
 					</div>
 					<div class="d-grid">
 						<button type="submit" class="btn btn-primary btn-lg fs-6">Add Tracker</button>
