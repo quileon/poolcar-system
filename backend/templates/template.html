@@ -10,7 +10,7 @@
 		<link rel="icon" type="image/png" href="/assets/logo.png" />
 		{% block head %}{% endblock %}
 	</head>
-	<body class="bg-light">
+	<body class="bg-light" hx-boost="true">
 		<div class="d-flex min-vh-100">
 			<!-- Sidebar -->
 			<aside class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark border-end border-secondary vh-100" style="width: 260px;">
@@ -137,7 +137,7 @@
 				</header>
 
 				<!-- Scrollable Content Body -->
-				<main class="p-4">
+				<main class="p-4 d-flex flex-column gap-4">
 					{% block body %}{% endblock %}
 				</main>
 			</div>

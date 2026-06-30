@@ -1,0 +1,130 @@
+{% extends "template.html" %}
+
+{% block head %}
+	<title>Trackers - Poolcar</title>
+{% endblock %}
+
+{% block body %}
+<!-- Page Header -->
+<div class="d-flex flex-column">
+	<h3 class="fw-bold text-dark">Trackers Management</h3>
+	<p class="text-dark-emphasis">Manage GPS tracking hardware devices registered in the system.</p>
+</div>
+
+<!-- Main Content -->
+<div class="row g-4">
+	<!-- Table -->
+	<div class="col-12 col-lg-8">
+		<div class="card border-0 shadow-sm p-4 h-100 d-flex flex-column gap-4">
+			<div class="d-flex align-items-center justify-content-between">
+				<h5 class="mb-0 fw-bold text-dark">Registered Trackers</h5>
+				<span class="badge rounded-pill bg-primary py-2 px-3 fw-semibold">
+				    {{ trackers.len() }} Devices
+				</span>
+			</div>
+
+			<div class="table-responsive">
+				<table class="table align-middle mb-0">
+					<thead class="table-light">
+						<tr>
+							<th style="width: 80px;">ID</th>
+							<th>Tracker Name</th>
+							<th>Assigned Car</th>
+							<th>Created At</th>
+							<th>Updated At</th>
+							<th style="width: 150px;" class="text-end">Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% if trackers.is_empty() %}
+						<tr>
+							<td colspan="6" class="text-center py-5 text-muted">
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor" class="mb-3 text-secondary" style="width: 48px; height: 48px;"><path d="M480-179.46q117.38-105.08 179.65-201.58 62.27-96.5 62.27-169.04 0-109.38-69.5-179.84-69.5-70.46-172.42-70.46-102.92 0-172.42 70.46-69.5 70.46-69.5 179.84 0 72.54 62.27 169.04 62.27 96.5 179.65 201.58Zm-23.38 53.04q-11.7-4.04-21.16-12.5-53.84-49.62-100.77-102.2-46.92-52.57-81.57-105.11-34.66-52.54-54.85-104.15-20.19-51.62-20.19-99.7 0-138.46 89.57-224.19Q357.23-860 480-860t212.35 85.73q89.57 85.73 89.57 224.19 0 48.08-20.19 99.5-20.19 51.43-54.65 104.16-34.47 52.73-81.39 105.11-46.92 52.39-100.77 102-9.46 8.46-21.34 12.69-11.89 4.23-23.58 4.23-11.69 0-23.38-4.03ZM480-557.69Zm51.11 51.11q21.2-21.19 21.2-51.11 0-29.92-21.2-51.12Q509.92-630 480-630q-29.92 0-51.11 21.19-21.2 21.2-21.2 51.12 0 29.92 21.2 51.11 21.19 21.19 51.11 21.19 29.92 0 51.11-21.19Z"/></svg>
+								<div class="fs-6 fw-semibold text-dark-emphasis mb-1">No Trackers Found</div>
+								<div>Add a tracker on the right side to get started.</div>
+							</td>
+						</tr>
+						{% else %}
+							{% for item in trackers %}
+							<tr id="tracker-row-{{ item.tracker.tracker_id }}">
+								<td class="font-monospace fw-semibold">#{{ item.tracker.tracker_id }}</td>
+								<td class="fw-semibold text-dark">{{ item.tracker.name }}</td>
+								<td>
+									{% if let Some(car) = item.car %}
+										<span class="badge bg-success px-2 py-1 rounded-pill">
+											{{ car.name }} ({{ car.police_number }})
+										</span>
+									{% else %}
+                                        <span class="badge bg-warning px-2 py-1 rounded-pill">
+                                            Unassigned
+                                        </span>
+									{% endif %}
+								</td>
+								<td class="text-muted" style="font-size: 0.9rem;">
+									{{ item.tracker.created_at.format("%Y-%m-%d %H:%M:%S") }}
+								</td>
+								<td class="text-muted" style="font-size: 0.9rem;">
+									{{ item.tracker.updated_at.format("%Y-%m-%d %H:%M:%S") }}
+								</td>
+								<td class="text-end">
+									<div class="d-flex gap-2 justify-content-end">
+										<a href="/crud/trackers?edit={{ item.tracker.tracker_id }}" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1.5" title="Edit">
+											<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor" style="width: 16px; height: 16px;"><path d="M200-200h50.46l409.46-409.46-50.46-50.46L200-250.46V-200Zm-23.84 60q-15.37 0-25.76-10.4-10.4-10.39-10.4-25.76v-69.3q0-14.63 5.62-27.89 5.61-13.26 15.46-23.11l506.54-506.31q9.07-8.24 20.03-12.73 10.97-4.5 23-4.5t23.3 4.27q11.28 4.27 19.97 13.58l48.85 49.46q9.31 8.69 13.27 20 3.96 11.31 3.96 22.62 0 12.07-4.12 23.03-4.12 10.97-13.11 20.04L296.46-161.08q-9.85 9.85-23.11 15.46-13.26 5.62-27.89 5.62h-69.3Zm584.22-570.15-50.23-50.23 50.23 50.23Zm-126.13 75.9-24.79-25.67 50.46 50.46-25.67-24.79Z"/></svg>
+											Edit
+										</a>
+										<button class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1.5"
+											hx-delete="/crud/trackers/{{ item.tracker.tracker_id }}"
+											hx-target="#tracker-row-{{ item.tracker.tracker_id }}"
+											hx-swap="outerHTML"
+											hx-confirm="Are you sure you want to delete tracker '{{ item.tracker.name }}'?"
+											title="Delete">
+											<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor" style="width: 16px; height: 16px;"><path d="M292.31-140q-29.83 0-51.07-21.24Q220-182.48 220-212.31V-720h-10q-12.75 0-21.37-8.63-8.63-8.63-8.63-21.38 0-12.76 8.63-21.37Q197.25-780 210-780h150q0-14.69 10.35-25.04 10.34-10.34 25.03-10.34h169.24q14.69 0 25.03 10.34Q600-794.69 600-780h150q12.75 0 21.37 8.63 8.63 8.63 8.63 21.38 0 12.76-8.63 21.37Q762.75-720 750-720h-10v507.69q0 29.83-21.24 51.07Q697.52-140 667.69-140H292.31ZM680-720H280v507.69q0 5.39 3.46 8.85t8.85 3.46h375.38q5.39 0 8.85-3.46t3.46-8.85V-720ZM427.54-288.62q8.61-8.63 8.61-21.38v-300q0-12.75-8.63-21.38-8.62-8.62-21.38-8.62-12.75 0-21.37 8.62-8.61 8.63-8.61 21.38v300q0 12.75 8.62 21.38 8.63 8.62 21.39 8.62 12.75 0 21.37-8.62Zm147.69 0q8.61-8.63 8.61-21.38v-300q0-12.75-8.62-21.38-8.63-8.62-21.39-8.62-12.75 0-21.37 8.62-8.61 8.63-8.61 21.38v300q0 12.75 8.63 21.38 8.62 8.62 21.38 8.62 12.75 0 21.37-8.62ZM280-720v520-520Z"/></svg>
+											Delete
+										</button>
+									</div>
+								</td>
+							</tr>
+							{% endfor %}
+						{% endif %}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+
+	<!-- CRUD Form -->
+	<div class="col-12 col-lg-4">
+		<div class="card border-0 shadow-sm p-4 h-100 d-flex flex-column gap-4">
+			{% if let Some(editing) = editing_tracker %}
+				<div class="d-flex align-items-center justify-content-between">
+					<h5 class="mb-0 fw-bold text-dark">Edit Tracker</h5>
+					<span class="badge rounded-pill bg-primary px-3 py-2 fw-semibold">ID #{{ editing.tracker_id }}</span>
+				</div>
+
+				<form hx-put="/crud/trackers/{{ editing.tracker_id }}" hx-target="body" hx-swap="innerHTML">
+					<div class="mb-3">
+						<label for="tracker-name" class="form-label fw-semibold text-muted">Tracker Name / Serial</label>
+						<input type="text" class="form-control form-control-lg" id="tracker-name" name="name" value="{{ editing.name }}" placeholder="Tracker Alpha" required>
+					</div>
+					<div class="d-grid gap-2">
+						<button type="submit" class="btn btn-primary btn-lg fs-6">Save Changes</button>
+						<a href="/crud/trackers" class="btn btn-light border btn-lg fs-6">Cancel</a>
+					</div>
+				</form>
+			{% else %}
+				<h5 class="fw-bold text-dark">Add New Tracker</h5>
+
+				<form action="/crud/trackers" method="post">
+					<div class="mb-3">
+						<label for="tracker-name" class="form-label fw-semibold text-muted">Tracker Name / Serial</label>
+						<input type="text" class="form-control form-control-lg" id="tracker-name" name="name" placeholder="Tracker Alpha" required>
+					</div>
+					<div class="d-grid">
+						<button type="submit" class="btn btn-primary btn-lg fs-6">Add Tracker</button>
+					</div>
+				</form>
+			{% endif %}
+		</div>
+	</div>
+</div>
+{% endblock %}

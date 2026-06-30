@@ -1,11 +1,10 @@
 use crate::auth::{self, JwtSecret};
 use crate::entities::sea_orm_active_enums::UserRole;
 use crate::entities::users::{self, Entity as Users};
-use crate::types::HxRedirect;
 use askama::Template;
 use askama_web::WebTemplate;
 use rocket::form::Form;
-use rocket::http::{Cookie, CookieJar, Header};
+use rocket::http::{Cookie, CookieJar};
 use rocket::response::Redirect;
 use rocket::{FromForm, State};
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
@@ -42,7 +41,7 @@ pub async fn post_login<'r>(
     db: &State<DatabaseConnection>,
     jwt_secret: &State<JwtSecret>,
     cookies: &CookieJar<'_>,
-) -> Result<HxRedirect, LoginTemplate> {
+) -> Result<Redirect, LoginTemplate> {
     let username = form_data.username;
     let password = form_data.password;
 
@@ -75,10 +74,7 @@ pub async fn post_login<'r>(
 
             cookies.add(Cookie::new("session_token", token));
 
-            return Ok(HxRedirect {
-                body: "",
-                header: Header::new("HX-Redirect", "/"),
-            });
+            return Ok(Redirect::to("/"));
         }
     }
 

@@ -216,7 +216,11 @@ async fn run_rocket(
                 pages::login::logout,
                 pages::api::verify,
                 pages::api::api_login,
-                pages::dashboard::dashboard
+                pages::dashboard::dashboard,
+                pages::trackers::list_trackers,
+                pages::trackers::create_tracker,
+                pages::trackers::update_tracker,
+                pages::trackers::delete_tracker
             ],
         )
         .mount("/js", rocket::fs::FileServer::from("templates/js"))
