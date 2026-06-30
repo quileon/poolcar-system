@@ -89,10 +89,7 @@ pub async fn post_login<'r>(
 }
 
 #[rocket::get("/logout")]
-pub fn logout(cookies: &CookieJar<'_>) -> HxRedirect {
+pub fn logout(cookies: &CookieJar<'_>) -> Redirect {
     cookies.remove(Cookie::from("session_token"));
-    HxRedirect {
-        body: "",
-        header: Header::new("HX-Redirect", "/login"),
-    }
+    Redirect::to("/login")
 }
