@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<script src="/js/htmx.min.js"></script>
+		<script src="/js/bootstrap.bundle.min.js"></script>
+		<link rel="stylesheet" href="/css/bootstrap.min.css" />
+		<link rel="icon" type="image/png" href="/assets/logo.png" />
+		<title>Login - Poolcar</title>
+	</head>
+	<body
+		class="d-flex justify-content-center align-items-center vh-100"
+		hx-boost="true"
+	>
+		<div class="card mb-3" style="max-width: 800px">
+			<div class="row g-0">
+				<!-- Left Column -->
+				<div class="col-md-4">
+					<img
+						src="/assets/logo.png"
+						class="img-fluid rounded-start w-100 h-100"
+						style="object-fit: contain"
+						alt="Poolcar logo"
+					/>
+				</div>
+
+				<!-- Right Column -->
+				<div class="col-md-8">
+					<div class="card-body p-4">
+						<h5 class="card-title">
+							Welcome to Poolcar Management System
+						</h5>
+						<p class="card-text">Please enter your credentials!</p>
+
+						<!-- Render Error Alert if Present -->
+						{% if let Some(err) = error %}
+						<div class="alert alert-danger" role="alert">
+							{{ err }}
+						</div>
+						{% endif %}
+
+						<form
+							hx-post="/login"
+							hx-target="body"
+							hx-swap="innerHTML"
+						>
+							<div class="mb-3">
+								<label for="username" class="form-label"
+									>Username</label
+								>
+								<input
+									type="text"
+									id="username"
+									name="username"
+									class="form-control"
+									value="{% if let Some(user) = username %}{{ user }}{% endif %}"
+									required
+								/>
+							</div>
+
+							<div class="mb-3">
+								<label for="password" class="form-label"
+									>Password</label
+								>
+								<input
+									type="password"
+									id="password"
+									name="password"
+									class="form-control"
+									required
+								/>
+							</div>
+
+							<button type="submit" class="btn btn-primary">
+								Sign In
+							</button>
+						</form>
+					</div>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>
