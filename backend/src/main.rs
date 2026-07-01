@@ -198,8 +198,8 @@ async fn run_rocket(
         .map(|s| s.into_bytes())
         .unwrap_or_else(|_| b"i-love-curren-chan".to_vec());
 
-    let google_api_key = env::var("GOOGLE_API_KEY")
-        .expect("GOOGLE_API_KEY environment variable not set");
+    let google_api_key =
+        env::var("GOOGLE_API_KEY").expect("GOOGLE_API_KEY environment variable not set");
 
     let figment = rocket::Config::figment()
         .merge(("port", rocket_port))
@@ -234,6 +234,10 @@ async fn run_rocket(
                 pages::cars::create_car,
                 pages::cars::update_car,
                 pages::cars::delete_car,
+                pages::car_history::list_history,
+                pages::car_history::create_history,
+                pages::car_history::update_history,
+                pages::car_history::delete_history,
                 pages::contacts::list_contacts,
                 pages::contacts::create_contact,
                 pages::contacts::update_contact,
