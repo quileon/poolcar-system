@@ -1,4 +1,5 @@
-use crate::auth::{self, JwtSecret};
+use crate::auth;
+use crate::types::AppConfig;
 use crate::entities::sea_orm_active_enums::UserRole;
 use crate::entities::users::{self, Entity as Users};
 use askama::Template;
@@ -39,7 +40,7 @@ pub fn unauthorized() -> Redirect {
 pub async fn post_login<'r>(
     form_data: Form<LoginForm<'r>>,
     db: &State<DatabaseConnection>,
-    jwt_secret: &State<JwtSecret>,
+    config: &State<AppConfig>,
     cookies: &CookieJar<'_>,
 ) -> Result<Redirect, LoginTemplate> {
     let username = form_data.username;
@@ -65,7 +66,7 @@ pub async fn post_login<'r>(
             let token = auth::create_token(
                 &user.username,
                 &format!("{:?}", user.user_role),
-                &jwt_secret.0,
+                &config.jwt_secret,
             )
             .map_err(|_| LoginTemplate {
                 error: Some("Token generation failed".to_owned()),

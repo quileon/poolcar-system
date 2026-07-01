@@ -198,16 +198,24 @@ async fn run_rocket(
         .map(|s| s.into_bytes())
         .unwrap_or_else(|_| b"i-love-curren-chan".to_vec());
 
+    let google_api_key = env::var("GOOGLE_API_KEY")
+        .expect("GOOGLE_API_KEY environment variable not set");
+
     let figment = rocket::Config::figment()
         .merge(("port", rocket_port))
         .merge(("address", "0.0.0.0"))
         .merge(("cli_colors", false))
         .merge(("log_level", "normal"));
 
+    let app_config = types::AppConfig {
+        jwt_secret,
+        google_api_key,
+    };
+
     rocket::custom(figment)
         .manage(db)
         .manage(redis)
-        .manage(auth::JwtSecret(jwt_secret))
+        .manage(app_config)
         .mount(
             "/",
             routes![
@@ -216,6 +224,7 @@ async fn run_rocket(
                 pages::login::logout,
                 pages::api::verify,
                 pages::api::api_login,
+                pages::api::search_places,
                 pages::dashboard::dashboard,
                 pages::trackers::list_trackers,
                 pages::trackers::create_tracker,

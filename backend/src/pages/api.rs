@@ -1,10 +1,12 @@
-use crate::auth::{AuthenticatedUser, JwtSecret};
+use crate::auth::AuthenticatedUser;
+use crate::types::AppConfig;
 use crate::entities::sea_orm_active_enums::UserRole;
 use crate::entities::users::{self, Entity as Users};
 use rocket::State;
 use rocket::http::Status;
 use rocket::serde::json::Json;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
+use serde::{Deserialize, Serialize};
 
 #[derive(serde::Serialize)]
 pub struct UserResponse {
@@ -13,7 +15,7 @@ pub struct UserResponse {
     pub role: String,
 }
 
-#[derive(serde::Serialize)]
+#[derive(Serialize)]
 pub struct ErrorResponse {
     pub error: &'static str,
 }
@@ -48,7 +50,7 @@ pub fn verify(
     }
 }
 
-#[derive(serde::Deserialize)]
+#[derive(Deserialize)]
 pub struct ApiLoginRequest<'r> {
     pub username: &'r str,
     pub password: &'r str,
@@ -58,7 +60,7 @@ pub struct ApiLoginRequest<'r> {
 pub async fn api_login(
     credentials: Json<ApiLoginRequest<'_>>,
     db: &State<DatabaseConnection>,
-    jwt_secret: &State<JwtSecret>,
+    config: &State<AppConfig>,
 ) -> Result<Json<UserResponse>, (Status, Json<ErrorResponse>)> {
     let username = credentials.username;
     let password = credentials.password;
@@ -89,7 +91,7 @@ pub async fn api_login(
             let token = crate::auth::create_token(
                 &user.username,
                 &format!("{:?}", user.user_role),
-                &jwt_secret.0,
+                &config.jwt_secret,
             )
             .map_err(|_| {
                 (
@@ -114,4 +116,120 @@ pub async fn api_login(
             error: "Invalid username or password",
         }),
     ))
+}
+
+
+
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct GoogleMapPayload {
+    #[serde(rename = "textQuery")]
+    text_query: String,
+    #[serde(rename = "languageCode")]
+    language_code: String,
+    #[serde(rename = "locationBias")]
+    location_bias: Option<GoogleMapLocationBias>,
+    #[serde(rename = "pageSize")]
+    page_size: Option<u8>,
+}
+
+impl GoogleMapPayload {
+    pub fn new(
+        text_query: String,
+        language_code: String,
+        latitude: f64,
+        longitude: f64,
+        radius: f64,
+        page_size: Option<u8>,
+    ) -> Self {
+        Self {
+            text_query,
+            language_code,
+            location_bias: Some(GoogleMapLocationBias {
+                circle: GoogleMapLocationBiasCircle {
+                    center: PlaceLocation {
+                        latitude,
+                        longitude,
+                    },
+                    radius,
+                },
+            }),
+            page_size: Some(page_size.unwrap_or(20)),
+        }
+    }
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct GoogleMapLocationBias {
+    circle: GoogleMapLocationBiasCircle,
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct GoogleMapLocationBiasCircle {
+    center: PlaceLocation,
+    radius: f64,
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct GoogleMapResponse {
+    #[serde(default)]
+    pub places: Vec<Place>,
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct PlaceLocation {
+    pub latitude: f64,
+    pub longitude: f64,
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct PlaceDisplayName {
+    pub text: String,
+    #[serde(rename = "languageCode")]
+    pub language_code: String,
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct Place {
+    pub id: String,
+    #[serde(rename = "formattedAddress")]
+    pub formatted_address: String,
+    pub location: PlaceLocation,
+    #[serde(rename = "displayName")]
+    pub display_name: PlaceDisplayName,
+}
+
+#[rocket::get("/api/places/search?<name>")]
+pub async fn search_places(
+    name: String,
+    config: &State<AppConfig>,
+    _user: AuthenticatedUser,
+) -> Result<Json<GoogleMapResponse>, Status> {
+    let url = "https://places.googleapis.com/v1/places:searchText";
+    let payload = GoogleMapPayload::new(
+        name,
+        "en".into(),
+        -6.370901936057233,
+        106.82459298887727,
+        50000.0,
+        Some(5),
+    );
+
+    let client = reqwest::Client::new();
+    let response: GoogleMapResponse = client
+        .post(url)
+        .header("Content-Type", "application/json")
+        .header("X-Goog-Api-Key", &config.google_api_key)
+        .header(
+            "X-Goog-FieldMask",
+            "places.id,places.displayName,places.formattedAddress,places.location",
+        )
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|_| Status::InternalServerError)?
+        .json()
+        .await
+        .map_err(|_| Status::InternalServerError)?;
+
+    Ok(Json(response))
 }

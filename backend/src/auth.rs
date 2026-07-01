@@ -13,26 +13,25 @@ pub struct Claims {
     pub role: String, // User role (e.g. Admin, Employee)
 }
 
+use crate::types::AppConfig;
+
 pub struct AuthenticatedUser {
     pub username: String,
     pub role: String,
     pub token: String, // <-- Added raw token string
 }
 
-/// Managed state containing the JWT secret key
-pub struct JwtSecret(pub Vec<u8>);
-
 /// Generate a JWT token valid for 24 hours using the managed secret key
 pub fn create_token(username: &str, role: &str, secret: &[u8]) -> Result<String, JwtError> {
     let expiration = chrono::Utc::now()
-        .checked_add_signed(chrono::Duration::days(1))
+        .checked_add_signed(chrono::Duration::hours(24))
         .expect("valid timestamp")
         .timestamp() as usize;
 
     let claims = Claims {
-        sub: username.to_owned(),
+        sub: username.to_string(),
+        role: role.to_string(),
         exp: expiration,
-        role: role.to_owned(),
     };
 
     encode(
@@ -42,8 +41,7 @@ pub fn create_token(username: &str, role: &str, secret: &[u8]) -> Result<String,
     )
 }
 
-/// Decode and validate a JWT token using the managed secret key
-pub fn decode_token(token: &str, secret: &[u8]) -> Result<Claims, JwtError> {
+fn decode_token(token: &str, secret: &[u8]) -> Result<Claims, JwtError> {
     let token_data = decode::<Claims>(
         token,
         &DecodingKey::from_secret(secret),
@@ -58,8 +56,8 @@ impl<'r> FromRequest<'r> for AuthenticatedUser {
 
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         // Fetch the managed JWT secret from Rocket's state
-        let secret = match request.guard::<&State<JwtSecret>>().await {
-            Outcome::Success(s) => &s.0,
+        let secret = match request.guard::<&State<AppConfig>>().await {
+            Outcome::Success(s) => &s.jwt_secret,
             _ => {
                 // If the state is not registered in main.rs, fail request
                 return Outcome::Error((Status::InternalServerError, ()));
