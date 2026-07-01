@@ -2,6 +2,26 @@
 
 {% block head %}
 	<title>Contacts - Poolcar</title>
+	<style>
+		#map {
+			height: 200px;
+			border-radius: 8px;
+			margin-bottom: 1.5rem;
+			z-index: 1;
+		}
+		#search-results {
+			z-index: 1050;
+			max-height: 250px;
+			overflow-y: auto;
+			background-color: var(--bs-tertiary-bg, #f8f9fa);
+			border: 1px solid var(--bs-border-color, #dee2e6);
+			border-radius: 0.375rem;
+			margin-top: 0.25rem;
+		}
+		#search-results .list-group-item {
+			background-color: transparent;
+		}
+	</style>
 {% endblock %}
 
 {% block body %}
@@ -102,32 +122,32 @@
 					<ul class="pagination pagination-sm mb-0">
 						<!-- Previous Page -->
 						<li class="page-item {% if current_page == 1 %}disabled{% endif %}">
-							<button class="page-link" 
-								hx-get="/crud/contacts?page={{ current_page - 1 }}{% if let Some(e) = editing_contact %}&edit={{ e.contact_id }}{% endif %}" 
-								hx-target="body" 
+							<button class="page-link"
+								hx-get="/crud/contacts?page={{ current_page - 1 }}{% if let Some(e) = editing_contact %}&edit={{ e.contact_id }}{% endif %}"
+								hx-target="body"
 								hx-swap="innerHTML"
 								{% if current_page == 1 %}disabled{% endif %}>
 								Previous
 							</button>
 						</li>
-						
+
 						<!-- Page Numbers -->
 						{% for p in pages %}
 						<li class="page-item {% if *p == current_page %}active{% endif %}">
-							<button class="page-link" 
-								hx-get="/crud/contacts?page={{ p }}{% if let Some(e) = editing_contact %}&edit={{ e.contact_id }}{% endif %}" 
-								hx-target="body" 
+							<button class="page-link"
+								hx-get="/crud/contacts?page={{ p }}{% if let Some(e) = editing_contact %}&edit={{ e.contact_id }}{% endif %}"
+								hx-target="body"
 								hx-swap="innerHTML">
 								{{ p }}
 							</button>
 						</li>
 						{% endfor %}
-						
+
 						<!-- Next Page -->
 						<li class="page-item {% if current_page == total_pages %}disabled{% endif %}">
-							<button class="page-link" 
-								hx-get="/crud/contacts?page={{ current_page + 1 }}{% if let Some(e) = editing_contact %}&edit={{ e.contact_id }}{% endif %}" 
-								hx-target="body" 
+							<button class="page-link"
+								hx-get="/crud/contacts?page={{ current_page + 1 }}{% if let Some(e) = editing_contact %}&edit={{ e.contact_id }}{% endif %}"
+								hx-target="body"
 								hx-swap="innerHTML"
 								{% if current_page == total_pages %}disabled{% endif %}>
 								Next
@@ -154,13 +174,25 @@
 						<label for="contact-name" class="form-label fw-semibold text-muted">Contact Name</label>
 						<input type="text" class="form-control form-control-lg" id="contact-name" name="name" value="{{ editing.name }}" placeholder="e.g. Acme Corp" required>
 					</div>
+					<div class="mb-3 position-relative">
+						<label for="contact-search" class="form-label fw-semibold text-muted">Google Maps Search</label>
+						<input type="text"
+							   class="form-control form-control-lg"
+							   id="contact-search"
+							   name="query"
+							   placeholder="Search address or location..."
+							   hx-get="/api/places/search"
+							   hx-trigger="input changed delay:1000ms, searchTrigger delay:1000ms"
+							   hx-target="#search-results">
+						<div id="search-results" class="list-group position-absolute w-100 shadow-sm d-none"></div>
+					</div>
 					<div class="mb-3">
 						<label for="contact-lat" class="form-label fw-semibold text-muted">Latitude</label>
-						<input type="number" step="any" class="form-control form-control-lg" id="contact-lat" name="latitude" value="{{ editing.latitude }}" placeholder="e.g. -6.200000" required>
+						<input type="number" step="any" class="form-control form-control-lg" id="contact-lat" name="latitude" value="{{ editing.latitude }}" placeholder="e.g. -6.3709019" required>
 					</div>
 					<div class="mb-3">
 						<label for="contact-lng" class="form-label fw-semibold text-muted">Longitude</label>
-						<input type="number" step="any" class="form-control form-control-lg" id="contact-lng" name="longitude" value="{{ editing.longitude }}" placeholder="e.g. 106.816666" required>
+						<input type="number" step="any" class="form-control form-control-lg" id="contact-lng" name="longitude" value="{{ editing.longitude }}" placeholder="e.g. 106.8245930" required>
 					</div>
 					<div class="mb-3">
 						<label for="contact-type" class="form-label fw-semibold text-muted">Contact Type</label>
@@ -169,6 +201,12 @@
 							<option value="Supplier" {% if let crate::entities::sea_orm_active_enums::ContactType::Supplier = editing.contact_type %}selected{% endif %}>Supplier</option>
 						</select>
 					</div>
+
+					<div class="mb-3">
+						<label class="form-label fw-semibold text-muted">Location Map</label>
+						<div id="map"></div>
+					</div>
+
 					<div class="d-grid gap-2">
 						<button type="submit" class="btn btn-primary btn-lg fs-6">Save Changes</button>
 						<button hx-get="/crud/contacts?page={{ current_page }}" hx-target="body" hx-swap="innerHTML" class="btn btn-light border btn-lg fs-6">Cancel</button>
@@ -182,13 +220,25 @@
 						<label for="contact-name" class="form-label fw-semibold text-muted">Contact Name</label>
 						<input type="text" class="form-control form-control-lg" id="contact-name" name="name" placeholder="e.g. Acme Corp" required>
 					</div>
+					<div class="mb-3 position-relative">
+						<label for="contact-search" class="form-label fw-semibold text-muted">Google Maps Search</label>
+						<input type="text"
+							   class="form-control form-control-lg"
+							   id="contact-search"
+							   name="query"
+							   placeholder="Search address or location..."
+							   hx-get="/api/places/search"
+							   hx-trigger="input changed delay:1000ms, searchTrigger delay:1000ms"
+							   hx-target="#search-results">
+						<div id="search-results" class="list-group position-absolute w-100 shadow-sm d-none"></div>
+					</div>
 					<div class="mb-3">
 						<label for="contact-lat" class="form-label fw-semibold text-muted">Latitude</label>
-						<input type="number" step="any" class="form-control form-control-lg" id="contact-lat" name="latitude" placeholder="e.g. -6.200000" required>
+						<input type="number" step="any" class="form-control form-control-lg" id="contact-lat" name="latitude" placeholder="e.g. -6.3709019" required>
 					</div>
 					<div class="mb-3">
 						<label for="contact-lng" class="form-label fw-semibold text-muted">Longitude</label>
-						<input type="number" step="any" class="form-control form-control-lg" id="contact-lng" name="longitude" placeholder="e.g. 106.816666" required>
+						<input type="number" step="any" class="form-control form-control-lg" id="contact-lng" name="longitude" placeholder="e.g. 106.8245930" required>
 					</div>
 					<div class="mb-3">
 						<label for="contact-type" class="form-label fw-semibold text-muted">Contact Type</label>
@@ -197,6 +247,12 @@
 							<option value="Supplier">Supplier</option>
 						</select>
 					</div>
+
+					<div class="mb-3">
+						<label class="form-label fw-semibold text-muted">Location Map</label>
+						<div id="map"></div>
+					</div>
+
 					<div class="d-grid">
 						<button type="submit" class="btn btn-primary btn-lg fs-6">Add Contact</button>
 					</div>
@@ -205,4 +261,156 @@
 		</div>
 	</div>
 </div>
+
+<script>
+(function() {
+	const homeLat = -6.370901936057233;
+	const homeLng = 106.82459298887727;
+
+	let initialLat = homeLat;
+	let initialLng = homeLng;
+	let hasContactCoords = false;
+
+	const latInput = document.getElementById('contact-lat');
+	const lngInput = document.getElementById('contact-lng');
+	const nameInput = document.getElementById('contact-name');
+	const searchInput = document.getElementById('contact-search');
+	const resultsContainer = document.getElementById('search-results');
+	let debounceTimer = null;
+
+	if (latInput && lngInput) {
+		const latVal = parseFloat(latInput.value);
+		const lngVal = parseFloat(lngInput.value);
+		if (!isNaN(latVal) && !isNaN(lngVal)) {
+			initialLat = latVal;
+			initialLng = lngVal;
+			hasContactCoords = true;
+		}
+	}
+
+	// Safely clean up previous map if active
+	if (window.contactsMap) {
+		window.contactsMap.remove();
+		window.contactsMap = null;
+	}
+
+	const mapElement = document.getElementById('map');
+	if (!mapElement) return;
+
+	const map = L.map('map').setView([initialLat, initialLng], 13);
+	window.contactsMap = map;
+
+	L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+		maxZoom: 19,
+		attribution: '© OpenStreetMap'
+	}).addTo(map);
+
+	const homeIcon = L.icon({
+		iconUrl: '/assets/home.png',
+		iconSize: [42, 42],
+		iconAnchor: [21, 21],
+		popupAnchor: [0, -15]
+	});
+
+	const flagIcon = L.icon({
+		iconUrl: '/assets/flag.png',
+		iconSize: [31, 46],
+		iconAnchor: [15.5, 21],
+		popupAnchor: [0, -40]
+	});
+
+	// Draw static Home marker
+	L.marker([homeLat, homeLng], { icon: homeIcon }).addTo(map).bindPopup('Home');
+
+	// Draw Contact flag marker if coordinates exist initially
+	let contactMarker = null;
+	if (hasContactCoords) {
+		contactMarker = L.marker([initialLat, initialLng], { icon: flagIcon }).addTo(map);
+	}
+
+	function updateMarker() {
+		if (!latInput || !lngInput) return;
+		const latVal = parseFloat(latInput.value);
+		const lngVal = parseFloat(lngInput.value);
+
+		if (!isNaN(latVal) && !isNaN(lngVal)) {
+			if (contactMarker) {
+				contactMarker.setLatLng([latVal, lngVal]);
+			} else {
+				contactMarker = L.marker([latVal, lngVal], { icon: flagIcon }).addTo(map);
+			}
+			map.setView([latVal, lngVal], map.getZoom());
+		} else {
+			if (contactMarker) {
+				map.removeLayer(contactMarker);
+				contactMarker = null;
+			}
+		}
+	}
+
+	if (latInput && lngInput) {
+		latInput.addEventListener('input', updateMarker);
+		lngInput.addEventListener('input', updateMarker);
+	}
+
+	// Make map clickable to set input coordinates
+	map.on('click', function(e) {
+		if (latInput && lngInput) {
+			latInput.value = e.latlng.lat.toFixed(7);
+			lngInput.value = e.latlng.lng.toFixed(7);
+			updateMarker();
+		}
+	});
+
+	// Expose place selection globally for template button onClick handlers
+	window.selectPlace = function(name, lat, lng) {
+		if (nameInput) nameInput.value = name;
+		if (latInput) latInput.value = parseFloat(lat).toFixed(7);
+		if (lngInput) lngInput.value = parseFloat(lng).toFixed(7);
+
+		updateMarker();
+
+		if (searchInput) searchInput.value = '';
+		if (resultsContainer) {
+			resultsContainer.innerHTML = '';
+			resultsContainer.classList.add('d-none');
+		}
+	};
+
+	if (searchInput && resultsContainer) {
+		// Show results container when HTMX finishes swapping content
+		searchInput.addEventListener('htmx:afterOnLoad', function() {
+			if (resultsContainer.innerHTML.trim() !== '') {
+				resultsContainer.classList.remove('d-none');
+			} else {
+				resultsContainer.classList.add('d-none');
+			}
+		});
+
+		// Hide results container if input query is cleared
+		searchInput.addEventListener('input', function() {
+			if (searchInput.value.trim().length < 3) {
+				resultsContainer.innerHTML = '';
+				resultsContainer.classList.add('d-none');
+			}
+		});
+
+		// Trigger HTMX query on focus/click if query has enough characters
+		const triggerSearch = function() {
+			if (searchInput.value.trim().length >= 3) {
+				htmx.trigger(searchInput, 'searchTrigger');
+			}
+		};
+		searchInput.addEventListener('focus', triggerSearch);
+		searchInput.addEventListener('click', triggerSearch);
+
+		// Hide results when clicking outside
+		document.addEventListener('click', function(e) {
+			if (!searchInput.contains(e.target) && !resultsContainer.contains(e.target)) {
+				resultsContainer.classList.add('d-none');
+			}
+		});
+	}
+})();
+</script>
 {% endblock %}
