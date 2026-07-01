@@ -5,3 +5,5 @@ pub mod contacts;
 pub mod dashboard;
 pub mod login;
 pub mod trackers;
+pub mod users;
+

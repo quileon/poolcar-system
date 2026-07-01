@@ -56,9 +56,9 @@ pub async fn post_login<'r>(
         })?;
 
     if let Some(user) = user {
-        if user.user_role == UserRole::Employee {
+        if user.user_role == UserRole::Security {
             return Err(LoginTemplate {
-                error: Some("Employee users cannot log in".to_owned()),
+                error: Some("Security users cannot log in via web".to_owned()),
                 username: Some(username.to_owned()),
             });
         }
