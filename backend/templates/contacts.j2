@@ -2,29 +2,30 @@
 
 {% block head %}
 	<title>Contacts - Poolcar</title>
-	<style>
-		#map {
-			height: 200px;
-			border-radius: 8px;
-			margin-bottom: 1.5rem;
-			z-index: 1;
-		}
-		#search-results {
-			z-index: 1050;
-			max-height: 250px;
-			overflow-y: auto;
-			background-color: var(--bs-tertiary-bg, #f8f9fa);
-			border: 1px solid var(--bs-border-color, #dee2e6);
-			border-radius: 0.375rem;
-			margin-top: 0.25rem;
-		}
-		#search-results .list-group-item {
-			background-color: transparent;
-		}
-	</style>
 {% endblock %}
 
 {% block body %}
+<style>
+	#map {
+		height: 200px;
+		border-radius: 8px;
+		margin-bottom: 1.5rem;
+		z-index: 1;
+	}
+	#search-results {
+		z-index: 1050;
+		max-height: 250px;
+		overflow-y: auto;
+		background-color: var(--bs-tertiary-bg, #f8f9fa);
+		border: 1px solid var(--bs-border-color, #dee2e6);
+		border-radius: 0.375rem;
+		margin-top: 0.25rem;
+	}
+	#search-results .list-group-item {
+		background-color: transparent;
+	}
+</style>
+
 <!-- Page Header -->
 <div class="d-flex flex-column">
 	<h3 class="fw-bold text-dark">Contacts Management</h3>
@@ -264,152 +265,179 @@
 
 <script>
 (function() {
-	const homeLat = -6.370901936057233;
-	const homeLng = 106.82459298887727;
+	function initMap() {
+		const mapElement = document.getElementById('map');
+		if (!mapElement) return;
 
-	let initialLat = homeLat;
-	let initialLng = homeLng;
-	let hasContactCoords = false;
+		const homeLat = -6.370901936057233;
+		const homeLng = 106.82459298887727;
 
-	const latInput = document.getElementById('contact-lat');
-	const lngInput = document.getElementById('contact-lng');
-	const nameInput = document.getElementById('contact-name');
-	const searchInput = document.getElementById('contact-search');
-	const resultsContainer = document.getElementById('search-results');
-	let debounceTimer = null;
+		let initialLat = homeLat;
+		let initialLng = homeLng;
+		let hasContactCoords = false;
 
-	if (latInput && lngInput) {
-		const latVal = parseFloat(latInput.value);
-		const lngVal = parseFloat(lngInput.value);
-		if (!isNaN(latVal) && !isNaN(lngVal)) {
-			initialLat = latVal;
-			initialLng = lngVal;
-			hasContactCoords = true;
-		}
-	}
+		const latInput = document.getElementById('contact-lat');
+		const lngInput = document.getElementById('contact-lng');
+		const nameInput = document.getElementById('contact-name');
+		const searchInput = document.getElementById('contact-search');
+		const resultsContainer = document.getElementById('search-results');
 
-	// Safely clean up previous map if active
-	if (window.contactsMap) {
-		window.contactsMap.remove();
-		window.contactsMap = null;
-	}
+		const homeIcon = L.icon({
+			iconUrl: '/assets/home.png',
+			iconSize: [42, 42],
+			iconAnchor: [21, 21],
+			popupAnchor: [0, -15]
+		});
+		const flagIcon = L.icon({
+			iconUrl: '/assets/flag.png',
+			iconSize: [31, 46],
+			iconAnchor: [15.5, 21],
+			popupAnchor: [0, -40]
+		});
 
-	const mapElement = document.getElementById('map');
-	if (!mapElement) return;
-
-	const map = L.map('map').setView([initialLat, initialLng], 13);
-	window.contactsMap = map;
-
-	L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-		maxZoom: 19,
-		attribution: '© OpenStreetMap'
-	}).addTo(map);
-
-	const homeIcon = L.icon({
-		iconUrl: '/assets/home.png',
-		iconSize: [42, 42],
-		iconAnchor: [21, 21],
-		popupAnchor: [0, -15]
-	});
-
-	const flagIcon = L.icon({
-		iconUrl: '/assets/flag.png',
-		iconSize: [31, 46],
-		iconAnchor: [15.5, 21],
-		popupAnchor: [0, -40]
-	});
-
-	// Draw static Home marker
-	L.marker([homeLat, homeLng], { icon: homeIcon }).addTo(map).bindPopup('Home');
-
-	// Draw Contact flag marker if coordinates exist initially
-	let contactMarker = null;
-	if (hasContactCoords) {
-		contactMarker = L.marker([initialLat, initialLng], { icon: flagIcon }).addTo(map);
-	}
-
-	function updateMarker() {
-		if (!latInput || !lngInput) return;
-		const latVal = parseFloat(latInput.value);
-		const lngVal = parseFloat(lngInput.value);
-
-		if (!isNaN(latVal) && !isNaN(lngVal)) {
-			if (contactMarker) {
-				contactMarker.setLatLng([latVal, lngVal]);
-			} else {
-				contactMarker = L.marker([latVal, lngVal], { icon: flagIcon }).addTo(map);
-			}
-			map.setView([latVal, lngVal], map.getZoom());
-		} else {
-			if (contactMarker) {
-				map.removeLayer(contactMarker);
-				contactMarker = null;
-			}
-		}
-	}
-
-	if (latInput && lngInput) {
-		latInput.addEventListener('input', updateMarker);
-		lngInput.addEventListener('input', updateMarker);
-	}
-
-	// Make map clickable to set input coordinates
-	map.on('click', function(e) {
+		// Update coordinates if latitude and longitude is inputted
 		if (latInput && lngInput) {
-			latInput.value = e.latlng.lat.toFixed(7);
-			lngInput.value = e.latlng.lng.toFixed(7);
-			updateMarker();
+			const latVal = parseFloat(latInput.value);
+			const lngVal = parseFloat(lngInput.value);
+			if (!isNaN(latVal) && !isNaN(lngVal)) {
+				initialLat = latVal;
+				initialLng = lngVal;
+				hasContactCoords = true;
+			}
 		}
-	});
 
-	// Expose place selection globally for template button onClick handlers
-	window.selectPlace = function(name, lat, lng) {
-		if (nameInput) nameInput.value = name;
-		if (latInput) latInput.value = parseFloat(lat).toFixed(7);
-		if (lngInput) lngInput.value = parseFloat(lng).toFixed(7);
-
-		updateMarker();
-
-		if (searchInput) searchInput.value = '';
-		if (resultsContainer) {
-			resultsContainer.innerHTML = '';
-			resultsContainer.classList.add('d-none');
+		// Leaflet initialization
+		if (window.contactsMap) {
+			try {
+				window.contactsMap.off();
+				window.contactsMap.remove();
+			} catch (e) {
+				console.error('Error removing map:', e);
+			}
+			window.contactsMap = null;
 		}
-	};
 
-	if (searchInput && resultsContainer) {
-		// Show results container when HTMX finishes swapping content
-		searchInput.addEventListener('htmx:afterOnLoad', function() {
-			if (resultsContainer.innerHTML.trim() !== '') {
-				resultsContainer.classList.remove('d-none');
-			} else {
-				resultsContainer.classList.add('d-none');
+		const map = L.map('map').setView([initialLat, initialLng], 13);
+		window.contactsMap = map;
+
+		mapElement.addEventListener('htmx:beforeCleanupElement', function() {
+			if (window.contactsMap) {
+				try {
+					window.contactsMap.off();
+					window.contactsMap.remove();
+				} catch (e) {
+					console.error('Error removing map:', e);
+				}
+				window.contactsMap = null;
 			}
 		});
 
-		// Hide results container if input query is cleared
-		searchInput.addEventListener('input', function() {
-			if (searchInput.value.trim().length < 3) {
+		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+			maxZoom: 19,
+			attribution: '© OpenStreetMap'
+		}).addTo(map);
+
+
+		// Marker initialization
+		L.marker([homeLat, homeLng], { icon: homeIcon }).addTo(map).bindPopup('Home');
+
+		let contactMarker = null;
+		if (hasContactCoords) {
+			contactMarker = L.marker([initialLat, initialLng], { icon: flagIcon }).addTo(map);
+		}
+
+		function updateMarker() {
+			if (!latInput || !lngInput) return;
+			const latVal = parseFloat(latInput.value);
+			const lngVal = parseFloat(lngInput.value);
+
+			if (!isNaN(latVal) && !isNaN(lngVal)) {
+				if (contactMarker) {
+					contactMarker.setLatLng([latVal, lngVal]);
+				} else {
+					contactMarker = L.marker([latVal, lngVal], { icon: flagIcon }).addTo(map);
+				}
+				map.setView([latVal, lngVal], map.getZoom());
+			} else {
+				if (contactMarker) {
+					map.removeLayer(contactMarker);
+					contactMarker = null;
+				}
+			}
+		}
+
+		// Update marker when latitude or longitude input changes
+		if (latInput && lngInput) {
+			latInput.addEventListener('input', updateMarker);
+			lngInput.addEventListener('input', updateMarker);
+		}
+
+		map.on('click', function(e) {
+			if (latInput && lngInput) {
+				latInput.value = e.latlng.lat.toFixed(7);
+				lngInput.value = e.latlng.lng.toFixed(7);
+				updateMarker();
+			}
+		});
+
+		// Debouncing
+		window.selectPlace = function(name, lat, lng) {
+			if (nameInput) nameInput.value = name;
+			if (latInput) latInput.value = parseFloat(lat).toFixed(7);
+			if (lngInput) lngInput.value = parseFloat(lng).toFixed(7);
+
+			updateMarker();
+
+			if (searchInput) searchInput.value = '';
+			if (resultsContainer) {
 				resultsContainer.innerHTML = '';
 				resultsContainer.classList.add('d-none');
 			}
-		});
-
-		// Trigger HTMX query on focus/click if query has enough characters
-		const triggerSearch = function() {
-			if (searchInput.value.trim().length >= 3) {
-				htmx.trigger(searchInput, 'searchTrigger');
-			}
 		};
-		searchInput.addEventListener('focus', triggerSearch);
-		searchInput.addEventListener('click', triggerSearch);
 
-		// Hide results when clicking outside
-		document.addEventListener('click', function(e) {
-			if (!searchInput.contains(e.target) && !resultsContainer.contains(e.target)) {
-				resultsContainer.classList.add('d-none');
-			}
-		});
+		if (searchInput && resultsContainer) {
+			searchInput.addEventListener('htmx:afterOnLoad', function() {
+				if (resultsContainer.innerHTML.trim() !== '') {
+					resultsContainer.classList.remove('d-none');
+				} else {
+					resultsContainer.classList.add('d-none');
+				}
+			});
+
+			searchInput.addEventListener('input', function() {
+				if (searchInput.value.trim().length < 3) {
+					resultsContainer.innerHTML = '';
+					resultsContainer.classList.add('d-none');
+				}
+			});
+
+			const triggerSearch = function() {
+				if (searchInput.value.trim().length >= 3) {
+					htmx.trigger(searchInput, 'searchTrigger');
+				}
+			};
+			searchInput.addEventListener('focus', triggerSearch);
+			searchInput.addEventListener('click', triggerSearch);
+
+			searchInput.addEventListener('blur', function() {
+				setTimeout(function() {
+					resultsContainer.classList.add('d-none');
+				}, 200);
+			});
+		}
+
+		map.invalidateSize();
+	}
+
+	// Initialize map after HTMX swap if applicable
+	const isHtmxSwap = document.querySelector('.htmx-swapping, .htmx-settling') !== null;
+
+	if (isHtmxSwap) {
+		document.body.addEventListener('htmx:afterSettle', function() {
+			initMap();
+		}, { once: true });
+	} else {
+		initMap();
 	}
 })();
 </script>
