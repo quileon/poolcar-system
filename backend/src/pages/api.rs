@@ -1,14 +1,16 @@
 use crate::auth::AuthenticatedUser;
-use crate::types::AppConfig;
 use crate::entities::sea_orm_active_enums::UserRole;
 use crate::entities::users::{self, Entity as Users};
+use crate::types::AppConfig;
+use askama::Template;
+use askama_web::WebTemplate;
 use rocket::State;
 use rocket::http::Status;
 use rocket::serde::json::Json;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
 
-#[derive(serde::Serialize)]
+#[derive(Serialize)]
 pub struct UserResponse {
     pub token: String,
     pub username: String,
@@ -118,9 +120,7 @@ pub async fn api_login(
     ))
 }
 
-
-
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct GoogleMapPayload {
     #[serde(rename = "textQuery")]
     text_query: String,
@@ -158,37 +158,37 @@ impl GoogleMapPayload {
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct GoogleMapLocationBias {
     circle: GoogleMapLocationBiasCircle,
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct GoogleMapLocationBiasCircle {
     center: PlaceLocation,
     radius: f64,
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct GoogleMapResponse {
     #[serde(default)]
     pub places: Vec<Place>,
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct PlaceLocation {
     pub latitude: f64,
     pub longitude: f64,
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct PlaceDisplayName {
     pub text: String,
     #[serde(rename = "languageCode")]
     pub language_code: String,
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Place {
     pub id: String,
     #[serde(rename = "formattedAddress")]
@@ -198,15 +198,21 @@ pub struct Place {
     pub display_name: PlaceDisplayName,
 }
 
-#[rocket::get("/api/places/search?<name>")]
+#[derive(Template, WebTemplate)]
+#[template(path = "places_search_results.j2")]
+pub struct PlacesSearchResultsTemplate {
+    pub places: Vec<Place>,
+}
+
+#[rocket::get("/api/places/search?<query>")]
 pub async fn search_places(
-    name: String,
+    query: String,
     config: &State<AppConfig>,
     _user: AuthenticatedUser,
-) -> Result<Json<GoogleMapResponse>, Status> {
+) -> Result<PlacesSearchResultsTemplate, Status> {
     let url = "https://places.googleapis.com/v1/places:searchText";
     let payload = GoogleMapPayload::new(
-        name,
+        query,
         "en".into(),
         -6.370901936057233,
         106.82459298887727,
@@ -231,5 +237,7 @@ pub async fn search_places(
         .await
         .map_err(|_| Status::InternalServerError)?;
 
-    Ok(Json(response))
+    Ok(PlacesSearchResultsTemplate {
+        places: response.places,
+    })
 }
