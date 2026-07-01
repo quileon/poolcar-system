@@ -224,7 +224,11 @@ async fn run_rocket(
                 pages::cars::list_cars,
                 pages::cars::create_car,
                 pages::cars::update_car,
-                pages::cars::delete_car
+                pages::cars::delete_car,
+                pages::contacts::list_contacts,
+                pages::contacts::create_contact,
+                pages::contacts::update_contact,
+                pages::contacts::delete_contact
             ],
         )
         .mount("/js", rocket::fs::FileServer::from("templates/js"))

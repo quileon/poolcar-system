@@ -128,7 +128,6 @@ pub async fn delete_tracker(
         return Err(Status::Forbidden);
     }
 
-    // Hard delete directly from the database using delete_by_id
     trackers::Entity::delete_by_id(id)
         .exec(db.inner())
         .await

@@ -6,7 +6,7 @@ use rocket::form::Form;
 use rocket::http::Status;
 use rocket::response::Redirect;
 use rocket::{FromForm, State};
-use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
+use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, QueryFilter, ColumnTrait, Set};
 
 pub struct CarWithTracker {
     pub car: cars::Model,
@@ -41,6 +41,7 @@ pub async fn list_cars(
         return Err(Status::Forbidden);
     }
 
+    // Fetch all cars and their related tracker
     let cars_raw = cars::Entity::find()
         .find_also_related(trackers::Entity)
         .all(db.inner())
@@ -52,6 +53,7 @@ pub async fn list_cars(
         .map(|(c, t)| CarWithTracker { car: c, tracker: t })
         .collect::<Vec<_>>();
 
+    // Fetch the editing car if requested
     let editing_car = match edit {
         Some(id) => cars::Entity::find_by_id(id)
             .one(db.inner())
@@ -60,6 +62,7 @@ pub async fn list_cars(
         None => None,
     };
 
+    // Find busy trackers (assigned to other cars)
     let editing_car_tracker_id = editing_car.as_ref().and_then(|c| c.tracker_id);
     let assigned_tracker_ids: Vec<i32> = cars::Entity::find()
         .all(db.inner())
@@ -70,6 +73,7 @@ pub async fn list_cars(
         .filter(|&tid| Some(tid) != editing_car_tracker_id)
         .collect();
 
+    // Fetch available (unassigned) trackers
     let mut query = trackers::Entity::find();
     if !assigned_tracker_ids.is_empty() {
         query = query.filter(trackers::Column::TrackerId.is_not_in(assigned_tracker_ids));
@@ -151,8 +155,7 @@ pub async fn update_car(
         active.car_type = Set(car_type);
         active.tracker_id = Set(form_data.tracker_id);
         active.updated_at = Set(chrono::Utc::now().naive_utc());
-        active
-            .update(db.inner())
+        active.update(db.inner())
             .await
             .map_err(|_| Status::InternalServerError)?;
     }

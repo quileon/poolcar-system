@@ -1,0 +1,156 @@
+{% extends "template.html" %}
+
+{% block head %}
+	<title>Contacts - Poolcar</title>
+{% endblock %}
+
+{% block body %}
+<!-- Page Header -->
+<div class="d-flex flex-column">
+	<h3 class="fw-bold text-dark">Contacts Management</h3>
+	<p class="text-dark-emphasis">Manage consumers and suppliers registered in the system.</p>
+</div>
+
+<!-- Main Content -->
+<div class="row g-4">
+	<!-- Contacts List Column -->
+	<div class="col-12 col-lg-8">
+		<div class="card border-0 shadow-sm p-4 h-100">
+			<div class="d-flex align-items-center justify-content-between mb-4">
+				<h5 class="mb-0 fw-bold text-dark">Registered Contacts</h5>
+				<span class="badge rounded-pill bg-primary bg-opacity-10 text-primary py-2 px-3 fw-semibold">
+					{{ contacts.len() }} Contacts
+				</span>
+			</div>
+
+			<div class="table-responsive">
+				<table class="table align-middle mb-0">
+					<thead class="table-light">
+						<tr>
+							<th style="width: 80px;">ID</th>
+							<th>Name</th>
+							<th>Type</th>
+							<th>Coordinates</th>
+							<th style="width: 150px;" class="text-end">Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% if contacts.is_empty() %}
+						<tr>
+							<td colspan="5" class="text-center py-5 text-muted">
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor" class="mb-3 text-secondary" style="width: 48px; height: 48px;"><path d="M200-72.31q-12.77 0-21.38-8.62-8.62-8.61-8.62-21.38t8.62-21.38q8.61-8.62 21.38-8.62h560q12.77 0 21.38 8.62 8.62 8.61 8.62 21.38t-8.62 21.38q-8.61 8.62-21.38 8.62H200Zm0-755.38q-12.77 0-21.38-8.62-8.62-8.61-8.62-21.38t8.62-21.38q8.61-8.62 21.38-8.62h560q12.77 0 21.38 8.62 8.62 8.61 8.62 21.38t-8.62 21.38q-8.61 8.62-21.38 8.62H200ZM480-420q45.77 0 77.88-32.11Q590-484.23 590-530t-32.12-77.88Q525.77-640 480-640q-45.77 0-77.88 32.12Q370-575.77 370-530q0 45.77 32.12 77.89Q434.23-420 480-420ZM172.31-180Q142-180 121-201q-21-21-21-51.31v-455.38Q100-738 121-759q21-21 51.31-21h615.38Q818-780 839-759q21 21 21 51.31v455.38Q860-222 839-201q-21 21-51.31 21H172.31Zm83.85-60q45-48.31 101.69-74.15Q414.54-340 480-340q65.46 0 122.15 25.85 56.69 25.84 101.69 74.15h83.85q4.62 0 8.46-3.85 3.85-3.84 3.85-8.46v-455.38q0-4.62-3.85-8.46-3.84-3.85-8.46-3.85H172.31q-4.62 0-8.46 3.85-3.85 3.84-3.85 8.46v455.38q0 4.62 3.85 8.46 3.84 3.85 8.46 3.85h83.85Zm91.84 0h264q-29-20-62.5-30T480-280q-36 0-69.5 10T348-240Zm96.58-254.57Q430-509.15 430-530q0-20.84 14.58-35.42Q459.15-580 480-580t35.42 14.58Q530-550.84 530-530q0 20.85-14.58 35.43Q500.85-480 480-480t-35.42-14.57ZM480-480Z"/></svg>
+								<div class="fs-6 fw-semibold text-dark-emphasis mb-1">No Contacts Found</div>
+								<div>Add a contact on the right side to get started.</div>
+							</td>
+						</tr>
+						{% else %}
+							{% for item in contacts %}
+							<tr id="contact-row-{{ item.contact_id }}">
+								<td class="font-monospace fw-semibold">#{{ item.contact_id }}</td>
+								<td class="fw-semibold text-dark">{{ item.name }}</td>
+								<td>
+									{% if let crate::entities::sea_orm_active_enums::ContactType::Consumer = item.contact_type %}
+										<span class="badge bg-success px-2 py-1 rounded-pill fw-semibold">
+											Consumer
+										</span>
+									{% else %}
+										<span class="badge bg-primary px-2 py-1 rounded-pill fw-semibold">
+											Supplier
+										</span>
+									{% endif %}
+								</td>
+								<td class="font-monospace text-muted">
+									{{ item.latitude }}, {{ item.longitude }}
+								</td>
+								<td class="text-end">
+									<div class="d-flex gap-2 justify-content-end">
+										<button hx-get="/crud/contacts?edit={{ item.contact_id }}" hx-target="body" hx-swap="innerHTML" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1.5" title="Edit">
+											<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor" style="width: 16px; height: 16px;"><path d="M200-200h50.46l409.46-409.46-50.46-50.46L200-250.46V-200Zm-23.84 60q-15.37 0-25.76-10.4-10.4-10.39-10.4-25.76v-69.3q0-14.63 5.62-27.89 5.61-13.26 15.46-23.11l506.54-506.31q9.07-8.24 20.03-12.73 10.97-4.5 23-4.5t23.3 4.27q11.28 4.27 19.97 13.58l48.85 49.46q9.31 8.69 13.27 20 3.96 11.31 3.96 22.62 0 12.07-4.12 23.03-4.12 10.97-13.11 20.04L296.46-161.08q-9.85 9.85-23.11 15.46-13.26 5.62-27.89 5.62h-69.3Zm584.22-570.15-50.23-50.23 50.23 50.23Zm-126.13 75.9-24.79-25.67 50.46 50.46-25.67-24.79Z"/></svg>
+											Edit
+										</button>
+										<button class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1.5"
+											hx-delete="/crud/contacts/{{ item.contact_id }}"
+											hx-target="body"
+											hx-swap="innerHTML"
+											hx-confirm="Are you sure you want to delete contact '{{ item.name }}'?"
+											title="Delete">
+											<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor" style="width: 16px; height: 16px;"><path d="M292.31-140q-29.83 0-51.07-21.24Q220-182.48 220-212.31V-720h-10q-12.75 0-21.37-8.63-8.63-8.63-8.63-21.38 0-12.76 8.63-21.37Q197.25-780 210-780h150q0-14.69 10.35-25.04 10.34-10.34 25.03-10.34h169.24q14.69 0 25.03 10.34Q600-794.69 600-780h150q12.75 0 21.37 8.63 8.63 8.63 8.63 21.38 0 12.76-8.63 21.37Q762.75-720 750-720h-10v507.69q0 29.83-21.24 51.07Q697.52-140 667.69-140H292.31ZM680-720H280v507.69q0 5.39 3.46 8.85t8.85 3.46h375.38q5.39 0 8.85-3.46t3.46-8.85V-720ZM427.54-288.62q8.61-8.63 8.61-21.38v-300q0-12.75-8.63-21.38-8.62-8.62-21.38-8.62-12.75 0-21.37 8.62-8.61 8.63-8.61 21.38v300q0 12.75 8.62 21.38 8.63 8.62 21.39 8.62 12.75 0 21.37-8.62Zm147.69 0q8.61-8.63 8.61-21.38v-300q0-12.75-8.62-21.38-8.63-8.62-21.39-8.62-12.75 0-21.37 8.62-8.61 8.63-8.61 21.38v300q0 12.75 8.63 21.38 8.62 8.62 21.38 8.62 12.75 0 21.37-8.62ZM280-720v520-520Z"/></svg>
+											Delete
+										</button>
+									</div>
+								</td>
+							</tr>
+							{% endfor %}
+						{% endif %}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+
+	<!-- CRUD Form Column -->
+	<div class="col-12 col-lg-4">
+		<div class="card border-0 shadow-sm p-4 h-100 d-flex flex-column gap-4">
+			{% if let Some(editing) = editing_contact %}
+				<div class="d-flex align-items-center justify-content-between">
+					<h5 class="fw-bold text-dark">Edit Contact</h5>
+					<span class="badge rounded-pill bg-primary px-3 py-2 fw-semibold">ID #{{ editing.contact_id }}</span>
+				</div>
+
+				<form hx-put="/crud/contacts/{{ editing.contact_id }}" hx-target="body" hx-swap="innerHTML">
+					<div class="mb-3">
+						<label for="contact-name" class="form-label fw-semibold text-muted">Contact Name</label>
+						<input type="text" class="form-control form-control-lg" id="contact-name" name="name" value="{{ editing.name }}" placeholder="e.g. Acme Corp" required>
+					</div>
+					<div class="mb-3">
+						<label for="contact-lat" class="form-label fw-semibold text-muted">Latitude</label>
+						<input type="number" step="any" class="form-control form-control-lg" id="contact-lat" name="latitude" value="{{ editing.latitude }}" placeholder="e.g. -6.200000" required>
+					</div>
+					<div class="mb-3">
+						<label for="contact-lng" class="form-label fw-semibold text-muted">Longitude</label>
+						<input type="number" step="any" class="form-control form-control-lg" id="contact-lng" name="longitude" value="{{ editing.longitude }}" placeholder="e.g. 106.816666" required>
+					</div>
+					<div class="mb-3">
+						<label for="contact-type" class="form-label fw-semibold text-muted">Contact Type</label>
+						<select class="form-select form-select-lg" id="contact-type" name="contact_type" required>
+							<option value="Consumer" {% if let crate::entities::sea_orm_active_enums::ContactType::Consumer = editing.contact_type %}selected{% endif %}>Consumer</option>
+							<option value="Supplier" {% if let crate::entities::sea_orm_active_enums::ContactType::Supplier = editing.contact_type %}selected{% endif %}>Supplier</option>
+						</select>
+					</div>
+					<div class="d-grid gap-2">
+						<button type="submit" class="btn btn-primary btn-lg fs-6">Save Changes</button>
+						<button hx-get="/crud/contacts" hx-target="body" hx-swap="innerHTML" class="btn btn-light border btn-lg fs-6">Cancel</button>
+					</div>
+				</form>
+			{% else %}
+				<h5 class="fw-bold text-dark">Add New Contact</h5>
+
+				<form action="/crud/contacts" method="post">
+					<div class="mb-3">
+						<label for="contact-name" class="form-label fw-semibold text-muted">Contact Name</label>
+						<input type="text" class="form-control form-control-lg" id="contact-name" name="name" placeholder="e.g. Acme Corp" required>
+					</div>
+					<div class="mb-3">
+						<label for="contact-lat" class="form-label fw-semibold text-muted">Latitude</label>
+						<input type="number" step="any" class="form-control form-control-lg" id="contact-lat" name="latitude" placeholder="e.g. -6.200000" required>
+					</div>
+					<div class="mb-3">
+						<label for="contact-lng" class="form-label fw-semibold text-muted">Longitude</label>
+						<input type="number" step="any" class="form-control form-control-lg" id="contact-lng" name="longitude" placeholder="e.g. 106.816666" required>
+					</div>
+					<div class="mb-3">
+						<label for="contact-type" class="form-label fw-semibold text-muted">Contact Type</label>
+						<select class="form-select form-select-lg" id="contact-type" name="contact_type" required>
+							<option value="Consumer" selected>Consumer</option>
+							<option value="Supplier">Supplier</option>
+						</select>
+					</div>
+					<div class="d-grid">
+						<button type="submit" class="btn btn-primary btn-lg fs-6">Add Contact</button>
+					</div>
+				</form>
+			{% endif %}
+		</div>
+	</div>
+</div>
+{% endblock %}
