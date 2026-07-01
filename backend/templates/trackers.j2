@@ -68,12 +68,12 @@
 								</td>
 								<td class="text-end">
 									<div class="d-flex gap-2 justify-content-end">
-										<button hx-get="/crud/trackers?edit={{ item.tracker.tracker_id }}" hx-target="body" hx-swap="innerHTML" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1.5" title="Edit">
+										<button hx-get="/crud/trackers?edit={{ item.tracker.tracker_id }}&page={{ current_page }}" hx-target="body" hx-swap="innerHTML" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1.5" title="Edit">
 											<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor" style="width: 16px; height: 16px;"><path d="M200-200h50.46l409.46-409.46-50.46-50.46L200-250.46V-200Zm-23.84 60q-15.37 0-25.76-10.4-10.4-10.39-10.4-25.76v-69.3q0-14.63 5.62-27.89 5.61-13.26 15.46-23.11l506.54-506.31q9.07-8.24 20.03-12.73 10.97-4.5 23-4.5t23.3 4.27q11.28 4.27 19.97 13.58l48.85 49.46q9.31 8.69 13.27 20 3.96 11.31 3.96 22.62 0 12.07-4.12 23.03-4.12 10.97-13.11 20.04L296.46-161.08q-9.85 9.85-23.11 15.46-13.26 5.62-27.89 5.62h-69.3Zm584.22-570.15-50.23-50.23 50.23 50.23Zm-126.13 75.9-24.79-25.67 50.46 50.46-25.67-24.79Z"/></svg>
 											Edit
 										</button>
 										<button class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1.5"
-											hx-delete="/crud/trackers/{{ item.tracker.tracker_id }}"
+											hx-delete="/crud/trackers/{{ item.tracker.tracker_id }}?page={{ current_page }}"
 											hx-target="body"
 											hx-swap="innerHTML"
 											hx-confirm="Are you sure you want to delete tracker '{{ item.tracker.name }}'?"
@@ -89,6 +89,51 @@
 					</tbody>
 				</table>
 			</div>
+
+			{% if total_pages > 1 %}
+			<div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+				<div class="text-muted small">
+					Page {{ current_page }} of {{ total_pages }}
+				</div>
+				<nav aria-label="Table navigation">
+					<ul class="pagination pagination-sm mb-0">
+						<!-- Previous Page -->
+						<li class="page-item {% if current_page == 1 %}disabled{% endif %}">
+							<button class="page-link" 
+								hx-get="/crud/trackers?page={{ current_page - 1 }}{% if let Some(e) = editing_tracker %}&edit={{ e.tracker_id }}{% endif %}" 
+								hx-target="body" 
+								hx-swap="innerHTML"
+								{% if current_page == 1 %}disabled{% endif %}>
+								Previous
+							</button>
+						</li>
+						
+						<!-- Page Numbers -->
+						{% for p in pages %}
+						<li class="page-item {% if *p == current_page %}active{% endif %}">
+							<button class="page-link" 
+								hx-get="/crud/trackers?page={{ p }}{% if let Some(e) = editing_tracker %}&edit={{ e.tracker_id }}{% endif %}" 
+								hx-target="body" 
+								hx-swap="innerHTML">
+								{{ p }}
+							</button>
+						</li>
+						{% endfor %}
+						
+						<!-- Next Page -->
+						<li class="page-item {% if current_page == total_pages %}disabled{% endif %}">
+							<button class="page-link" 
+								hx-get="/crud/trackers?page={{ current_page + 1 }}{% if let Some(e) = editing_tracker %}&edit={{ e.tracker_id }}{% endif %}" 
+								hx-target="body" 
+								hx-swap="innerHTML"
+								{% if current_page == total_pages %}disabled{% endif %}>
+								Next
+							</button>
+						</li>
+					</ul>
+				</nav>
+			</div>
+			{% endif %}
 		</div>
 	</div>
 
@@ -101,20 +146,20 @@
 					<span class="badge rounded-pill bg-primary px-3 py-2 fw-semibold">ID #{{ editing.tracker_id }}</span>
 				</div>
 
-				<form hx-put="/crud/trackers/{{ editing.tracker_id }}" hx-target="body" hx-swap="innerHTML">
+				<form hx-put="/crud/trackers/{{ editing.tracker_id }}?page={{ current_page }}" hx-target="body" hx-swap="innerHTML">
 					<div class="mb-3">
 						<label for="tracker-name" class="form-label fw-semibold text-muted">Tracker Name / Serial</label>
 						<input type="text" class="form-control form-control-lg" id="tracker-name" name="name" value="{{ editing.name }}" placeholder="e.g. Tracker Alpha" required>
 					</div>
 					<div class="d-grid gap-2">
 						<button type="submit" class="btn btn-primary btn-lg fs-6">Save Changes</button>
-						<button hx-get="/crud/trackers" hx-target="body" hx-swap="innerHTML" class="btn btn-light border btn-lg fs-6">Cancel</button>
+						<button hx-get="/crud/trackers?page={{ current_page }}" hx-target="body" hx-swap="innerHTML" class="btn btn-light border btn-lg fs-6">Cancel</button>
 					</div>
 				</form>
 			{% else %}
 				<h5 class="fw-bold text-dark">Add New Tracker</h5>
 
-				<form action="/crud/trackers" method="post">
+				<form hx-post="/crud/trackers" hx-target="body" hx-swap="innerHTML">
 					<div class="mb-3">
 						<label for="tracker-name" class="form-label fw-semibold text-muted">Tracker Name / Serial</label>
 						<input type="text" class="form-control form-control-lg" id="tracker-name" name="name" placeholder="e.g. Tracker Alpha" required>

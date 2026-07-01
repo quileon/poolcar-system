@@ -4,9 +4,8 @@ use askama::Template;
 use askama_web::WebTemplate;
 use rocket::form::Form;
 use rocket::http::Status;
-use rocket::response::Redirect;
 use rocket::{FromForm, State};
-use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, QueryFilter, ColumnTrait, Set};
+use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, QueryFilter, ColumnTrait, PaginatorTrait, Set};
 
 pub struct CarWithTracker {
     pub car: cars::Model,
@@ -21,6 +20,9 @@ pub struct CarsTemplate {
     pub cars: Vec<CarWithTracker>,
     pub available_trackers: Vec<trackers::Model>,
     pub editing_car: Option<cars::Model>,
+    pub current_page: u64,
+    pub total_pages: u64,
+    pub pages: Vec<u64>,
 }
 
 #[derive(FromForm)]
@@ -31,32 +33,19 @@ pub struct CarForm<'r> {
     pub tracker_id: Option<i32>,
 }
 
-#[rocket::get("/crud/cars?<edit>")]
-pub async fn list_cars(
+async fn render_cars(
+    db: &DatabaseConnection,
+    user: &AuthenticatedUser,
     edit: Option<i32>,
-    db: &State<DatabaseConnection>,
-    user: AuthenticatedUser,
+    page: Option<u64>,
 ) -> Result<CarsTemplate, Status> {
-    if user.role != "Admin" {
-        return Err(Status::Forbidden);
-    }
-
-    // Fetch all cars and their related tracker
-    let cars_raw = cars::Entity::find()
-        .find_also_related(trackers::Entity)
-        .all(db.inner())
-        .await
-        .map_err(|_| Status::InternalServerError)?;
-
-    let cars = cars_raw
-        .into_iter()
-        .map(|(c, t)| CarWithTracker { car: c, tracker: t })
-        .collect::<Vec<_>>();
+    let current_page = page.unwrap_or(1);
+    let page_size = 5;
 
     // Fetch the editing car if requested
     let editing_car = match edit {
         Some(id) => cars::Entity::find_by_id(id)
-            .one(db.inner())
+            .one(db)
             .await
             .map_err(|_| Status::InternalServerError)?,
         None => None,
@@ -65,7 +54,7 @@ pub async fn list_cars(
     // Find busy trackers (assigned to other cars)
     let editing_car_tracker_id = editing_car.as_ref().and_then(|c| c.tracker_id);
     let assigned_tracker_ids: Vec<i32> = cars::Entity::find()
-        .all(db.inner())
+        .all(db)
         .await
         .map_err(|_| Status::InternalServerError)?
         .into_iter()
@@ -79,17 +68,54 @@ pub async fn list_cars(
         query = query.filter(trackers::Column::TrackerId.is_not_in(assigned_tracker_ids));
     }
     let available_trackers = query
-        .all(db.inner())
+        .all(db)
         .await
         .map_err(|_| Status::InternalServerError)?;
 
+    // Fetch paginated cars list
+    let paginator = cars::Entity::find()
+        .find_also_related(trackers::Entity)
+        .paginate(db, page_size);
+
+    let raw_total_pages = paginator.num_pages().await.map_err(|_| Status::InternalServerError)?;
+    let total_pages = std::cmp::max(1, raw_total_pages);
+    let target_page = std::cmp::min(current_page, total_pages);
+
+    let cars_raw = paginator
+        .fetch_page(target_page.saturating_sub(1))
+        .await
+        .map_err(|_| Status::InternalServerError)?;
+
+    let cars = cars_raw
+        .into_iter()
+        .map(|(c, t)| CarWithTracker { car: c, tracker: t })
+        .collect::<Vec<_>>();
+
+    let pages = (1..=total_pages).collect::<Vec<u64>>();
+
     Ok(CarsTemplate {
-        username: user.username,
-        role: user.role,
+        username: user.username.clone(),
+        role: user.role.clone(),
         cars,
         available_trackers,
         editing_car,
+        current_page: target_page,
+        total_pages,
+        pages,
     })
+}
+
+#[rocket::get("/crud/cars?<edit>&<page>")]
+pub async fn list_cars(
+    edit: Option<i32>,
+    page: Option<u64>,
+    db: &State<DatabaseConnection>,
+    user: AuthenticatedUser,
+) -> Result<CarsTemplate, Status> {
+    if user.role != "Admin" {
+        return Err(Status::Forbidden);
+    }
+    render_cars(db.inner(), &user, edit, page).await
 }
 
 #[rocket::post("/crud/cars", data = "<form_data>")]
@@ -97,7 +123,7 @@ pub async fn create_car(
     form_data: Form<CarForm<'_>>,
     db: &State<DatabaseConnection>,
     user: AuthenticatedUser,
-) -> Result<Redirect, Status> {
+) -> Result<CarsTemplate, Status> {
     if user.role != "Admin" {
         return Err(Status::Forbidden);
     }
@@ -124,16 +150,17 @@ pub async fn create_car(
         .await
         .map_err(|_| Status::InternalServerError)?;
 
-    Ok(Redirect::to("/crud/cars"))
+    render_cars(db.inner(), &user, None, None).await
 }
 
-#[rocket::put("/crud/cars/<id>", data = "<form_data>")]
+#[rocket::put("/crud/cars/<id>?<page>", data = "<form_data>")]
 pub async fn update_car(
     id: i32,
+    page: Option<u64>,
     form_data: Form<CarForm<'_>>,
     db: &State<DatabaseConnection>,
     user: AuthenticatedUser,
-) -> Result<Redirect, Status> {
+) -> Result<CarsTemplate, Status> {
     if user.role != "Admin" {
         return Err(Status::Forbidden);
     }
@@ -160,15 +187,16 @@ pub async fn update_car(
             .map_err(|_| Status::InternalServerError)?;
     }
 
-    Ok(Redirect::to("/crud/cars"))
+    render_cars(db.inner(), &user, None, page).await
 }
 
-#[rocket::delete("/crud/cars/<id>")]
+#[rocket::delete("/crud/cars/<id>?<page>")]
 pub async fn delete_car(
     id: i32,
+    page: Option<u64>,
     db: &State<DatabaseConnection>,
     user: AuthenticatedUser,
-) -> Result<Redirect, Status> {
+) -> Result<CarsTemplate, Status> {
     if user.role != "Admin" {
         return Err(Status::Forbidden);
     }
@@ -178,5 +206,5 @@ pub async fn delete_car(
         .await
         .map_err(|_| Status::InternalServerError)?;
 
-    Ok(Redirect::to("/crud/cars"))
+    render_cars(db.inner(), &user, None, page).await
 }

@@ -4,9 +4,8 @@ use askama::Template;
 use askama_web::WebTemplate;
 use rocket::form::Form;
 use rocket::http::Status;
-use rocket::response::Redirect;
 use rocket::{FromForm, State};
-use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, Set};
+use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, PaginatorTrait, Set};
 
 #[derive(Template, WebTemplate)]
 #[template(path = "contacts.j2")]
@@ -15,6 +14,9 @@ pub struct ContactsTemplate {
     pub role: String,
     pub contacts: Vec<contacts::Model>,
     pub editing_contact: Option<contacts::Model>,
+    pub current_page: u64,
+    pub total_pages: u64,
+    pub pages: Vec<u64>,
 }
 
 #[derive(FromForm)]
@@ -25,35 +27,59 @@ pub struct ContactForm<'r> {
     pub contact_type: &'r str,
 }
 
-#[rocket::get("/crud/contacts?<edit>")]
+async fn render_contacts(
+    db: &DatabaseConnection,
+    user: &AuthenticatedUser,
+    edit: Option<i32>,
+    page: Option<u64>,
+) -> Result<ContactsTemplate, Status> {
+    let current_page = page.unwrap_or(1);
+    let page_size = 5;
+
+    let paginator = contacts::Entity::find()
+        .paginate(db, page_size);
+
+    let raw_total_pages = paginator.num_pages().await.map_err(|_| Status::InternalServerError)?;
+    let total_pages = std::cmp::max(1, raw_total_pages);
+    let target_page = std::cmp::min(current_page, total_pages);
+
+    let contacts = paginator
+        .fetch_page(target_page.saturating_sub(1))
+        .await
+        .map_err(|_| Status::InternalServerError)?;
+
+    let editing_contact = match edit {
+        Some(id) => contacts::Entity::find_by_id(id)
+            .one(db)
+            .await
+            .map_err(|_| Status::InternalServerError)?,
+        None => None,
+    };
+
+    let pages = (1..=total_pages).collect::<Vec<u64>>();
+
+    Ok(ContactsTemplate {
+        username: user.username.clone(),
+        role: user.role.clone(),
+        contacts,
+        editing_contact,
+        current_page: target_page,
+        total_pages,
+        pages,
+    })
+}
+
+#[rocket::get("/crud/contacts?<edit>&<page>")]
 pub async fn list_contacts(
     edit: Option<i32>,
+    page: Option<u64>,
     db: &State<DatabaseConnection>,
     user: AuthenticatedUser,
 ) -> Result<ContactsTemplate, Status> {
     if user.role != "Admin" {
         return Err(Status::Forbidden);
     }
-
-    let contacts = contacts::Entity::find()
-        .all(db.inner())
-        .await
-        .map_err(|_| Status::InternalServerError)?;
-
-    let editing_contact = match edit {
-        Some(id) => contacts::Entity::find_by_id(id)
-            .one(db.inner())
-            .await
-            .map_err(|_| Status::InternalServerError)?,
-        None => None,
-    };
-
-    Ok(ContactsTemplate {
-        username: user.username,
-        role: user.role,
-        contacts,
-        editing_contact,
-    })
+    render_contacts(db.inner(), &user, edit, page).await
 }
 
 #[rocket::post("/crud/contacts", data = "<form_data>")]
@@ -61,7 +87,7 @@ pub async fn create_contact(
     form_data: Form<ContactForm<'_>>,
     db: &State<DatabaseConnection>,
     user: AuthenticatedUser,
-) -> Result<Redirect, Status> {
+) -> Result<ContactsTemplate, Status> {
     if user.role != "Admin" {
         return Err(Status::Forbidden);
     }
@@ -87,16 +113,17 @@ pub async fn create_contact(
         .await
         .map_err(|_| Status::InternalServerError)?;
 
-    Ok(Redirect::to("/crud/contacts"))
+    render_contacts(db.inner(), &user, None, None).await
 }
 
-#[rocket::put("/crud/contacts/<id>", data = "<form_data>")]
+#[rocket::put("/crud/contacts/<id>?<page>", data = "<form_data>")]
 pub async fn update_contact(
     id: i32,
+    page: Option<u64>,
     form_data: Form<ContactForm<'_>>,
     db: &State<DatabaseConnection>,
     user: AuthenticatedUser,
-) -> Result<Redirect, Status> {
+) -> Result<ContactsTemplate, Status> {
     if user.role != "Admin" {
         return Err(Status::Forbidden);
     }
@@ -123,15 +150,16 @@ pub async fn update_contact(
             .map_err(|_| Status::InternalServerError)?;
     }
 
-    Ok(Redirect::to("/crud/contacts"))
+    render_contacts(db.inner(), &user, None, page).await
 }
 
-#[rocket::delete("/crud/contacts/<id>")]
+#[rocket::delete("/crud/contacts/<id>?<page>")]
 pub async fn delete_contact(
     id: i32,
+    page: Option<u64>,
     db: &State<DatabaseConnection>,
     user: AuthenticatedUser,
-) -> Result<Redirect, Status> {
+) -> Result<ContactsTemplate, Status> {
     if user.role != "Admin" {
         return Err(Status::Forbidden);
     }
@@ -141,5 +169,5 @@ pub async fn delete_contact(
         .await
         .map_err(|_| Status::InternalServerError)?;
 
-    Ok(Redirect::to("/crud/contacts"))
+    render_contacts(db.inner(), &user, None, page).await
 }
