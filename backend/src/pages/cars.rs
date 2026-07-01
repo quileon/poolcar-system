@@ -23,6 +23,7 @@ pub struct CarsTemplate {
     pub current_page: u64,
     pub total_pages: u64,
     pub pages: Vec<u64>,
+    pub error: Option<String>,
 }
 
 #[derive(FromForm)]
@@ -38,6 +39,7 @@ async fn render_cars(
     user: &AuthenticatedUser,
     edit: Option<i32>,
     page: Option<u64>,
+    error: Option<String>,
 ) -> Result<CarsTemplate, Status> {
     let current_page = page.unwrap_or(1);
     let page_size = 5;
@@ -102,6 +104,7 @@ async fn render_cars(
         current_page: target_page,
         total_pages,
         pages,
+        error,
     })
 }
 
@@ -115,7 +118,7 @@ pub async fn list_cars(
     if user.role != "Admin" {
         return Err(Status::Forbidden);
     }
-    render_cars(db.inner(), &user, edit, page).await
+    render_cars(db.inner(), &user, edit, page, None).await
 }
 
 #[rocket::post("/crud/cars", data = "<form_data>")]
@@ -145,12 +148,10 @@ pub async fn create_car(
         ..Default::default()
     };
 
-    new_car
-        .insert(db.inner())
-        .await
-        .map_err(|_| Status::InternalServerError)?;
-
-    render_cars(db.inner(), &user, None, None).await
+    match new_car.insert(db.inner()).await {
+        Ok(_) => render_cars(db.inner(), &user, None, None, None).await,
+        Err(err) => render_cars(db.inner(), &user, None, None, Some(err.to_string())).await,
+    }
 }
 
 #[rocket::put("/crud/cars/<id>?<page>", data = "<form_data>")]
@@ -165,29 +166,28 @@ pub async fn update_car(
         return Err(Status::Forbidden);
     }
 
-    let car = cars::Entity::find_by_id(id)
-        .one(db.inner())
-        .await
-        .map_err(|_| Status::InternalServerError)?;
+    let car = match cars::Entity::find_by_id(id).one(db.inner()).await {
+        Ok(Some(c)) => c,
+        Ok(None) => return render_cars(db.inner(), &user, Some(id), page, Some(format!("Car with ID {} not found in the database.", id))).await,
+        Err(err) => return render_cars(db.inner(), &user, Some(id), page, Some(err.to_string())).await,
+    };
 
-    if let Some(c) = car {
-        let car_type = match form_data.car_type {
-            "Delivery" => crate::entities::sea_orm_active_enums::CarType::Delivery,
-            _ => crate::entities::sea_orm_active_enums::CarType::Passenger,
-        };
+    let car_type = match form_data.car_type {
+        "Delivery" => crate::entities::sea_orm_active_enums::CarType::Delivery,
+        _ => crate::entities::sea_orm_active_enums::CarType::Passenger,
+    };
 
-        let mut active: cars::ActiveModel = c.into();
-        active.name = Set(form_data.name.to_string());
-        active.police_number = Set(form_data.police_number.to_string());
-        active.car_type = Set(car_type);
-        active.tracker_id = Set(form_data.tracker_id);
-        active.updated_at = Set(chrono::Utc::now().naive_utc());
-        active.update(db.inner())
-            .await
-            .map_err(|_| Status::InternalServerError)?;
+    let mut active: cars::ActiveModel = car.into();
+    active.name = Set(form_data.name.to_string());
+    active.police_number = Set(form_data.police_number.to_string());
+    active.car_type = Set(car_type);
+    active.tracker_id = Set(form_data.tracker_id);
+    active.updated_at = Set(chrono::Utc::now().naive_utc());
+
+    match active.update(db.inner()).await {
+        Ok(_) => render_cars(db.inner(), &user, None, page, None).await,
+        Err(err) => render_cars(db.inner(), &user, Some(id), page, Some(err.to_string())).await,
     }
-
-    render_cars(db.inner(), &user, None, page).await
 }
 
 #[rocket::delete("/crud/cars/<id>?<page>")]
@@ -201,10 +201,8 @@ pub async fn delete_car(
         return Err(Status::Forbidden);
     }
 
-    cars::Entity::delete_by_id(id)
-        .exec(db.inner())
-        .await
-        .map_err(|_| Status::InternalServerError)?;
-
-    render_cars(db.inner(), &user, None, page).await
+    match cars::Entity::delete_by_id(id).exec(db.inner()).await {
+        Ok(_) => render_cars(db.inner(), &user, None, page, None).await,
+        Err(err) => render_cars(db.inner(), &user, None, page, Some(err.to_string())).await,
+    }
 }

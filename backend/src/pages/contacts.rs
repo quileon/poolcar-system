@@ -17,6 +17,7 @@ pub struct ContactsTemplate {
     pub current_page: u64,
     pub total_pages: u64,
     pub pages: Vec<u64>,
+    pub error: Option<String>,
 }
 
 #[derive(FromForm)]
@@ -32,6 +33,7 @@ async fn render_contacts(
     user: &AuthenticatedUser,
     edit: Option<i32>,
     page: Option<u64>,
+    error: Option<String>,
 ) -> Result<ContactsTemplate, Status> {
     let current_page = page.unwrap_or(1);
     let page_size = 5;
@@ -66,6 +68,7 @@ async fn render_contacts(
         current_page: target_page,
         total_pages,
         pages,
+        error,
     })
 }
 
@@ -79,7 +82,7 @@ pub async fn list_contacts(
     if user.role != "Admin" {
         return Err(Status::Forbidden);
     }
-    render_contacts(db.inner(), &user, edit, page).await
+    render_contacts(db.inner(), &user, edit, page, None).await
 }
 
 #[rocket::post("/crud/contacts", data = "<form_data>")]
@@ -108,12 +111,10 @@ pub async fn create_contact(
         ..Default::default()
     };
 
-    new_contact
-        .insert(db.inner())
-        .await
-        .map_err(|_| Status::InternalServerError)?;
-
-    render_contacts(db.inner(), &user, None, None).await
+    match new_contact.insert(db.inner()).await {
+        Ok(_) => render_contacts(db.inner(), &user, None, None, None).await,
+        Err(err) => render_contacts(db.inner(), &user, None, None, Some(err.to_string())).await,
+    }
 }
 
 #[rocket::put("/crud/contacts/<id>?<page>", data = "<form_data>")]
@@ -128,29 +129,28 @@ pub async fn update_contact(
         return Err(Status::Forbidden);
     }
 
-    let contact = contacts::Entity::find_by_id(id)
-        .one(db.inner())
-        .await
-        .map_err(|_| Status::InternalServerError)?;
+    let contact = match contacts::Entity::find_by_id(id).one(db.inner()).await {
+        Ok(Some(c)) => c,
+        Ok(None) => return render_contacts(db.inner(), &user, Some(id), page, Some(format!("Contact with ID {} not found in the database.", id))).await,
+        Err(err) => return render_contacts(db.inner(), &user, Some(id), page, Some(err.to_string())).await,
+    };
 
-    if let Some(c) = contact {
-        let contact_type = match form_data.contact_type {
-            "Supplier" => crate::entities::sea_orm_active_enums::ContactType::Supplier,
-            _ => crate::entities::sea_orm_active_enums::ContactType::Consumer,
-        };
+    let contact_type = match form_data.contact_type {
+        "Supplier" => crate::entities::sea_orm_active_enums::ContactType::Supplier,
+        _ => crate::entities::sea_orm_active_enums::ContactType::Consumer,
+    };
 
-        let mut active: contacts::ActiveModel = c.into();
-        active.name = Set(form_data.name.to_string());
-        active.latitude = Set(form_data.latitude);
-        active.longitude = Set(form_data.longitude);
-        active.contact_type = Set(contact_type);
-        active.updated_at = Set(chrono::Utc::now().naive_utc());
-        active.update(db.inner())
-            .await
-            .map_err(|_| Status::InternalServerError)?;
+    let mut active: contacts::ActiveModel = contact.into();
+    active.name = Set(form_data.name.to_string());
+    active.latitude = Set(form_data.latitude);
+    active.longitude = Set(form_data.longitude);
+    active.contact_type = Set(contact_type);
+    active.updated_at = Set(chrono::Utc::now().naive_utc());
+
+    match active.update(db.inner()).await {
+        Ok(_) => render_contacts(db.inner(), &user, None, page, None).await,
+        Err(err) => render_contacts(db.inner(), &user, Some(id), page, Some(err.to_string())).await,
     }
-
-    render_contacts(db.inner(), &user, None, page).await
 }
 
 #[rocket::delete("/crud/contacts/<id>?<page>")]
@@ -164,10 +164,8 @@ pub async fn delete_contact(
         return Err(Status::Forbidden);
     }
 
-    contacts::Entity::delete_by_id(id)
-        .exec(db.inner())
-        .await
-        .map_err(|_| Status::InternalServerError)?;
-
-    render_contacts(db.inner(), &user, None, page).await
+    match contacts::Entity::delete_by_id(id).exec(db.inner()).await {
+        Ok(_) => render_contacts(db.inner(), &user, None, page, None).await,
+        Err(err) => render_contacts(db.inner(), &user, None, page, Some(err.to_string())).await,
+    }
 }

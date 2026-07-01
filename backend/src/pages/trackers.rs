@@ -1,10 +1,10 @@
 use crate::auth::AuthenticatedUser;
-use crate::entities::{trackers, cars};
+use crate::entities::{cars, trackers};
 use askama::Template;
 use askama_web::WebTemplate;
+use rocket::State;
 use rocket::form::Form;
 use rocket::http::Status;
-use rocket::State;
 use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, PaginatorTrait, Set};
 
 pub struct TrackerWithCar {
@@ -22,6 +22,7 @@ pub struct TrackersTemplate {
     pub current_page: u64,
     pub total_pages: u64,
     pub pages: Vec<u64>,
+    pub error: Option<String>,
 }
 
 #[derive(rocket::FromForm)]
@@ -34,6 +35,7 @@ async fn render_trackers(
     user: &AuthenticatedUser,
     edit: Option<i32>,
     page: Option<u64>,
+    error: Option<String>,
 ) -> Result<TrackersTemplate, Status> {
     let current_page = page.unwrap_or(1);
     let page_size = 5;
@@ -42,7 +44,10 @@ async fn render_trackers(
         .find_also_related(crate::entities::cars::Entity)
         .paginate(db, page_size);
 
-    let raw_total_pages = paginator.num_pages().await.map_err(|_| Status::InternalServerError)?;
+    let raw_total_pages = paginator
+        .num_pages()
+        .await
+        .map_err(|_| Status::InternalServerError)?;
     let total_pages = std::cmp::max(1, raw_total_pages);
     let target_page = std::cmp::min(current_page, total_pages);
 
@@ -74,6 +79,7 @@ async fn render_trackers(
         current_page: target_page,
         total_pages,
         pages,
+        error,
     })
 }
 
@@ -87,7 +93,7 @@ pub async fn list_trackers(
     if user.role != "Admin" {
         return Err(Status::Forbidden);
     }
-    render_trackers(db.inner(), &user, edit, page).await
+    render_trackers(db.inner(), &user, edit, page, None).await
 }
 
 #[rocket::post("/crud/trackers", data = "<form_data>")]
@@ -108,12 +114,10 @@ pub async fn create_tracker(
         ..Default::default()
     };
 
-    new_tracker
-        .insert(db.inner())
-        .await
-        .map_err(|_| Status::InternalServerError)?;
-
-    render_trackers(db.inner(), &user, None, None).await
+    match new_tracker.insert(db.inner()).await {
+        Ok(_) => render_trackers(db.inner(), &user, None, None, None).await,
+        Err(err) => render_trackers(db.inner(), &user, None, None, Some(err.to_string())).await,
+    }
 }
 
 #[rocket::put("/crud/trackers/<id>?<page>", data = "<form_data>")]
@@ -128,21 +132,31 @@ pub async fn update_tracker(
         return Err(Status::Forbidden);
     }
 
-    let tracker = trackers::Entity::find_by_id(id)
-        .one(db.inner())
-        .await
-        .map_err(|_| Status::InternalServerError)?;
+    let tracker = match trackers::Entity::find_by_id(id).one(db.inner()).await {
+        Ok(Some(t)) => t,
+        Ok(None) => {
+            return render_trackers(
+                db.inner(),
+                &user,
+                Some(id),
+                page,
+                Some(format!("Tracker with ID {} not found in the database.", id)),
+            )
+            .await;
+        }
+        Err(err) => {
+            return render_trackers(db.inner(), &user, Some(id), page, Some(err.to_string())).await;
+        }
+    };
 
-    if let Some(t) = tracker {
-        let mut active: trackers::ActiveModel = t.into();
-        active.name = Set(form_data.name.to_string());
-        active.updated_at = Set(chrono::Utc::now().naive_utc());
-        active.update(db.inner())
-            .await
-            .map_err(|_| Status::InternalServerError)?;
+    let mut active: trackers::ActiveModel = tracker.into();
+    active.name = Set(form_data.name.to_string());
+    active.updated_at = Set(chrono::Utc::now().naive_utc());
+
+    match active.update(db.inner()).await {
+        Ok(_) => render_trackers(db.inner(), &user, None, page, None).await,
+        Err(err) => render_trackers(db.inner(), &user, Some(id), page, Some(err.to_string())).await,
     }
-
-    render_trackers(db.inner(), &user, None, page).await
 }
 
 #[rocket::delete("/crud/trackers/<id>?<page>")]
@@ -156,10 +170,8 @@ pub async fn delete_tracker(
         return Err(Status::Forbidden);
     }
 
-    trackers::Entity::delete_by_id(id)
-        .exec(db.inner())
-        .await
-        .map_err(|_| Status::InternalServerError)?;
-
-    render_trackers(db.inner(), &user, None, page).await
+    match trackers::Entity::delete_by_id(id).exec(db.inner()).await {
+        Ok(_) => render_trackers(db.inner(), &user, None, page, None).await,
+        Err(err) => render_trackers(db.inner(), &user, None, page, Some(err.to_string())).await,
+    }
 }
