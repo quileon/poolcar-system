@@ -1,6 +1,6 @@
 mod auth;
 mod entities;
-
+mod loops;
 mod pages;
 mod run;
 mod types;
@@ -12,7 +12,6 @@ use clap::{Parser, Subcommand};
 use dotenvy::dotenv;
 use migration::{Migrator, MigratorTrait};
 // use rand::{RngExt, distr};
-use rocket::routes;
 // use rumqttc::{AsyncClient, MqttOptions, TlsConfiguration, Transport};
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Database, DatabaseConnection, EntityTrait, QueryFilter, Set,
@@ -125,6 +124,7 @@ async fn create_superuser(
 }
 
 async fn run_server(db_url: String) -> anyhow::Result<()> {
+    // Rocket environment variables
     let redis_url =
         env::var("REDIS_URL").map_err(|_| anyhow!("REDIS_URL environment variable is not set"))?;
     let rocket_port = env::var("ROCKET_PORT")
@@ -133,8 +133,45 @@ async fn run_server(db_url: String) -> anyhow::Result<()> {
         .parse()
         .map_err(|e| anyhow!("Failed to parse ROCKET_PORT as u16: {}", e))?;
 
+    // MQTT environment variables
+    let mqtt_host = env::var("MQTT_URL").unwrap_or_else(|_| "localhost".to_string());
+    let mqtt_port: u16 = env::var("MQTT_PORT")
+        .unwrap_or_else(|_| "1883".to_string())
+        .parse()
+        .unwrap_or(1883);
+    let mqtt_client = env::var("MQTT_CLIENT").unwrap_or_else(|_| "poolcar_backend".to_string());
+    let mqtt_use_tls = env::var("MQTT_SECURE")
+        .unwrap_or_else(|_| "false".to_string())
+        .parse::<bool>()
+        .unwrap_or(false);
+    let mqtt_username = env::var("MQTT_USERNAME").unwrap_or_else(|_| "poolcar".to_string());
+    let mqtt_password = env::var("MQTT_PASSWORD").unwrap_or_else(|_| "poolcar".to_string());
+    let mqtt_topic = env::var("MQTT_TOPIC").unwrap_or_else(|_| "poolcar/+".to_string());
+
     let (db, redis) = tokio::try_join!(connect_db(&db_url), connect_redis(&redis_url))?;
-    run_rocket(rocket_port, db, redis).await?;
+
+    let db_clone = db.clone();
+    let redis_clone = redis.clone();
+
+    // Create the real-time broadcast channel
+    let (tx, _rx) = tokio::sync::broadcast::channel::<String>(1024);
+    let tx_clone = tx.clone();
+
+    tokio::try_join!(
+        run::run_rocket(rocket_port, db, redis, tx_clone),
+        run::run_mqtt(
+            db_clone,
+            redis_clone,
+            &mqtt_host,
+            mqtt_port,
+            &mqtt_client,
+            mqtt_use_tls,
+            &mqtt_username,
+            &mqtt_password,
+            &mqtt_topic,
+            tx,
+        )
+    )?;
 
     Ok(())
 }
@@ -160,105 +197,4 @@ async fn connect_redis(redis_url: &str) -> Result<redis::Client, anyhow::Error> 
         .await?;
     info!("Redis connection established successfully!");
     Ok(redis)
-}
-
-// async fn connect_mqtt(
-//     mqtt_host: &str,
-//     mqtt_port: u16,
-//     mqtt_client: &str,
-//     mqtt_use_tls: bool,
-//     mqtt_username: &str,
-//     mqtt_password: &str,
-// ) -> anyhow::Result<(rumqttc::AsyncClient, rumqttc::EventLoop)> {
-//     let mut rng = rand::rng();
-//     let random_suffix: String = (0..8)
-//         .map(|_| rng.sample(distr::Alphanumeric) as char)
-//         .collect();
-//     let mqtt_client = format!("{}-{}", mqtt_client, random_suffix);
-
-//     let mut mqtt_options = MqttOptions::new(mqtt_client, mqtt_host, mqtt_port);
-//     mqtt_options.set_keep_alive(Duration::from_secs(5));
-//     mqtt_options.set_credentials(mqtt_username, mqtt_password);
-
-//     if mqtt_use_tls {
-//         mqtt_options.set_transport(Transport::Tls(TlsConfiguration::Native));
-//     }
-
-//     let (mqtt_client, mqtt_event_loop) = AsyncClient::new(mqtt_options, 10);
-//     info!("MQTT connection initialized successfully!");
-//     Ok((mqtt_client, mqtt_event_loop))
-// }
-
-async fn run_rocket(
-    rocket_port: u16,
-    db: sea_orm::DatabaseConnection,
-    redis: redis::Client,
-) -> anyhow::Result<()> {
-    let jwt_secret = env::var("JWT_SECRET")
-        .map(|s| s.into_bytes())
-        .unwrap_or_else(|_| b"i-love-curren-chan".to_vec());
-
-    let google_api_key =
-        env::var("GOOGLE_API_KEY").expect("GOOGLE_API_KEY environment variable not set");
-
-    let figment = rocket::Config::figment()
-        .merge(("port", rocket_port))
-        .merge(("address", "0.0.0.0"))
-        .merge(("cli_colors", false))
-        .merge(("log_level", "normal"));
-
-    let app_config = types::AppConfig {
-        jwt_secret,
-        google_api_key,
-    };
-
-    rocket::custom(figment)
-        .manage(db)
-        .manage(redis)
-        .manage(app_config)
-        .mount(
-            "/",
-            routes![
-                pages::login::login,
-                pages::login::post_login,
-                pages::login::logout,
-                pages::api::verify,
-                pages::api::api_login,
-                pages::api::search_places,
-                pages::dashboard::dashboard,
-                pages::trackers::list_trackers,
-                pages::trackers::create_tracker,
-                pages::trackers::update_tracker,
-                pages::trackers::delete_tracker,
-                pages::cars::list_cars,
-                pages::cars::create_car,
-                pages::cars::update_car,
-                pages::cars::delete_car,
-                pages::car_history::list_history,
-                pages::car_history::create_history,
-                pages::car_history::update_history,
-                pages::car_history::delete_history,
-                pages::contacts::list_contacts,
-                pages::contacts::create_contact,
-                pages::contacts::update_contact,
-                pages::contacts::delete_contact,
-                pages::users::list_users,
-                pages::users::create_user,
-                pages::users::update_user,
-                pages::users::delete_user,
-                pages::trips::list_trips,
-                pages::trips::create_trip,
-                pages::trips::update_trip,
-                pages::trips::delete_trip,
-                pages::live::live_tracking
-            ],
-        )
-        .mount("/js", rocket::fs::FileServer::from("templates/js"))
-        .mount("/css", rocket::fs::FileServer::from("templates/css"))
-        .mount("/assets", rocket::fs::FileServer::from("templates/assets"))
-        .register("/", rocket::catchers![pages::login::unauthorized])
-        .launch()
-        .await?;
-
-    Ok(())
 }
