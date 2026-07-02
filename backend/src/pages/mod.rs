@@ -7,5 +7,6 @@ pub mod login;
 pub mod trackers;
 pub mod users;
 pub mod trips;
+pub mod live;
 
 

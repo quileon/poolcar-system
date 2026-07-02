@@ -1,0 +1,165 @@
+{% extends "template.html" %}
+
+{% block head %}
+	<title>Live Tracking - Poolcar</title>
+{% endblock %}
+
+{% block body %}
+<!-- Page Header & Focus Selector -->
+<div class="d-flex flex-column gap-3 mb-2">
+	<h3 class="fw-bold text-dark mb-0">Live Tracking</h3>
+	<div style="max-width: 280px;">
+		<label for="focus-tracker" class="form-label fw-semibold text-muted mb-3">Focus Tracker</label>
+		<select class="form-select" id="focus-tracker">
+			<option value="" selected>Show All Trackers</option>
+			{% for tracker in trackers %}
+				{% if let Some(lat) = tracker.latitude %}
+					{% if let Some(lng) = tracker.longitude %}
+						<option value="{{ tracker.id }}" data-lat="{{ lat }}" data-lng="{{ lng }}">
+							{{ tracker.name }}
+						</option>
+					{% endif %}
+				{% else %}
+					<option value="{{ tracker.id }}" disabled>
+						{{ tracker.name }} (No Signal)
+					</option>
+				{% endif %}
+			{% endfor %}
+		</select>
+	</div>
+</div>
+
+<!-- Map Container -->
+<div class="rounded-4 overflow-hidden border border-secondary-subtle" style="height: calc(100vh - 280px); width: 100%; position: relative;">
+	<div id="live-map" style="position: absolute; top: 0; bottom: 0; left: 0; right: 0; z-index: 1;"></div>
+</div>
+
+<script>
+(function() {
+	function initLiveMap() {
+		const mapElement = document.getElementById('live-map');
+		if (!mapElement) return;
+
+		const homeLat = -6.370901936057233;
+		const homeLng = 106.82459298887727;
+
+		const homeIcon = L.icon({
+			iconUrl: '/assets/home.png',
+			iconSize: [42, 42],
+			iconAnchor: [21, 21],
+			popupAnchor: [0, -15]
+		});
+
+		const flagIcon = L.icon({
+			iconUrl: '/assets/flag.png',
+			iconSize: [31, 46],
+			iconAnchor: [15.5, 21],
+			popupAnchor: [0, -40]
+		});
+
+		if (window.liveMapInstance) {
+			try {
+				window.liveMapInstance.off();
+				window.liveMapInstance.remove();
+			} catch (e) {
+				console.error('Error removing map:', e);
+			}
+			window.liveMapInstance = null;
+		}
+
+		// Initialize Map
+		const map = L.map('live-map').setView([homeLat, homeLng], 13);
+		window.liveMapInstance = map;
+
+		mapElement.addEventListener('htmx:beforeCleanupElement', function() {
+			if (window.liveMapInstance) {
+				try {
+					window.liveMapInstance.off();
+					window.liveMapInstance.remove();
+				} catch (e) {
+					console.error('Error removing map:', e);
+				}
+				window.liveMapInstance = null;
+			}
+		});
+
+		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+			maxZoom: 19,
+			attribution: '© OpenStreetMap'
+		}).addTo(map);
+
+		// Place Home marker
+		L.marker([homeLat, homeLng], { icon: homeIcon }).addTo(map).bindPopup('Home Office');
+
+		const markers = {};
+		const allLatLngs = [[homeLat, homeLng]];
+
+		// Parse and place active tracker markers from the select dropdown options
+		const selectEl = document.getElementById('focus-tracker');
+		if (selectEl) {
+			Array.from(selectEl.options).forEach(opt => {
+				const id = opt.value;
+				if (!id) return; // Skip "Show All" option
+
+				const latStr = opt.getAttribute('data-lat');
+				const lngStr = opt.getAttribute('data-lng');
+
+				if (latStr && lngStr) {
+					const lat = parseFloat(latStr);
+					const lng = parseFloat(lngStr);
+					if (!isNaN(lat) && !isNaN(lng)) {
+						const marker = L.marker([lat, lng], { icon: flagIcon })
+							.addTo(map)
+							.bindPopup(`<strong>${opt.text}</strong><br>Status: Active`);
+						markers[id] = marker;
+						allLatLngs.push([lat, lng]);
+					}
+				}
+			});
+		}
+
+		// Fit bounds initially if we have trackers
+		if (allLatLngs.length > 1) {
+			map.fitBounds(L.latLngBounds(allLatLngs), { padding: [50, 50] });
+		}
+
+		// Dropdown focus handler
+		function handleFocusChange() {
+			const selectedOption = selectEl.options[selectEl.selectedIndex];
+			const id = selectedOption.value;
+
+			if (!id) {
+				// Show all bounds
+				if (allLatLngs.length > 1) {
+					map.fitBounds(L.latLngBounds(allLatLngs), { padding: [50, 50] });
+				} else {
+					map.setView([homeLat, homeLng], 13);
+				}
+				return;
+			}
+
+			const latStr = selectedOption.getAttribute('data-lat');
+			const lngStr = selectedOption.getAttribute('data-lng');
+
+			if (latStr && lngStr) {
+				const lat = parseFloat(latStr);
+				const lng = parseFloat(lngStr);
+				if (!isNaN(lat) && !isNaN(lng)) {
+					map.setView([lat, lng], 16);
+					if (markers[id]) {
+						markers[id].openPopup();
+					}
+				}
+			}
+		}
+
+		if (selectEl) {
+			selectEl.addEventListener('change', handleFocusChange);
+		}
+	}
+
+	document.addEventListener('htmx:afterSettle', initLiveMap);
+	initLiveMap();
+})();
+</script>
+{% endblock %}

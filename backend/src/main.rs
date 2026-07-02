@@ -249,7 +249,8 @@ async fn run_rocket(
                 pages::trips::list_trips,
                 pages::trips::create_trip,
                 pages::trips::update_trip,
-                pages::trips::delete_trip
+                pages::trips::delete_trip,
+                pages::live::live_tracking
             ],
         )
         .mount("/js", rocket::fs::FileServer::from("templates/js"))
