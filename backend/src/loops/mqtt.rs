@@ -56,16 +56,9 @@ pub async fn handle_mqtt_payload(
                 parsed_payload.location.longitude.unwrap_or(0.0),
                 db,
                 redis,
+                tx,
             )
             .await?;
-
-            let ws_message = serde_json::json!({
-                "message_type": "remove_destination",
-                "data": {
-                    "activity_id": trip.trip.activity_id,
-                }
-            });
-            let _ = tx.send(ws_message.to_string());
 
             break;
         }

@@ -141,6 +141,7 @@ pub async fn finish_trip(
     finished_longitude: f64,
     db: &DatabaseConnection,
     redis: &redis::Client,
+    tx: &tokio::sync::broadcast::Sender<String>,
 ) -> Result<(), anyhow::Error> {
     let trip = trips_entity::Entity::find_by_id(activity_id)
         .one(db)
@@ -169,6 +170,14 @@ pub async fn finish_trip(
     if let Err(e) = reload_active_trips_cache(db, redis).await {
         error!("Failed to reload active trips cache: {:?}", e);
     }
+
+    let ws_message = serde_json::json!({
+        "message_type": "remove_destination",
+        "data": {
+            "activity_id": activity_id,
+        }
+    });
+    let _ = tx.send(ws_message.to_string());
 
     Ok(())
 }
@@ -319,6 +328,7 @@ pub async fn create_trip(
     form_data: Form<TripForm<'_>>,
     db: &State<DatabaseConnection>,
     redis: &State<redis::Client>,
+    tx: &State<tokio::sync::broadcast::Sender<String>>,
     user: AuthenticatedUser,
 ) -> Result<TripsTemplate, Status> {
     if user.role != "Admin" {
@@ -352,9 +362,34 @@ pub async fn create_trip(
     };
 
     match new_trip.insert(db.inner()).await {
-        Ok(_) => {
+        Ok(inserted) => {
             if let Err(e) = reload_active_trips_cache(db.inner(), redis.inner()).await {
                 error!("Failed to reload active trips cache: {:?}", e);
+            }
+            if finished_at.is_some() {
+                let ws_message = serde_json::json!({
+                    "message_type": "remove_destination",
+                    "data": {
+                        "activity_id": inserted.activity_id,
+                    }
+                });
+                let _ = tx.send(ws_message.to_string());
+            } else {
+                if let Ok(Some(contact)) = contacts::Entity::find_by_id(inserted.contact_id)
+                    .one(db.inner())
+                    .await
+                {
+                    let ws_message = serde_json::json!({
+                        "message_type": "update_destination",
+                        "data": {
+                            "activity_id": inserted.activity_id,
+                            "contact_name": contact.name,
+                            "contact_latitude": contact.latitude,
+                            "contact_longitude": contact.longitude,
+                        }
+                    });
+                    let _ = tx.send(ws_message.to_string());
+                }
             }
             render_trips(db.inner(), &user, None, None, None).await
         }
@@ -369,6 +404,7 @@ pub async fn update_trip(
     form_data: Form<TripForm<'_>>,
     db: &State<DatabaseConnection>,
     redis: &State<redis::Client>,
+    tx: &State<tokio::sync::broadcast::Sender<String>>,
     user: AuthenticatedUser,
 ) -> Result<TripsTemplate, Status> {
     if user.role != "Admin" {
@@ -418,6 +454,31 @@ pub async fn update_trip(
             if let Err(e) = reload_active_trips_cache(db.inner(), redis.inner()).await {
                 error!("Failed to reload active trips cache: {:?}", e);
             }
+            if finished_at.is_some() {
+                let ws_message = serde_json::json!({
+                    "message_type": "remove_destination",
+                    "data": {
+                        "activity_id": id,
+                    }
+                });
+                let _ = tx.send(ws_message.to_string());
+            } else {
+                if let Ok(Some(contact)) = contacts::Entity::find_by_id(form_data.contact_id)
+                    .one(db.inner())
+                    .await
+                {
+                    let ws_message = serde_json::json!({
+                        "message_type": "update_destination",
+                        "data": {
+                            "activity_id": id,
+                            "contact_name": contact.name,
+                            "contact_latitude": contact.latitude,
+                            "contact_longitude": contact.longitude,
+                        }
+                    });
+                    let _ = tx.send(ws_message.to_string());
+                }
+            }
             render_trips(db.inner(), &user, None, page, None).await
         }
         Err(err) => render_trips(db.inner(), &user, Some(id), page, Some(err.to_string())).await,
@@ -430,6 +491,7 @@ pub async fn delete_trip(
     page: Option<u64>,
     db: &State<DatabaseConnection>,
     redis: &State<redis::Client>,
+    tx: &State<tokio::sync::broadcast::Sender<String>>,
     user: AuthenticatedUser,
 ) -> Result<TripsTemplate, Status> {
     if user.role != "Admin" {
@@ -444,6 +506,13 @@ pub async fn delete_trip(
             if let Err(e) = reload_active_trips_cache(db.inner(), redis.inner()).await {
                 error!("Failed to reload active trips cache: {:?}", e);
             }
+            let ws_message = serde_json::json!({
+                "message_type": "remove_destination",
+                "data": {
+                    "activity_id": id,
+                }
+            });
+            let _ = tx.send(ws_message.to_string());
             render_trips(db.inner(), &user, None, page, None).await
         }
         Err(err) => render_trips(db.inner(), &user, None, page, Some(err.to_string())).await,
