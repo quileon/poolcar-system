@@ -5,6 +5,14 @@
 {% endblock %}
 
 {% block body %}
+<style>
+	#map {
+		height: 200px;
+		border-radius: 8px;
+		margin-bottom: 1.5rem;
+		z-index: 1;
+	}
+</style>
 
 <!-- Page Header -->
 <div class="d-flex flex-column">
@@ -190,7 +198,7 @@
 						<label for="trip-contact" class="form-label fw-semibold text-muted">Select Contact</label>
 						<select class="form-select form-select-lg" id="trip-contact" name="contact_id" required>
 							{% for contact in contacts %}
-								<option value="{{ contact.contact_id }}" {% if editing.contact_id == contact.contact_id %}selected{% endif %}>
+								<option value="{{ contact.contact_id }}" data-lat="{{ contact.latitude }}" data-lng="{{ contact.longitude }}" {% if editing.contact_id == contact.contact_id %}selected{% endif %}>
 									{{ contact.name }}
 								</option>
 							{% endfor %}
@@ -211,6 +219,11 @@
 					<div class="mb-3">
 						<label for="trip-desc" class="form-label fw-semibold text-muted">Description</label>
 						<textarea class="form-control form-control-lg" id="trip-desc" name="description" rows="3" placeholder="Enter trip details...">{% if let Some(desc) = editing.description %}{{ desc }}{% endif %}</textarea>
+					</div>
+
+					<div class="mb-3">
+						<label class="form-label fw-semibold text-muted">Location Map</label>
+						<div id="map"></div>
 					</div>
 
 					<div class="form-check form-switch mb-3">
@@ -269,7 +282,7 @@
 						<select class="form-select form-select-lg" id="trip-contact" name="contact_id" required>
 							<option value="" disabled selected>Choose a destination contact...</option>
 							{% for contact in contacts %}
-								<option value="{{ contact.contact_id }}">
+								<option value="{{ contact.contact_id }}" data-lat="{{ contact.latitude }}" data-lng="{{ contact.longitude }}">
 									{{ contact.name }}
 								</option>
 							{% endfor %}
@@ -290,6 +303,11 @@
 					<div class="mb-3">
 						<label for="trip-desc" class="form-label fw-semibold text-muted">Description</label>
 						<textarea class="form-control form-control-lg" id="trip-desc" name="description" rows="3" placeholder="Enter trip details..."></textarea>
+					</div>
+
+					<div class="mb-3">
+						<label class="form-label fw-semibold text-muted">Location Map</label>
+						<div id="map"></div>
 					</div>
 
 					<div class="form-check form-switch mb-3">
@@ -371,6 +389,118 @@
 		const localISOTime = (new Date(now - offset)).toISOString().slice(0, 16);
 		startedInput.value = localISOTime;
 	}
+
+	// Leaflet map initialization
+	function initMap() {
+		const mapElement = document.getElementById('map');
+		if (!mapElement) return;
+
+		const homeLat = -6.370901936057233;
+		const homeLng = 106.82459298887727;
+
+		const homeIcon = L.icon({
+			iconUrl: '/assets/home.png',
+			iconSize: [42, 42],
+			iconAnchor: [21, 21],
+			popupAnchor: [0, -15]
+		});
+		const flagIcon = L.icon({
+			iconUrl: '/assets/flag.png',
+			iconSize: [31, 46],
+			iconAnchor: [15.5, 21],
+			popupAnchor: [0, -40]
+		});
+
+		if (window.tripsMap) {
+			try {
+				window.tripsMap.off();
+				window.tripsMap.remove();
+			} catch (e) {
+				console.error('Error removing map:', e);
+			}
+			window.tripsMap = null;
+		}
+
+		// Initialize non-interactive map
+		const map = L.map('map', {
+			zoomControl: false,
+			dragging: false,
+			touchZoom: false,
+			doubleClickZoom: false,
+			scrollWheelZoom: false,
+			boxZoom: false,
+			keyboard: false
+		}).setView([homeLat, homeLng], 13);
+
+		window.tripsMap = map;
+
+		mapElement.addEventListener('htmx:beforeCleanupElement', function() {
+			if (window.tripsMap) {
+				try {
+					window.tripsMap.off();
+					window.tripsMap.remove();
+				} catch (e) {
+					console.error('Error removing map:', e);
+				}
+				window.tripsMap = null;
+			}
+		});
+
+		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+			maxZoom: 19,
+			attribution: '© OpenStreetMap'
+		}).addTo(map);
+
+		// Place Home marker
+		L.marker([homeLat, homeLng], { icon: homeIcon }).addTo(map);
+
+		let contactMarker = null;
+
+		function updateMapMarkers() {
+			const select = document.getElementById('trip-contact');
+			if (!select) return;
+			const selectedOption = select.options[select.selectedIndex];
+			if (!selectedOption) return;
+
+			const latStr = selectedOption.getAttribute('data-lat');
+			const lngStr = selectedOption.getAttribute('data-lng');
+
+			if (latStr && lngStr) {
+				const lat = parseFloat(latStr);
+				const lng = parseFloat(lngStr);
+				if (!isNaN(lat) && !isNaN(lng)) {
+					if (contactMarker) {
+						map.removeLayer(contactMarker);
+					}
+					contactMarker = L.marker([lat, lng], { icon: flagIcon }).addTo(map);
+
+					// Fit both home and contact markers
+					const bounds = L.latLngBounds([
+						[homeLat, homeLng],
+						[lat, lng]
+					]);
+					map.fitBounds(bounds, { padding: [30, 30] });
+					return;
+				}
+			}
+
+			if (contactMarker) {
+				map.removeLayer(contactMarker);
+				contactMarker = null;
+			}
+			map.setView([homeLat, homeLng], 13);
+		}
+
+		updateMapMarkers();
+
+		const select = document.getElementById('trip-contact');
+		if (select) {
+			select.addEventListener('change', updateMapMarkers);
+		}
+	}
+
+	document.addEventListener('htmx:afterSettle', initMap);
+	initMap();
 })();
 </script>
 {% endblock %}
