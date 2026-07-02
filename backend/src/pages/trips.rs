@@ -10,6 +10,7 @@ use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter,
     QueryOrder, Set,
 };
+use serde::{Deserialize, Serialize};
 use tracing::error;
 
 pub struct TripWithDetails {
@@ -58,16 +59,35 @@ fn parse_datetime(s: Option<&str>) -> Option<NaiveDateTime> {
     })
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct ActiveTripCache {
+    pub trip: trips_entity::Model,
+    pub contact_latitude: f64,
+    pub contact_longitude: f64,
+}
+
 pub async fn reload_active_trips_cache(
     db: &DatabaseConnection,
     redis: &redis::Client,
 ) -> Result<(), anyhow::Error> {
-    let active_trips = trips_entity::Entity::find()
+    let active_trips_with_contacts = trips_entity::Entity::find()
         .filter(trips_entity::Column::FinishedAt.is_null())
+        .find_also_related(contacts::Entity)
         .all(db)
         .await?;
 
-    let json_data = serde_json::to_string(&active_trips)?;
+    let mut cache_items = Vec::new();
+    for (trip, contact_opt) in active_trips_with_contacts {
+        if let Some(contact) = contact_opt {
+            cache_items.push(ActiveTripCache {
+                trip,
+                contact_latitude: contact.latitude,
+                contact_longitude: contact.longitude,
+            });
+        }
+    }
+
+    let json_data = serde_json::to_string(&cache_items)?;
 
     use redis::AsyncCommands;
     let mut redis_conn = redis.get_multiplexed_async_connection().await?;
@@ -81,25 +101,37 @@ pub async fn reload_active_trips_cache(
 pub async fn get_active_trips(
     db: &DatabaseConnection,
     redis: &redis::Client,
-) -> Result<Vec<trips_entity::Model>, anyhow::Error> {
+) -> Result<Vec<ActiveTripCache>, anyhow::Error> {
     use redis::AsyncCommands;
     let mut redis_conn = redis.get_multiplexed_async_connection().await?;
 
     if let Ok(Some(cached_json)) = redis_conn.get::<_, Option<String>>("trips:active").await {
-        if let Ok(trips) = serde_json::from_str::<Vec<trips_entity::Model>>(&cached_json) {
+        if let Ok(trips) = serde_json::from_str::<Vec<ActiveTripCache>>(&cached_json) {
             return Ok(trips);
         }
     }
 
-    let active_trips = trips_entity::Entity::find()
+    let active_trips_with_contacts = trips_entity::Entity::find()
         .filter(trips_entity::Column::FinishedAt.is_null())
+        .find_also_related(contacts::Entity)
         .all(db)
         .await?;
 
-    let json_data = serde_json::to_string(&active_trips)?;
+    let mut cache_items = Vec::new();
+    for (trip, contact_opt) in active_trips_with_contacts {
+        if let Some(contact) = contact_opt {
+            cache_items.push(ActiveTripCache {
+                trip,
+                contact_latitude: contact.latitude,
+                contact_longitude: contact.longitude,
+            });
+        }
+    }
+
+    let json_data = serde_json::to_string(&cache_items)?;
     let _ = redis_conn.set::<_, _, ()>("trips:active", &json_data).await;
 
-    Ok(active_trips)
+    Ok(cache_items)
 }
 
 pub async fn finish_trip(
