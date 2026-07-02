@@ -2,11 +2,15 @@ use crate::auth::AuthenticatedUser;
 use crate::entities::{activities as trips_entity, cars, contacts, trackers};
 use askama::Template;
 use askama_web::WebTemplate;
+use chrono::NaiveDateTime;
 use rocket::form::Form;
 use rocket::http::Status;
 use rocket::{FromForm, State};
-use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, PaginatorTrait, Set, QueryOrder, ColumnTrait, QueryFilter};
-use chrono::NaiveDateTime;
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter,
+    QueryOrder, Set,
+};
+use tracing::error;
 
 pub struct TripWithDetails {
     pub trip: trips_entity::Model,
@@ -54,6 +58,89 @@ fn parse_datetime(s: Option<&str>) -> Option<NaiveDateTime> {
     })
 }
 
+pub async fn reload_active_trips_cache(
+    db: &DatabaseConnection,
+    redis: &redis::Client,
+) -> Result<(), anyhow::Error> {
+    let active_trips = trips_entity::Entity::find()
+        .filter(trips_entity::Column::FinishedAt.is_null())
+        .all(db)
+        .await?;
+
+    let json_data = serde_json::to_string(&active_trips)?;
+
+    use redis::AsyncCommands;
+    let mut redis_conn = redis.get_multiplexed_async_connection().await?;
+    redis_conn
+        .set::<_, _, ()>("trips:active", &json_data)
+        .await?;
+
+    Ok(())
+}
+
+pub async fn get_active_trips(
+    db: &DatabaseConnection,
+    redis: &redis::Client,
+) -> Result<Vec<trips_entity::Model>, anyhow::Error> {
+    use redis::AsyncCommands;
+    let mut redis_conn = redis.get_multiplexed_async_connection().await?;
+
+    if let Ok(Some(cached_json)) = redis_conn.get::<_, Option<String>>("trips:active").await {
+        if let Ok(trips) = serde_json::from_str::<Vec<trips_entity::Model>>(&cached_json) {
+            return Ok(trips);
+        }
+    }
+
+    let active_trips = trips_entity::Entity::find()
+        .filter(trips_entity::Column::FinishedAt.is_null())
+        .all(db)
+        .await?;
+
+    let json_data = serde_json::to_string(&active_trips)?;
+    let _ = redis_conn.set::<_, _, ()>("trips:active", &json_data).await;
+
+    Ok(active_trips)
+}
+
+pub async fn finish_trip(
+    activity_id: i32,
+    tracker_id: i32,
+    finished_latitude: f64,
+    finished_longitude: f64,
+    db: &DatabaseConnection,
+    redis: &redis::Client,
+) -> Result<(), anyhow::Error> {
+    let trip = trips_entity::Entity::find_by_id(activity_id)
+        .one(db)
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("Trip with ID {} not found", activity_id))?;
+
+    let assigned_car = cars::Entity::find()
+        .filter(cars::Column::TrackerId.eq(tracker_id))
+        .filter(cars::Column::DeletedAt.is_null())
+        .one(db)
+        .await?;
+    let car_id = assigned_car.map(|c| c.car_id);
+
+    let now = chrono::Utc::now().naive_utc();
+
+    let mut active: trips_entity::ActiveModel = trip.into();
+    active.car_id = Set(car_id);
+    active.tracker_id = Set(Some(tracker_id));
+    active.finished_at = Set(Some(now));
+    active.finished_latitude = Set(Some(finished_latitude));
+    active.finished_longitude = Set(Some(finished_longitude));
+    active.updated_at = Set(now);
+
+    active.update(db).await?;
+
+    if let Err(e) = reload_active_trips_cache(db, redis).await {
+        error!("Failed to reload active trips cache: {:?}", e);
+    }
+
+    Ok(())
+}
+
 async fn render_trips(
     db: &DatabaseConnection,
     user: &AuthenticatedUser,
@@ -94,7 +181,10 @@ async fn render_trips(
         .order_by_desc(trips_entity::Column::CreatedAt)
         .paginate(db, page_size);
 
-    let raw_total_pages = paginator.num_pages().await.map_err(|_| Status::InternalServerError)?;
+    let raw_total_pages = paginator
+        .num_pages()
+        .await
+        .map_err(|_| Status::InternalServerError)?;
     let total_pages = std::cmp::max(1, raw_total_pages);
     let target_page = std::cmp::min(current_page, total_pages);
 
@@ -140,9 +230,19 @@ async fn render_trips(
     let trips = raw_trips
         .into_iter()
         .map(|t| {
-            let car = t.car_id.and_then(|cid| related_cars.iter().find(|c| c.car_id == cid).cloned());
-            let contact = related_contacts.iter().find(|c| c.contact_id == t.contact_id).cloned();
-            let tracker = t.tracker_id.and_then(|tid| related_trackers.iter().find(|tr| tr.tracker_id == tid).cloned());
+            let car = t
+                .car_id
+                .and_then(|cid| related_cars.iter().find(|c| c.car_id == cid).cloned());
+            let contact = related_contacts
+                .iter()
+                .find(|c| c.contact_id == t.contact_id)
+                .cloned();
+            let tracker = t.tracker_id.and_then(|tid| {
+                related_trackers
+                    .iter()
+                    .find(|tr| tr.tracker_id == tid)
+                    .cloned()
+            });
             TripWithDetails {
                 trip: t,
                 car,
@@ -186,6 +286,7 @@ pub async fn list_trips(
 pub async fn create_trip(
     form_data: Form<TripForm<'_>>,
     db: &State<DatabaseConnection>,
+    redis: &State<redis::Client>,
     user: AuthenticatedUser,
 ) -> Result<TripsTemplate, Status> {
     if user.role != "Admin" {
@@ -219,7 +320,12 @@ pub async fn create_trip(
     };
 
     match new_trip.insert(db.inner()).await {
-        Ok(_) => render_trips(db.inner(), &user, None, None, None).await,
+        Ok(_) => {
+            if let Err(e) = reload_active_trips_cache(db.inner(), redis.inner()).await {
+                error!("Failed to reload active trips cache: {:?}", e);
+            }
+            render_trips(db.inner(), &user, None, None, None).await
+        }
         Err(err) => render_trips(db.inner(), &user, None, None, Some(err.to_string())).await,
     }
 }
@@ -230,6 +336,7 @@ pub async fn update_trip(
     page: Option<u64>,
     form_data: Form<TripForm<'_>>,
     db: &State<DatabaseConnection>,
+    redis: &State<redis::Client>,
     user: AuthenticatedUser,
 ) -> Result<TripsTemplate, Status> {
     if user.role != "Admin" {
@@ -238,8 +345,19 @@ pub async fn update_trip(
 
     let trip_record = match trips_entity::Entity::find_by_id(id).one(db.inner()).await {
         Ok(Some(t)) => t,
-        Ok(None) => return render_trips(db.inner(), &user, Some(id), page, Some(format!("Trip with ID {} not found.", id))).await,
-        Err(err) => return render_trips(db.inner(), &user, Some(id), page, Some(err.to_string())).await,
+        Ok(None) => {
+            return render_trips(
+                db.inner(),
+                &user,
+                Some(id),
+                page,
+                Some(format!("Trip with ID {} not found.", id)),
+            )
+            .await;
+        }
+        Err(err) => {
+            return render_trips(db.inner(), &user, Some(id), page, Some(err.to_string())).await;
+        }
     };
 
     let started_at = parse_datetime(form_data.started_at);
@@ -264,7 +382,12 @@ pub async fn update_trip(
     active.updated_at = Set(chrono::Utc::now().naive_utc());
 
     match active.update(db.inner()).await {
-        Ok(_) => render_trips(db.inner(), &user, None, page, None).await,
+        Ok(_) => {
+            if let Err(e) = reload_active_trips_cache(db.inner(), redis.inner()).await {
+                error!("Failed to reload active trips cache: {:?}", e);
+            }
+            render_trips(db.inner(), &user, None, page, None).await
+        }
         Err(err) => render_trips(db.inner(), &user, Some(id), page, Some(err.to_string())).await,
     }
 }
@@ -274,14 +397,23 @@ pub async fn delete_trip(
     id: i32,
     page: Option<u64>,
     db: &State<DatabaseConnection>,
+    redis: &State<redis::Client>,
     user: AuthenticatedUser,
 ) -> Result<TripsTemplate, Status> {
     if user.role != "Admin" {
         return Err(Status::Forbidden);
     }
 
-    match trips_entity::Entity::delete_by_id(id).exec(db.inner()).await {
-        Ok(_) => render_trips(db.inner(), &user, None, page, None).await,
+    match trips_entity::Entity::delete_by_id(id)
+        .exec(db.inner())
+        .await
+    {
+        Ok(_) => {
+            if let Err(e) = reload_active_trips_cache(db.inner(), redis.inner()).await {
+                error!("Failed to reload active trips cache: {:?}", e);
+            }
+            render_trips(db.inner(), &user, None, page, None).await
+        }
         Err(err) => render_trips(db.inner(), &user, None, page, Some(err.to_string())).await,
     }
 }
