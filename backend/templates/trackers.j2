@@ -56,15 +56,11 @@
 							<tr id="tracker-row-{{ item.tracker.tracker_id }}">
 								<td class="font-monospace fw-semibold">#{{ item.tracker.tracker_id }}</td>
 								<td class="fw-semibold text-dark">{{ item.tracker.name }}</td>
-								<td>
+								<td class="text-dark">
 									{% if let Some(car) = item.car %}
-										<span class="badge bg-success px-2 py-1 rounded-pill">
-											{{ car.name }} ({{ car.police_number }})
-										</span>
+										{{ car.name }} ({{ car.police_number }})
 									{% else %}
-                                        <span class="badge bg-secondary px-2 py-1 rounded-pill">
-                                            Unassigned
-                                        </span>
+										<span class="text-muted fw-normal">Unassigned</span>
 									{% endif %}
 								</td>
 								<td class="text-muted">

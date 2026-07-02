@@ -74,11 +74,11 @@
 									{% endif %}
 								</td>
 								<td>
-									<div class="fw-bold text-dark">
+									<div class="text-dark">
 										{% if let Some(car) = item.car %}
-											{{ car.name }} <span class="text-muted small">({{ car.police_number }})</span>
+											{{ car.name }} ({{ car.police_number }})
 										{% else %}
-											<span class="text-muted">Unassigned Car</span>
+											<span class="text-muted fw-normal">Unassigned Car</span>
 										{% endif %}
 									</div>
 									{% if let Some(tracker) = item.tracker %}

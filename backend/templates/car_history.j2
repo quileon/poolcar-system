@@ -58,16 +58,16 @@
 								<td class="font-monospace fw-semibold">#{{ item.status.car_status_id }}</td>
 								<td class="fw-semibold text-dark">
 									{% if let Some(car) = item.car %}
-										{{ car.name }} <span class="text-muted small">({{ car.police_number }})</span>
+										{{ car.name }} ({{ car.police_number }})
 									{% else %}
-										<span class="text-muted">Unknown Car</span>
+										<span class="text-muted fw-normal">Unknown Car</span>
 									{% endif %}
 								</td>
 								<td>{{ item.status.kilometres }} km</td>
 								<td>{{ item.status.gas_level }} bars</td>
 								<td>
 									{% if let crate::entities::sea_orm_active_enums::StatusType::Departure = item.status.status_type %}
-										<span class="badge bg-warning text-dark px-2 py-1 rounded-pill fw-semibold">
+										<span class="badge bg-primary px-2 py-1 rounded-pill fw-semibold">
 											Departure
 										</span>
 									{% else %}
