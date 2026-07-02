@@ -9,6 +9,8 @@ use rocket::http::Status;
 use rocket::serde::json::Json;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
+use tokio::sync::broadcast::error::RecvError;
+use tracing::{error, info};
 
 #[derive(Serialize)]
 pub struct UserResponse {
@@ -239,5 +241,52 @@ pub async fn search_places(
 
     Ok(PlacesSearchResultsTemplate {
         places: response.places,
+    })
+}
+
+#[rocket::get("/ws/live")]
+pub fn live_ws(
+    ws: rocket_ws::WebSocket,
+    tx: &State<tokio::sync::broadcast::Sender<String>>,
+) -> rocket_ws::Channel<'static> {
+    use rocket::futures::{SinkExt, StreamExt};
+    let mut rx = tx.subscribe();
+
+    ws.channel(move |mut stream| {
+        Box::pin(async move {
+            loop {
+                tokio::select! {
+                    msg_res = rx.recv() => {
+                        match msg_res {
+                            Ok(msg) => {
+                                if stream.send(rocket_ws::Message::Text(msg)).await.is_err() {
+                                    error!("Failed to send WebSocket message");
+                                    break;
+                                }
+                            }
+                            Err(RecvError::Lagged(_)) => {}
+                            Err(RecvError::Closed) => {
+                                error!("WebSocket connection closed unexpectedly");
+                                break;
+                            }
+                        }
+                    }
+                    client_msg = stream.next() => {
+                        match client_msg {
+                            Some(Ok(rocket_ws::Message::Close(_))) | None => {
+                                info!("WebSocket connection closed gracefully");
+                                break;
+                            }
+                            Some(Err(_)) => {
+                                error!("WebSocket connection error");
+                                break;
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+            Ok(())
+        })
     })
 }
