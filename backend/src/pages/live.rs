@@ -23,6 +23,14 @@ pub struct LiveTemplate {
     pub error: Option<String>,
 }
 
+impl LiveTemplate {
+    pub fn get_payload(&self, tracker_id: &i32) -> Option<&MqttPayload> {
+        self.tracker_payloads
+            .iter()
+            .find(|payload| payload.id == *tracker_id as u32)
+    }
+}
+
 async fn render_live(
     db: &DatabaseConnection,
     redis: &redis::Client,

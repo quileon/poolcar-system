@@ -20,12 +20,24 @@
 		<select class="form-select" id="focus-tracker">
 			<option value="" selected>Show All Trackers</option>
 			{% for tracker in trackers %}
-				<option value="{{ tracker.tracker.tracker_id }}" disabled>
-					{{ tracker.tracker.name }}
-					{% if let Some(car) = tracker.car %}
-						({{ car.name }} - {{ car.police_number }})
+				{% if let Some(payload) = self.get_payload(tracker.tracker.tracker_id) %}
+					{% if let (Some(lat), Some(lng)) = (payload.location.latitude, payload.location.longitude) %}
+						<option value="{{ tracker.tracker.tracker_id }}" data-lat="{{ lat }}" data-lng="{{ lng }}">
+							{{ tracker.tracker.name }}
+							{% if let Some(car) = tracker.car %}
+								({{ car.name }} - {{ car.police_number }})
+							{% endif %}
+						</option>
 					{% endif %}
-				</option>
+				{% else %}
+					<option value="{{ tracker.tracker.tracker_id }}" disabled>
+						{{ tracker.tracker.name }}
+						{% if let Some(car) = tracker.car %}
+							({{ car.name }} - {{ car.police_number }})
+						{% endif %}
+						(No Signal)
+					</option>
+				{% endif %}
 			{% endfor %}
 		</select>
 	</div>
