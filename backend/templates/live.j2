@@ -54,8 +54,10 @@
 <div id="active-trips-data" style="display: none;">
 	{% for trip in active_trips %}
 		<div class="trip-destination"
+			 data-activity-id="{{ trip.trip.activity_id }}"
 			 data-lat="{{ trip.contact_latitude }}"
 			 data-lng="{{ trip.contact_longitude }}"
+			 data-desc="{% if let Some(desc) = trip.trip.description.clone() %}{{ desc }}{% else %}No Description{% endif %}">
 		</div>
 	{% endfor %}
 </div>
@@ -107,7 +109,20 @@
 
 		// Initialize Tracker Marker
 		const markers = {};
+		const destinationMarkers = {};
 		const allLatLngs = [[homeLat, homeLng]];
+
+		function recalculateBounds() {
+			const newLatLngs = [[homeLat, homeLng]];
+			for (const key in markers) {
+				newLatLngs.push(markers[key].getLatLng());
+			}
+			for (const key in destinationMarkers) {
+				newLatLngs.push(destinationMarkers[key].getLatLng());
+			}
+			allLatLngs.length = 0;
+			newLatLngs.forEach(ll => allLatLngs.push(ll));
+		}
 
 		const selectElement = document.getElementById('focus-tracker');
 		if (selectElement) {
@@ -134,7 +149,7 @@
 
 						const marker = L.marker([lat, lng], { icon: trackerIcon })
 							.addTo(map)
-							.bindPopup(`${opt.text}</strong><br>Status: Active`);
+							.bindPopup(`<strong>${opt.text}</strong>`);
 						markers[id] = marker;
 						allLatLngs.push([lat, lng]);
 					}
@@ -145,8 +160,10 @@
 		// Initialize Trip Marker
 		const tripDestinations = document.querySelectorAll('.trip-destination');
 		tripDestinations.forEach(el => {
+			const activityId = el.getAttribute('data-activity-id');
 			const latStr = el.getAttribute('data-lat');
 			const lngStr = el.getAttribute('data-lng');
+			const desc = el.getAttribute('data-desc') || 'Destination';
 
 			if (latStr && lngStr) {
 				const lat = parseFloat(latStr);
@@ -159,8 +176,13 @@
 						popupAnchor: [0, -40]
 					});
 
-					L.marker([lat, lng], { icon: flagIcon })
+					const marker = L.marker([lat, lng], { icon: flagIcon })
 						.addTo(map)
+						.bindPopup(`<strong>${desc}</strong>`);
+
+					if (activityId) {
+						destinationMarkers[activityId] = marker;
+					}
 					allLatLngs.push([lat, lng]);
 				}
 			}
@@ -195,6 +217,118 @@
 		if (selectElement) {
 			selectElement.addEventListener('change', handleFocusChange);
 		}
+
+		// Setup WebSocket
+		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+		const wsUrl = `${protocol}//${window.location.host}/ws/live`;
+		const socket = new WebSocket(wsUrl);
+
+		socket.onmessage = function(event) {
+			try {
+				const message = JSON.parse(event.data);
+				if (message.message_type === 'tracker_location') {
+					const payload = message.data;
+					const trackerId = payload.id;
+
+					if (payload.location && payload.location.latitude !== null && payload.location.longitude !== null) {
+						const lat = payload.location.latitude;
+						const lng = payload.location.longitude;
+
+						// Also update dropdown
+						const opt = selectElement ? selectElement.querySelector(`option[value="${trackerId}"]`) : null;
+						if (opt) {
+							opt.setAttribute('data-lat', lat);
+							opt.setAttribute('data-lng', lng);
+
+							if (opt.disabled) {
+								opt.disabled = false;
+								opt.text = opt.text.replace(/\s*\(No\s+Signal\)/i, '');
+							}
+						}
+
+						let marker = markers[trackerId];
+						if (marker) {
+							marker.setLatLng([lat, lng]);
+						} else {
+							const carType = opt ? (opt.getAttribute('data-car-type') || 'passenger') : 'passenger';
+							const color = colors[trackerId % colors.length];
+
+							const customIcon = L.icon({
+								iconUrl: `/assets/${carType}-${color}.png`,
+								iconSize: [31, 46],
+								iconAnchor: [15.5, 46],
+								popupAnchor: [0, -40]
+							});
+
+							marker = L.marker([lat, lng], { icon: customIcon })
+								.addTo(map)
+								.bindPopup(`<strong>${opt ? opt.text : 'Tracker ' + trackerId}</strong>`);
+							markers[trackerId] = marker;
+						}
+
+						recalculateBounds();
+
+						// Continue focus
+						if (selectElement && selectElement.value === String(trackerId)) {
+							map.setView([lat, lng], 16);
+						}
+					}
+				} else if (message.message_type === 'update_destination') {
+					const payload = message.data;
+					const activityId = payload.activity_id;
+					const lat = parseFloat(payload.contact_latitude);
+					const lng = parseFloat(payload.contact_longitude);
+					const desc = payload.contact_name || 'No Description';
+
+					if (!isNaN(lat) && !isNaN(lng)) {
+						let marker = destinationMarkers[activityId];
+						if (marker) {
+							marker.setLatLng([lat, lng]);
+							marker.setPopupContent(`<strong>${desc}</strong>`);
+						} else {
+							const flagIcon = L.icon({
+								iconUrl: '/assets/flag.png',
+								iconSize: [31, 46],
+								iconAnchor: [15.5, 46],
+								popupAnchor: [0, -40]
+							});
+							marker = L.marker([lat, lng], { icon: flagIcon })
+								.addTo(map)
+								.bindPopup(`<strong>${desc}</strong>`);
+							destinationMarkers[activityId] = marker;
+						}
+						recalculateBounds();
+					}
+				} else if (message.message_type === 'remove_destination') {
+					const payload = message.data;
+					const activityId = payload.activity_id;
+					const marker = destinationMarkers[activityId];
+					if (marker) {
+						map.removeLayer(marker);
+						delete destinationMarkers[activityId];
+						recalculateBounds();
+					}
+				}
+			} catch (e) {
+				console.error('Error handling WebSocket message:', e);
+			}
+		};
+
+		socket.onclose = function() {
+			console.log('Live WebSocket connection closed');
+		};
+
+		socket.onerror = function(err) {
+			console.error('Live WebSocket error:', err);
+		};
+
+		mapElement.addEventListener('htmx:beforeCleanupElement', function() {
+			try {
+				socket.close();
+			} catch (e) {
+				console.error('Error closing WebSocket:', e);
+			}
+		});
 	}
 
 	initLiveMap();
