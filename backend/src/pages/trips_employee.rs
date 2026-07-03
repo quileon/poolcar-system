@@ -373,3 +373,120 @@ pub async fn finish_trip_employee(
         Err(err) => render_trips_employee(db.inner(), &user, Some(id), page, Some(err.to_string())).await,
     }
 }
+
+pub struct CsvResponse(pub Vec<u8>);
+
+impl<'r> rocket::response::Responder<'r, 'static> for CsvResponse {
+    fn respond_to(self, _: &'r rocket::Request<'_>) -> rocket::response::Result<'static> {
+        use rocket::http::{ContentType, Header};
+        rocket::response::Response::build()
+            .header(ContentType::CSV)
+            .header(Header::new("Content-Disposition", "attachment; filename=\"trips_export.csv\""))
+            .sized_body(self.0.len(), std::io::Cursor::new(self.0))
+            .ok()
+    }
+}
+
+#[rocket::get("/trips/export")]
+pub async fn export_trips_csv(
+    db: &State<DatabaseConnection>,
+    _user: AuthenticatedUser,
+) -> Result<CsvResponse, Status> {
+    let raw_trips = trips_entity::Entity::find()
+        .order_by_desc(trips_entity::Column::CreatedAt)
+        .all(db.inner())
+        .await
+        .map_err(|_| Status::InternalServerError)?;
+
+    let car_ids: Vec<i32> = raw_trips.iter().filter_map(|t| t.car_id).collect();
+    let contact_ids: Vec<i32> = raw_trips.iter().map(|t| t.contact_id).collect();
+    let tracker_ids: Vec<i32> = raw_trips.iter().filter_map(|t| t.tracker_id).collect();
+
+    let related_cars = if !car_ids.is_empty() {
+        cars::Entity::find()
+            .filter(cars::Column::CarId.is_in(car_ids))
+            .all(db.inner())
+            .await
+            .map_err(|_| Status::InternalServerError)?
+    } else {
+        vec![]
+    };
+
+    let related_contacts = if !contact_ids.is_empty() {
+        contacts::Entity::find()
+            .filter(contacts::Column::ContactId.is_in(contact_ids))
+            .all(db.inner())
+            .await
+            .map_err(|_| Status::InternalServerError)?
+    } else {
+        vec![]
+    };
+
+    let related_trackers = if !tracker_ids.is_empty() {
+        trackers::Entity::find()
+            .filter(trackers::Column::TrackerId.is_in(tracker_ids))
+            .all(db.inner())
+            .await
+            .map_err(|_| Status::InternalServerError)?
+    } else {
+        vec![]
+    };
+
+    let mut wtr = csv::Writer::from_writer(Vec::new());
+
+    wtr.write_record(&[
+        "activity_id",
+        "activity_type",
+        "description",
+        "started_at",
+        "finished_at",
+        "finished_latitude",
+        "finished_longitude",
+        "created_at",
+        "updated_at",
+        "car_id",
+        "car_name",
+        "car_police_number",
+        "car_tracker_id",
+        "tracker_id",
+        "tracker_name",
+        "contact_id",
+        "contact_name",
+        "contact_latitude",
+        "contact_longitude",
+    ])
+    .map_err(|_| Status::InternalServerError)?;
+
+    for t in raw_trips {
+        let car = t.car_id.and_then(|cid| related_cars.iter().find(|c| c.car_id == cid));
+        let contact = related_contacts.iter().find(|c| c.contact_id == t.contact_id);
+        let tracker = t.tracker_id.and_then(|tid| related_trackers.iter().find(|tr| tr.tracker_id == tid));
+
+        wtr.write_record(&[
+            t.activity_id.to_string(),
+            format!("{:?}", t.activity_type),
+            t.description.clone().unwrap_or_default(),
+            t.started_at.map(|dt| dt.to_string()).unwrap_or_default(),
+            t.finished_at.map(|dt| dt.to_string()).unwrap_or_default(),
+            t.finished_latitude.map(|val| val.to_string()).unwrap_or_default(),
+            t.finished_longitude.map(|val| val.to_string()).unwrap_or_default(),
+            t.created_at.to_string(),
+            t.updated_at.to_string(),
+            t.car_id.map(|id| id.to_string()).unwrap_or_default(),
+            car.map(|c| c.name.clone()).unwrap_or_default(),
+            car.map(|c| c.police_number.clone()).unwrap_or_default(),
+            car.and_then(|c| c.tracker_id).map(|id| id.to_string()).unwrap_or_default(),
+            t.tracker_id.map(|id| id.to_string()).unwrap_or_default(),
+            tracker.map(|tr| tr.name.clone()).unwrap_or_default(),
+            t.contact_id.to_string(),
+            contact.map(|c| c.name.clone()).unwrap_or_default(),
+            contact.map(|c| c.latitude.to_string()).unwrap_or_default(),
+            contact.map(|c| c.longitude.to_string()).unwrap_or_default(),
+        ])
+        .map_err(|_| Status::InternalServerError)?;
+    }
+
+    let csv_bytes = wtr.into_inner().map_err(|_| Status::InternalServerError)?;
+
+    Ok(CsvResponse(csv_bytes))
+}

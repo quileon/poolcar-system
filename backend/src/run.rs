@@ -76,6 +76,7 @@ pub async fn run_rocket(
                 pages::trips_employee::update_trip_employee,
                 pages::trips_employee::delete_trip_employee,
                 pages::trips_employee::finish_trip_employee,
+                pages::trips_employee::export_trips_csv,
                 pages::live::live_tracking
             ],
         )
