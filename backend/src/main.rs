@@ -150,18 +150,14 @@ async fn run_server(db_url: String) -> anyhow::Result<()> {
 
     let (db, redis) = tokio::try_join!(connect_db(&db_url), connect_redis(&redis_url))?;
 
-    let db_clone = db.clone();
-    let redis_clone = redis.clone();
-
-    // Create the real-time broadcast channel
     let (tx, _rx) = tokio::sync::broadcast::channel::<String>(1024);
     let tx_clone = tx.clone();
 
     tokio::try_join!(
-        run::run_rocket(rocket_port, db, redis, tx_clone),
+        run::run_rocket(rocket_port, db.clone(), redis.clone(), tx_clone),
         run::run_mqtt(
-            db_clone,
-            redis_clone,
+            db.clone(),
+            redis.clone(),
             &mqtt_host,
             mqtt_port,
             &mqtt_client,
@@ -170,7 +166,8 @@ async fn run_server(db_url: String) -> anyhow::Result<()> {
             &mqtt_password,
             &mqtt_topic,
             tx,
-        )
+        ),
+        run::run_audit(db, redis)
     )?;
 
     Ok(())

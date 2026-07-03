@@ -1,10 +1,15 @@
+use crate::loops::audit;
 use crate::loops::mqtt;
 use crate::pages;
 use crate::types;
+use rand::RngExt;
 use rocket::routes;
 use rumqttc::Event;
 use rumqttc::Packet;
+use rumqttc::{AsyncClient, MqttOptions, Transport};
 use std::env;
+use std::time::Duration;
+use tokio::time;
 use tracing::{error, info};
 
 pub async fn run_rocket(
@@ -102,10 +107,6 @@ pub async fn run_mqtt(
     mqtt_topic: &str,
     tx: tokio::sync::broadcast::Sender<String>,
 ) -> anyhow::Result<()> {
-    use rand::RngExt;
-    use rumqttc::{AsyncClient, MqttOptions, Transport};
-    use std::time::Duration;
-
     let random_suffix: String = {
         let mut rng = rand::rng();
         (0..8)
@@ -145,7 +146,9 @@ pub async fn run_mqtt(
                     let topic = publish.topic;
                     info!("Received MQTT payload on topic: {}", &topic);
 
-                    if let Err(e) = mqtt::handle_mqtt_payload(publish.payload, &db, &redis, &tx).await {
+                    if let Err(e) =
+                        mqtt::handle_mqtt_payload(publish.payload, &db, &redis, &tx).await
+                    {
                         error!("Error handling MQTT payload on topic {}: {:?}", &topic, e);
                     }
                 }
@@ -155,6 +158,21 @@ pub async fn run_mqtt(
                 error!("Error in MQTT eventloop: {:?}", e);
                 tokio::time::sleep(Duration::from_secs(5)).await;
             }
+        }
+    }
+}
+
+pub async fn run_audit(
+    db: sea_orm::DatabaseConnection,
+    redis: redis::Client,
+) -> anyhow::Result<()> {
+    let mut interval = time::interval(Duration::from_mins(1));
+    interval.tick().await;
+
+    loop {
+        interval.tick().await;
+        if let Err(e) = audit::audit_handler(&db, &redis).await {
+            error!("Error in auditing location: {:?}", e);
         }
     }
 }
