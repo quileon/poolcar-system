@@ -55,9 +55,9 @@
 							{% for item in users %}
 							<tr id="user-row-{{ item.user_id }}">
 								<td class="font-monospace fw-semibold">#{{ item.user_id }}</td>
-								<td class="fw-semibold text-dark">{{ item.full_name }}</td>
+								<td class="fw-semibold">{{ item.full_name }}</td>
 								<td class="font-monospace">{{ item.username }}</td>
-								<td class="text-muted">{{ item.email }}</td>
+								<td>{{ item.email }}</td>
 								<td>
 									{% if let crate::entities::sea_orm_active_enums::UserRole::Admin = item.user_role %}
 										<span class="badge bg-danger px-2 py-1 rounded-pill fw-semibold">Admin</span>

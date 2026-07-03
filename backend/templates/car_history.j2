@@ -56,11 +56,11 @@
 							{% for item in history %}
 							<tr>
 								<td class="font-monospace fw-semibold">#{{ item.status.car_status_id }}</td>
-								<td class="fw-semibold text-dark">
+								<td class="fw-semibold">
 									{% if let Some(car) = item.car %}
 										{{ car.name }} ({{ car.police_number }})
 									{% else %}
-										<span class="text-muted fw-normal">Unknown Car</span>
+										<span class="fw-normal">Unknown Car</span>
 									{% endif %}
 								</td>
 								<td>{{ item.status.kilometres }} km</td>
@@ -77,7 +77,7 @@
 									{% endif %}
 								</td>
 								<td>
-									<span class="small text-dark-emphasis">
+									<span>
 										{{ item.status.recorded_at.format("%Y-%m-%d %H:%M:%S") }}
 									</span>
 								</td>

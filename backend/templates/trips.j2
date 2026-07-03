@@ -65,11 +65,11 @@
 							{% for item in trips %}
 							<tr id="trip-row-{{ item.trip.activity_id }}">
 								<td class="font-monospace fw-semibold">#{{ item.trip.activity_id }}</td>
-								<td class="fw-semibold text-dark text-truncate" style="max-width: 150px;">
+								<td class="fw-semibold text-truncate" style="max-width: 150px;">
 									{% if let Some(contact) = item.contact %}
 										{{ contact.name }}
 									{% else %}
-										<span class="text-muted">Unknown Contact</span>
+										<span>Unknown Contact</span>
 									{% endif %}
 								</td>
 								<td>
@@ -86,15 +86,15 @@
 										{% if let Some(car) = item.car %}
 											{{ car.name }} ({{ car.police_number }})
 										{% else %}
-											<span class="text-muted fw-normal">Unassigned Car</span>
+											<span class="fw-normal">Unassigned Car</span>
 										{% endif %}
 									</div>
 									{% if let Some(tracker) = item.tracker %}
-										<div class="text-muted small mt-0.5">GPS: {{ tracker.name }}</div>
+										<div class="mt-0.5">GPS: {{ tracker.name }}</div>
 									{% endif %}
 								</td>
 								<td>
-									<span class="small text-muted">
+									<span>
 										{% if let Some(start) = item.trip.started_at %}
 											{{ start.format("%Y-%m-%d %H:%M") }}
 										{% else %}
@@ -103,7 +103,7 @@
 									</span>
 								</td>
 								<td>
-									<span class="small text-muted">
+									<span>
 										{% if let Some(finish) = item.trip.finished_at %}
 											{{ finish.format("%Y-%m-%d %H:%M") }}
 										{% else %}

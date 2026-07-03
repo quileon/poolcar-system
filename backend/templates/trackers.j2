@@ -55,18 +55,18 @@
 							{% for item in trackers %}
 							<tr id="tracker-row-{{ item.tracker.tracker_id }}">
 								<td class="font-monospace fw-semibold">#{{ item.tracker.tracker_id }}</td>
-								<td class="fw-semibold text-dark">{{ item.tracker.name }}</td>
-								<td class="text-dark">
+								<td class="fw-semibold">{{ item.tracker.name }}</td>
+								<td>
 									{% if let Some(car) = item.car %}
 										{{ car.name }} ({{ car.police_number }})
 									{% else %}
-										<span class="text-muted fw-normal">Unassigned</span>
+										<span class="fw-normal">Unassigned</span>
 									{% endif %}
 								</td>
-								<td class="text-muted">
+								<td>
 									{{ item.tracker.created_at.format("%Y-%m-%d %H:%M:%S") }}
 								</td>
-								<td class="text-muted">
+								<td>
 									{{ item.tracker.updated_at.format("%Y-%m-%d %H:%M:%S") }}
 								</td>
 								<td class="text-end">

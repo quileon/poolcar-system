@@ -75,7 +75,7 @@
 							{% for item in contacts %}
 							<tr id="contact-row-{{ item.contact_id }}">
 								<td class="font-monospace fw-semibold">#{{ item.contact_id }}</td>
-								<td class="fw-semibold text-dark">{{ item.name }}</td>
+								<td class="fw-semibold">{{ item.name }}</td>
 								<td>
 									{% if let crate::entities::sea_orm_active_enums::ContactType::Consumer = item.contact_type %}
 										<span class="badge bg-success px-2 py-1 rounded-pill fw-semibold">
@@ -87,7 +87,7 @@
 										</span>
 									{% endif %}
 								</td>
-								<td class="font-monospace text-muted">
+								<td class="font-monospace">
 									{{ item.latitude }}, {{ item.longitude }}
 								</td>
 								<td class="text-end">
