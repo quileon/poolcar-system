@@ -20,7 +20,7 @@
 		<select class="form-select" id="focus-tracker">
 			<option value="" selected>Show All Trackers</option>
 			{% for tracker in trackers %}
-				<option value="{{ tracker.tracker.tracker_id }}">
+				<option value="{{ tracker.tracker.tracker_id }}" disabled>
 					{{ tracker.tracker.name }}
 					{% if let Some(car) = tracker.car %}
 						({{ car.name }} - {{ car.police_number }})
@@ -90,70 +90,6 @@
 		L.marker([homeLat, homeLng], { icon: homeIcon }).addTo(map).bindPopup('Home');
 
 		const markers = {};
-		const allLatLngs = [[homeLat, homeLng]];
-
-		// Parse and place active tracker markers from the select dropdown options
-		const selectEl = document.getElementById('focus-tracker');
-		if (selectEl) {
-			Array.from(selectEl.options).forEach(opt => {
-				const id = opt.value;
-				if (!id) return; // Skip "Show All" option
-
-				const latStr = opt.getAttribute('data-lat');
-				const lngStr = opt.getAttribute('data-lng');
-
-				if (latStr && lngStr) {
-					const lat = parseFloat(latStr);
-					const lng = parseFloat(lngStr);
-					if (!isNaN(lat) && !isNaN(lng)) {
-						const marker = L.marker([lat, lng], { icon: flagIcon })
-							.addTo(map)
-							.bindPopup(`<strong>${opt.text}</strong><br>Status: Active`);
-						markers[id] = marker;
-						allLatLngs.push([lat, lng]);
-					}
-				}
-			});
-		}
-
-		// Fit bounds initially if we have trackers
-		if (allLatLngs.length > 1) {
-			map.fitBounds(L.latLngBounds(allLatLngs), { padding: [50, 50] });
-		}
-
-		// Dropdown focus handler
-		function handleFocusChange() {
-			const selectedOption = selectEl.options[selectEl.selectedIndex];
-			const id = selectedOption.value;
-
-			if (!id) {
-				// Show all bounds
-				if (allLatLngs.length > 1) {
-					map.fitBounds(L.latLngBounds(allLatLngs), { padding: [50, 50] });
-				} else {
-					map.setView([homeLat, homeLng], 13);
-				}
-				return;
-			}
-
-			const latStr = selectedOption.getAttribute('data-lat');
-			const lngStr = selectedOption.getAttribute('data-lng');
-
-			if (latStr && lngStr) {
-				const lat = parseFloat(latStr);
-				const lng = parseFloat(lngStr);
-				if (!isNaN(lat) && !isNaN(lng)) {
-					map.setView([lat, lng], 16);
-					if (markers[id]) {
-						markers[id].openPopup();
-					}
-				}
-			}
-		}
-
-		if (selectEl) {
-			selectEl.addEventListener('change', handleFocusChange);
-		}
 	}
 
 	document.addEventListener('htmx:afterSettle', initLiveMap);
