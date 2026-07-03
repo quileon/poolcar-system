@@ -22,7 +22,10 @@
 			{% for tracker in trackers %}
 				{% if let Some(payload) = self.get_payload(tracker.tracker.tracker_id) %}
 					{% if let (Some(lat), Some(lng)) = (payload.location.latitude, payload.location.longitude) %}
-						<option value="{{ tracker.tracker.tracker_id }}" data-lat="{{ lat }}" data-lng="{{ lng }}">
+						<option value="{{ tracker.tracker.tracker_id }}"
+								data-lat="{{ lat }}"
+								data-lng="{{ lng }}"
+								data-car-type="{% if let Some(car) = tracker.car %}{{ car.car_type.as_str() }}{% else %}passenger{% endif %}">
 							{{ tracker.tracker.name }}
 							{% if let Some(car) = tracker.car %}
 								({{ car.name }} - {{ car.police_number }})
@@ -48,6 +51,15 @@
 	<div id="live-map" style="position: absolute; top: 0; bottom: 0; left: 0; right: 0; z-index: 1;"></div>
 </div>
 
+<div id="active-trips-data" style="display: none;">
+	{% for trip in active_trips %}
+		<div class="trip-destination"
+			 data-lat="{{ trip.contact_latitude }}"
+			 data-lng="{{ trip.contact_longitude }}"
+		</div>
+	{% endfor %}
+</div>
+
 <script>
 (function() {
 	function initLiveMap() {
@@ -62,13 +74,10 @@
 			iconAnchor: [21, 21],
 			popupAnchor: [0, -15]
 		});
-		const flagIcon = L.icon({
-			iconUrl: '/assets/flag.png',
-			iconSize: [31, 46],
-			iconAnchor: [15.5, 21],
-			popupAnchor: [0, -40]
-		});
+		const colors = ['1d00ff', '00ff0e', 'cc0000', 'ff33e1', '0074cc', 'ffda00', 'ff8300', '28cc6a', 'ff3378', '00bdff'];
+		const map = L.map('live-map').setView([homeLat, homeLng], 13);
 
+		// Initialize Map
 		if (window.liveMapInstance) {
 			try {
 				window.liveMapInstance.off();
@@ -78,11 +87,7 @@
 			}
 			window.liveMapInstance = null;
 		}
-
-		// Initialize Map
-		const map = L.map('live-map').setView([homeLat, homeLng], 13);
 		window.liveMapInstance = map;
-
 		mapElement.addEventListener('htmx:beforeCleanupElement', function() {
 			if (window.liveMapInstance) {
 				try {
@@ -94,17 +99,104 @@
 				window.liveMapInstance = null;
 			}
 		});
-
 		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 			maxZoom: 19,
 			attribution: '© OpenStreetMap'
 		}).addTo(map);
-		L.marker([homeLat, homeLng], { icon: homeIcon }).addTo(map).bindPopup('Home');
+		L.marker([homeLat, homeLng], { icon: homeIcon }).addTo(map).bindPopup('Politeknik Negeri Jakarta');
 
+		// Initialize Tracker Marker
 		const markers = {};
+		const allLatLngs = [[homeLat, homeLng]];
+
+		const selectElement = document.getElementById('focus-tracker');
+		if (selectElement) {
+			Array.from(selectElement.options).forEach(opt => {
+				const id = opt.value;
+				if (!id) return;
+
+				const latStr = opt.getAttribute('data-lat');
+				const lngStr = opt.getAttribute('data-lng');
+
+				if (latStr && lngStr) {
+					const lat = parseFloat(latStr);
+					const lng = parseFloat(lngStr);
+					if (!isNaN(lat) && !isNaN(lng)) {
+						const carType = opt.getAttribute('data-car-type');
+						const colorIndex = parseInt(id || '0');
+						const color = colors[colorIndex % colors.length];
+						const trackerIcon = L.icon({
+							iconUrl: `/assets/${carType}-${color}.png`,
+							iconSize: [31, 46],
+							iconAnchor: [15.5, 46],
+							popupAnchor: [0, -40]
+						});
+
+						const marker = L.marker([lat, lng], { icon: trackerIcon })
+							.addTo(map)
+							.bindPopup(`${opt.text}</strong><br>Status: Active`);
+						markers[id] = marker;
+						allLatLngs.push([lat, lng]);
+					}
+				}
+			});
+		}
+
+		// Initialize Trip Marker
+		const tripDestinations = document.querySelectorAll('.trip-destination');
+		tripDestinations.forEach(el => {
+			const latStr = el.getAttribute('data-lat');
+			const lngStr = el.getAttribute('data-lng');
+
+			if (latStr && lngStr) {
+				const lat = parseFloat(latStr);
+				const lng = parseFloat(lngStr);
+				if (!isNaN(lat) && !isNaN(lng)) {
+					const flagIcon = L.icon({
+						iconUrl: '/assets/flag.png',
+						iconSize: [31, 46],
+						iconAnchor: [15.5, 46],
+						popupAnchor: [0, -40]
+					});
+
+					L.marker([lat, lng], { icon: flagIcon })
+						.addTo(map)
+					allLatLngs.push([lat, lng]);
+				}
+			}
+		});
+
+		// Fit bounds initially if we have trackers
+		if (allLatLngs.length > 1) {
+			map.fitBounds(L.latLngBounds(allLatLngs), { padding: [50, 50] });
+		}
+
+		// Dropdown to focus into tracker
+		function handleFocusChange() {
+			const selectedOption = selectElement.options[selectElement.selectedIndex];
+			const id = selectedOption.value;
+
+			if (id) {
+				const marker = markers[id];
+				if (marker) {
+					const latLng = marker.getLatLng();
+					map.setView(latLng, 16);
+					marker.openPopup();
+				}
+			} else {
+				if (allLatLngs.length > 1) {
+					map.fitBounds(L.latLngBounds(allLatLngs), { padding: [50, 50] });
+				} else {
+					map.setView([homeLat, homeLng], 13);
+				}
+			}
+		}
+
+		if (selectElement) {
+			selectElement.addEventListener('change', handleFocusChange);
+		}
 	}
 
-	document.addEventListener('htmx:afterSettle', initLiveMap);
 	initLiveMap();
 })();
 </script>

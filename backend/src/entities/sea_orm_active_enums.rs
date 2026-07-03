@@ -21,6 +21,15 @@ pub enum CarType {
     #[sea_orm(string_value = "Passenger")]
     Passenger,
 }
+
+impl CarType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Delivery => "delivery",
+            Self::Passenger => "passenger",
+        }
+    }
+}
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Copy, Serialize, Deserialize)]
 #[sea_orm(rs_type = "Enum", db_type = "Enum", enum_name = "contact_type")]
 pub enum ContactType {

@@ -1,6 +1,7 @@
 use crate::auth::AuthenticatedUser;
 use crate::entities::{cars, trackers};
 use crate::loops::mqtt::MqttPayload;
+use crate::pages::trips::{self, ActiveTripCache};
 use askama::Template;
 use askama_web::WebTemplate;
 use redis::AsyncCommands;
@@ -20,6 +21,7 @@ pub struct LiveTemplate {
     pub role: String,
     pub trackers: Vec<TrackerWithCar>,
     pub tracker_payloads: Vec<MqttPayload>,
+    pub active_trips: Vec<ActiveTripCache>,
     pub error: Option<String>,
 }
 
@@ -45,6 +47,21 @@ async fn render_live(
                 role: user.role.clone(),
                 trackers: vec![],
                 tracker_payloads: vec![],
+                active_trips: vec![],
+                error: Some(err.to_string()),
+            });
+        }
+    };
+
+    let active_trips = match trips::get_active_trips(db, redis).await {
+        Ok(at) => at,
+        Err(err) => {
+            return Ok(LiveTemplate {
+                username: user.username.clone(),
+                role: user.role.clone(),
+                trackers: vec![],
+                tracker_payloads: vec![],
+                active_trips: vec![],
                 error: Some(err.to_string()),
             });
         }
@@ -62,6 +79,7 @@ async fn render_live(
                 role: user.role.clone(),
                 trackers: vec![],
                 tracker_payloads: vec![],
+                active_trips: vec![],
                 error: Some(err.to_string()),
             });
         }
@@ -85,6 +103,7 @@ async fn render_live(
                     role: user.role.clone(),
                     trackers,
                     tracker_payloads,
+                    active_trips,
                     error: Some(err.to_string()),
                 });
             }
@@ -101,6 +120,7 @@ async fn render_live(
         role: user.role.clone(),
         trackers,
         tracker_payloads,
+        active_trips,
         error,
     })
 }
