@@ -1,73 +1,96 @@
 use crate::auth::AuthenticatedUser;
-use crate::entities::{audit, trackers};
+use crate::entities::trackers;
+use crate::loops::mqtt::MqttPayload;
 use askama::Template;
 use askama_web::WebTemplate;
-use rocket::http::Status;
+use redis::AsyncCommands;
 use rocket::State;
-use sea_orm::{
-    ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder,
-};
-use serde::Serialize;
-
-#[derive(Serialize)]
-pub struct TrackerWithLocation {
-    pub id: i32,
-    pub name: String,
-    pub latitude: Option<f64>,
-    pub longitude: Option<f64>,
-}
+use rocket::http::Status;
+use sea_orm::{DatabaseConnection, EntityTrait};
 
 #[derive(Template, WebTemplate)]
 #[template(path = "live.j2")]
 pub struct LiveTemplate {
     pub username: String,
     pub role: String,
-    pub trackers: Vec<TrackerWithLocation>,
+    pub trackers: Vec<trackers::Model>,
+    pub tracker_payloads: Vec<MqttPayload>,
+    pub error: Option<String>,
+}
+
+async fn render_live(
+    db: &DatabaseConnection,
+    redis: &redis::Client,
+    user: &AuthenticatedUser,
+    error: Option<String>,
+) -> Result<LiveTemplate, Status> {
+    let mut conn = match redis.get_multiplexed_async_connection().await {
+        Ok(c) => c,
+        Err(err) => {
+            return Ok(LiveTemplate {
+                username: user.username.clone(),
+                role: user.role.clone(),
+                trackers: vec![],
+                tracker_payloads: vec![],
+                error: Some(err.to_string()),
+            });
+        }
+    };
+
+    let trackers = match trackers::Entity::find().all(db).await {
+        Ok(t) => t,
+        Err(err) => {
+            return Ok(LiveTemplate {
+                username: user.username.clone(),
+                role: user.role.clone(),
+                trackers: vec![],
+                tracker_payloads: vec![],
+                error: Some(err.to_string()),
+            });
+        }
+    };
+
+    let mut tracker_payloads: Vec<MqttPayload> = Vec::new();
+    for tracker in &trackers {
+        let bytes: Option<Vec<u8>> = match conn
+            .get(format!("tracker:{}:live", tracker.tracker_id))
+            .await
+        {
+            Ok(b) => b,
+            Err(err) => {
+                return Ok(LiveTemplate {
+                    username: user.username.clone(),
+                    role: user.role.clone(),
+                    trackers,
+                    tracker_payloads,
+                    error: Some(err.to_string()),
+                });
+            }
+        };
+        if let Some(bytes) = bytes {
+            if let Ok(payload) = serde_json::from_slice::<MqttPayload>(&bytes) {
+                tracker_payloads.push(payload);
+            }
+        }
+    }
+
+    Ok(LiveTemplate {
+        username: user.username.clone(),
+        role: user.role.clone(),
+        trackers,
+        tracker_payloads,
+        error,
+    })
 }
 
 #[rocket::get("/live")]
 pub async fn live_tracking(
     db: &State<DatabaseConnection>,
+    redis: &State<redis::Client>,
     user: AuthenticatedUser,
 ) -> Result<LiveTemplate, Status> {
-    let db = db.inner();
-
-    // Fetch all active trackers
-    let db_trackers = trackers::Entity::find()
-        .filter(trackers::Column::DeletedAt.is_null())
-        .order_by_asc(trackers::Column::Name)
-        .all(db)
-        .await
-        .map_err(|_| Status::InternalServerError)?;
-
-    let mut trackers_with_loc = Vec::new();
-
-    for t in db_trackers {
-        // Query latest audit record for this tracker
-        let latest_audit = audit::Entity::find()
-            .filter(audit::Column::TrackerId.eq(t.tracker_id))
-            .filter(audit::Column::DeletedAt.is_null())
-            .order_by_desc(audit::Column::RecordedAt)
-            .one(db)
-            .await
-            .map_err(|_| Status::InternalServerError)?;
-
-        let (lat, lng) = match latest_audit {
-            Some(a) => (Some(a.latitude), Some(a.longitude)),
-            None => (None, None),
-        };
-
-        trackers_with_loc.push(TrackerWithLocation {
-            id: t.tracker_id,
-            name: t.name,
-            latitude: lat,
-            longitude: lng,
-        });
+    if user.role == "Security" {
+        return Err(Status::Forbidden);
     }
-
-    Ok(LiveTemplate {
-        username: user.username,
-        role: user.role,
-        trackers: trackers_with_loc,
-    })
+    render_live(db.inner(), redis.inner(), &user, None).await
 }
