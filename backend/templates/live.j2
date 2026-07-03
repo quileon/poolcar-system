@@ -15,13 +15,16 @@
 <!-- Page Header & Focus Selector -->
 <div class="d-flex flex-column gap-3 mb-2">
 	<h3 class="fw-bold mb-0">Live Tracking</h3>
-	<div style="max-width: 280px;">
+	<div style="max-width: 560px;">
 		<label for="focus-tracker" class="form-label fw-semibold mb-3">Focus Tracker</label>
 		<select class="form-select" id="focus-tracker">
 			<option value="" selected>Show All Trackers</option>
 			{% for tracker in trackers %}
-				<option value="{{ tracker.tracker_id }}" disabled>
-					{{ tracker.name }}
+				<option value="{{ tracker.tracker.tracker_id }}">
+					{{ tracker.tracker.name }}
+					{% if let Some(car) = tracker.car %}
+						({{ car.name }} - {{ car.police_number }})
+					{% endif %}
 				</option>
 			{% endfor %}
 		</select>

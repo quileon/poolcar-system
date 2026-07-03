@@ -1,5 +1,5 @@
 use crate::auth::AuthenticatedUser;
-use crate::entities::trackers;
+use crate::entities::{cars, trackers};
 use crate::loops::mqtt::MqttPayload;
 use askama::Template;
 use askama_web::WebTemplate;
@@ -8,12 +8,17 @@ use rocket::State;
 use rocket::http::Status;
 use sea_orm::{DatabaseConnection, EntityTrait};
 
+pub struct TrackerWithCar {
+    pub tracker: trackers::Model,
+    pub car: Option<cars::Model>,
+}
+
 #[derive(Template, WebTemplate)]
 #[template(path = "live.j2")]
 pub struct LiveTemplate {
     pub username: String,
     pub role: String,
-    pub trackers: Vec<trackers::Model>,
+    pub trackers: Vec<TrackerWithCar>,
     pub tracker_payloads: Vec<MqttPayload>,
     pub error: Option<String>,
 }
@@ -37,7 +42,11 @@ async fn render_live(
         }
     };
 
-    let trackers = match trackers::Entity::find().all(db).await {
+    let tracker_cars = match trackers::Entity::find()
+        .find_also_related(cars::Entity)
+        .all(db)
+        .await
+    {
         Ok(t) => t,
         Err(err) => {
             return Ok(LiveTemplate {
@@ -50,10 +59,15 @@ async fn render_live(
         }
     };
 
+    let trackers = tracker_cars
+        .into_iter()
+        .map(|(t, c)| TrackerWithCar { tracker: t, car: c })
+        .collect::<Vec<_>>();
+
     let mut tracker_payloads: Vec<MqttPayload> = Vec::new();
     for tracker in &trackers {
         let bytes: Option<Vec<u8>> = match conn
-            .get(format!("tracker:{}:live", tracker.tracker_id))
+            .get(format!("tracker:{}:live", tracker.tracker.tracker_id))
             .await
         {
             Ok(b) => b,
