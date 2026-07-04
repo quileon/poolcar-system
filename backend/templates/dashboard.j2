@@ -1,0 +1,187 @@
+{% extends "template.html" %}
+
+{% block head %}
+	<title>Dashboard - Poolcar</title>
+{% endblock %}
+
+{% block body %}
+<!-- Welcome Banner -->
+<div class="card border-0 shadow-sm p-4 bg-white d-flex flex-row align-items-center justify-content-between">
+	<div>
+		<h3 class="mb-1 fw-bold text-dark">Welcome back, {{ username }}!</h3>
+		<p class="text-muted mb-0" style="font-size: 0.95rem;">Here is what's happening with the Poolcar system today.</p>
+	</div>
+	<div>
+		<span class="badge rounded-pill px-3 py-2 fs-6 
+			{% if role == "Admin" %}
+				bg-primary bg-opacity-10 text-primary
+			{% else if role == "Security" %}
+				bg-warning bg-opacity-10 text-warning
+			{% else %}
+				bg-success bg-opacity-10 text-success
+			{% endif %}
+		">
+			<i class="bi bi-shield-check me-1"></i> {{ role }} Mode
+		</span>
+	</div>
+</div>
+
+<!-- Metrics Grid -->
+<div class="row g-4">
+	<!-- Metric 1: Active Fleet -->
+	<div class="col-12 col-sm-6 col-xl-3">
+		<div class="card border-0 shadow-sm p-4 h-100">
+			<div class="d-flex align-items-center justify-content-between mb-3">
+				<div class="rounded-3 bg-primary bg-opacity-10 p-3 text-primary d-inline-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+					<i class="bi bi-car-front fs-4"></i>
+				</div>
+				<span class="text-success fw-semibold" style="font-size: 0.9rem;"><i class="bi bi-arrow-up-right"></i> +8.2%</span>
+			</div>
+			<h6 class="text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.75rem; letter-spacing: 0.5px;">Active Fleet</h6>
+			<h3 class="mb-0 fw-bold">12 <span class="fs-5 text-muted fw-normal">/ 15 Cars</span></h3>
+		</div>
+	</div>
+
+	<!-- Metric 2: Bookings -->
+	<div class="col-12 col-sm-6 col-xl-3">
+		<div class="card border-0 shadow-sm p-4 h-100">
+			<div class="d-flex align-items-center justify-content-between mb-3">
+				<div class="rounded-3 bg-warning bg-opacity-10 p-3 text-warning d-inline-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+					<i class="bi bi-calendar-event fs-4"></i>
+				</div>
+				<span class="text-success fw-semibold" style="font-size: 0.9rem;"><i class="bi bi-arrow-up-right"></i> +12%</span>
+			</div>
+			<h6 class="text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.75rem; letter-spacing: 0.5px;">Bookings Today</h6>
+			<h3 class="mb-0 fw-bold">8 <span class="fs-5 text-muted fw-normal">Active</span></h3>
+		</div>
+	</div>
+
+	<!-- Metric 3: GPS Trackers -->
+	<div class="col-12 col-sm-6 col-xl-3">
+		<div class="card border-0 shadow-sm p-4 h-100">
+			<div class="d-flex align-items-center justify-content-between mb-3">
+				<div class="rounded-3 bg-success bg-opacity-10 p-3 text-success d-inline-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+					<i class="bi bi-geo-alt fs-4"></i>
+				</div>
+				<span class="text-muted fw-normal" style="font-size: 0.85rem;">100% Online</span>
+			</div>
+			<h6 class="text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.75rem; letter-spacing: 0.5px;">GPS Trackers</h6>
+			<h3 class="mb-0 fw-bold">15 <span class="fs-5 text-muted fw-normal">Devices</span></h3>
+		</div>
+	</div>
+
+	<!-- Metric 4: Average Fuel -->
+	<div class="col-12 col-sm-6 col-xl-3">
+		<div class="card border-0 shadow-sm p-4 h-100">
+			<div class="d-flex align-items-center justify-content-between mb-3">
+				<div class="rounded-3 bg-info bg-opacity-10 p-3 text-info d-inline-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+					<i class="bi bi-lightning fs-4"></i>
+				</div>
+				<span class="text-danger fw-semibold" style="font-size: 0.9rem;"><i class="bi bi-arrow-down-right"></i> -1.4%</span>
+			</div>
+			<h6 class="text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.75rem; letter-spacing: 0.5px;">Fuel Efficiency</h6>
+			<h3 class="mb-0 fw-bold">14.2 <span class="fs-5 text-muted fw-normal">km/L avg</span></h3>
+		</div>
+	</div>
+</div>
+
+<!-- Fleet Status Table -->
+<div class="card border-0 shadow-sm p-4">
+	<div class="d-flex align-items-center justify-content-between mb-4">
+		<h5 class="mb-0 fw-bold text-dark">Live Fleet Status</h5>
+		<button class="btn btn-outline-primary btn-sm rounded-pill px-3" style="font-size: 0.85rem;">View All Cars</button>
+	</div>
+
+	<div class="table-responsive">
+		<table class="table align-middle mb-0">
+			<thead class="table-light">
+				<tr>
+					<th>Car Model</th>
+					<th>License Plate</th>
+					<th>Driver</th>
+					<th>Tracker Status</th>
+					<th>Battery</th>
+					<th>Action</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td>
+						<div class="d-flex align-items-center">
+							<div class="bg-light p-2 rounded me-3">
+								<i class="bi bi-car-front text-primary fs-5"></i>
+							</div>
+							<div>
+								<span class="fw-semibold d-block" style="font-size: 0.95rem;">Toyota Prius (Hybrid)</span>
+								<span class="text-muted" style="font-size: 0.8rem;">Compact Hatchback</span>
+							</div>
+						</div>
+					</td>
+					<td><span class="font-monospace text-uppercase" style="font-size: 0.9rem;">B 1234 XYZ</span></td>
+					<td>John Doe</td>
+					<td><span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2 py-1" style="font-size: 0.8rem;">Active (Moving)</span></td>
+					<td>
+						<div class="d-flex align-items-center gap-2">
+							<div class="progress flex-grow-1" style="height: 6px; width: 60px;">
+								<div class="progress-bar bg-success" role="progressbar" style="width: 85%" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100"></div>
+							</div>
+							<span class="text-muted fw-semibold" style="font-size: 0.8rem;">85%</span>
+						</div>
+					</td>
+					<td><button class="btn btn-sm btn-light border" style="font-size: 0.85rem;">Track</button></td>
+				</tr>
+				<tr>
+					<td>
+						<div class="d-flex align-items-center">
+							<div class="bg-light p-2 rounded me-3">
+								<i class="bi bi-car-front text-primary fs-5"></i>
+							</div>
+							<div>
+								<span class="fw-semibold d-block" style="font-size: 0.95rem;">Honda Civic</span>
+								<span class="text-muted" style="font-size: 0.8rem;">Sedan</span>
+							</div>
+						</div>
+					</td>
+					<td><span class="font-monospace text-uppercase" style="font-size: 0.9rem;">B 5678 ABC</span></td>
+					<td>Jane Smith</td>
+					<td><span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2 py-1" style="font-size: 0.8rem;">Active (Stationary)</span></td>
+					<td>
+						<div class="d-flex align-items-center gap-2">
+							<div class="progress flex-grow-1" style="height: 6px; width: 60px;">
+								<div class="progress-bar bg-success" role="progressbar" style="width: 92%" aria-valuenow="92" aria-valuemin="0" aria-valuemax="100"></div>
+							</div>
+							<span class="text-muted fw-semibold" style="font-size: 0.8rem;">92%</span>
+						</div>
+					</td>
+					<td><button class="btn btn-sm btn-light border" style="font-size: 0.85rem;">Track</button></td>
+				</tr>
+				<tr>
+					<td>
+						<div class="d-flex align-items-center">
+							<div class="bg-light p-2 rounded me-3">
+								<i class="bi bi-car-front text-primary fs-5"></i>
+							</div>
+							<div>
+								<span class="fw-semibold d-block" style="font-size: 0.95rem;">Tesla Model 3</span>
+								<span class="text-muted" style="font-size: 0.8rem;">Electric Sedan</span>
+							</div>
+						</div>
+					</td>
+					<td><span class="font-monospace text-uppercase" style="font-size: 0.9rem;">B 9012 DEF</span></td>
+					<td>— (Available)</td>
+					<td><span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-2 py-1" style="font-size: 0.8rem;">Standby</span></td>
+					<td>
+						<div class="d-flex align-items-center gap-2">
+							<div class="progress flex-grow-1" style="height: 6px; width: 60px;">
+								<div class="progress-bar bg-warning" role="progressbar" style="width: 45%" aria-valuenow="45" aria-valuemin="0" aria-valuemax="100"></div>
+							</div>
+							<span class="text-muted fw-semibold" style="font-size: 0.8rem;">45%</span>
+						</div>
+					</td>
+					<td><button class="btn btn-sm btn-light border" style="font-size: 0.85rem;">Track</button></td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+</div>
+{% endblock %}

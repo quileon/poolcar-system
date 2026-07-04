@@ -1,0 +1,12 @@
+{% if places.is_empty() %}
+	<div class="list-group-item text-muted small p-3">No places found.</div>
+{% else %}
+	{% for place in places %}
+		<button type="button"
+				class="list-group-item list-group-item-action border-bottom py-3 px-3 d-flex flex-column align-items-start text-start"
+				onclick="selectPlace('{{ place.display_name.text|escape }}', {{ place.location.latitude }}, {{ place.location.longitude }})">
+			<div class="fw-bold text-dark small">{{ place.display_name.text }}</div>
+			<div class="text-muted small text-truncate w-100">{{ place.formatted_address }}</div>
+		</button>
+	{% endfor %}
+{% endif %}

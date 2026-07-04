@@ -1,13 +1,24 @@
-use anyhow::Context;
+mod auth;
+mod entities;
+mod loops;
+mod pages;
+mod run;
+mod types;
+
+use crate::entities::sea_orm_active_enums::UserRole;
+use crate::entities::users::{self, Entity as Users};
+use anyhow::anyhow;
 use clap::{Parser, Subcommand};
-use deadpool_redis::Runtime;
-use dotenvy;
-use poolcar::{auth_utils::hash_password, config::Config, create_app};
-use rand::{distr, Rng};
-use rumqttc::{MqttOptions, Transport};
-use sqlx::mysql::MySqlPoolOptions;
-use std::time::Duration;
-use tokio::signal;
+use dotenvy::dotenv;
+use migration::{Migrator, MigratorTrait};
+// use rand::{RngExt, distr};
+// use rumqttc::{AsyncClient, MqttOptions, TlsConfiguration, Transport};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, Database, DatabaseConnection, EntityTrait, QueryFilter, Set,
+};
+use std::env;
+use tracing::info;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Parser)]
 #[command(name = "poolcar")]
@@ -26,158 +37,170 @@ enum Commands {
         /// Username for the new admin account
         #[arg(short, long, default_value = "admin")]
         username: String,
-
         /// Password for the new admin account
         #[arg(short, long, default_value = "admin")]
         password: String,
-
         /// Email address for the new admin account
         #[arg(short, long, default_value = "admin@example.com")]
         email: String,
-
         /// Full name of the admin user
         #[arg(short, long, default_value = "Admin User")]
         full_name: String,
     },
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let _ = rustls::crypto::ring::default_provider().install_default();
-    dotenvy::dotenv().ok();
+#[rocket::main]
+async fn main() {
+    dotenv().ok();
 
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
-        )
-        .compact()
+    let env_filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| "htmx=debug,info".into())
+        .add_directive("sqlx=warn".parse().unwrap())
+        .add_directive("sea_orm=warn".parse().unwrap());
+
+    tracing_subscriber::registry()
+        .with(env_filter)
+        .with(tracing_subscriber::fmt::layer())
         .init();
 
     let cli = Cli::parse();
-    let config = Config::from_env()?;
-    tracing::info!("Environment configuration loaded");
 
-    // Database
-    let db_pool = MySqlPoolOptions::new()
-        .connect(&config.database_url)
-        .await
-        .context("Failed to connect to the Database pool")?;
-    tracing::info!("Database connection established");
+    let db_url = match env::var("DATABASE_URL") {
+        Ok(url) => url,
+        Err(_) => {
+            tracing::error!("DATABASE_URL environment variable is not set");
+            std::process::exit(1);
+        }
+    };
 
-    // Migrate
-    sqlx::migrate!("./migrations")
-        .run(&db_pool)
-        .await
-        .context("Failed to run migrations")?;
-    tracing::info!("Migrations completed");
-
-    match cli.command.unwrap_or(Commands::Run) {
-        Commands::Run => run_server(db_pool, config).await?,
+    let result = match cli.command.unwrap_or(Commands::Run) {
+        Commands::Run => run_server(db_url).await,
         Commands::Createsuperuser {
             username,
             password,
             email,
             full_name,
-        } => {
-            tracing::info!("Creating admin user: {}", username);
+        } => create_superuser(db_url, username, password, email, full_name).await,
+    };
 
-            let hashed_password = hash_password(&password).context("Failed to hash password")?;
-            sqlx::query(
-                "INSERT INTO users (username, email, password, full_name, user_role_id) VALUES (?, ?, ?, ?, ?)"
-            )
-            .bind(&username)
-            .bind(&email)
-            .bind(&hashed_password)
-            .bind(&full_name)
-            .bind(1)
-            .execute(&db_pool)
-            .await
-            .context("Failed to create admin user!")?;
-
-            tracing::info!("Admin user '{}' created successfully!", username);
-        }
+    if let Err(err) = result {
+        tracing::error!("{}", err);
+        std::process::exit(1);
     }
-
-    Ok(())
 }
 
-async fn run_server(
-    db_pool: sqlx::MySqlPool,
-    config: Config,
-) -> Result<(), Box<dyn std::error::Error>> {
-    // Redis
-    let redis_cfg = deadpool_redis::Config::from_url(&config.redis_url);
-    let redis_pool = redis_cfg
-        .create_pool(Some(Runtime::Tokio1))
-        .expect("Failed to create Redis pool");
-    tracing::info!("Redis connection established");
+async fn create_superuser(
+    db_url: String,
+    username: String,
+    password: String,
+    email: String,
+    full_name: String,
+) -> anyhow::Result<()> {
+    let db = connect_db(&db_url).await?;
 
-    // MQTT
-    let mut rng = rand::rng();
-    let random_suffix: String = (0..8)
-        .map(|_| rng.sample(distr::Alphanumeric) as char)
-        .collect();
-    let mqtt_client = format!("{}-{}", config.mqtt_client, random_suffix);
-
-    let mut mqtt_options = MqttOptions::new(mqtt_client, &config.mqtt_url, config.mqtt_port);
-    mqtt_options.set_keep_alive(Duration::from_secs(5));
-    mqtt_options.set_credentials(&config.mqtt_username, &config.mqtt_password);
-
-    if config.mqtt_secure {
-        let ca_cert_path = config
-            .mqtt_ca_crt
-            .as_ref()
-            .context("MQTT_CA_CRT path is required when MQTT_SECURE is true")?;
-        let ca_cert = std::fs::read(ca_cert_path).context("Failed to read MQTT certificate")?;
-        let transport = Transport::Tls(rumqttc::TlsConfiguration::Simple {
-            ca: ca_cert,
-            alpn: None,
-            client_auth: None,
-        });
-        mqtt_options.set_transport(transport);
-    }
-    tracing::info!("MQTT client configured");
-
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:7270")
-        .await
-        .context("Failed to bind to port 7270")?;
-    let listener_address = listener.local_addr()?;
-
-    // Axum
-    let app = create_app(db_pool, redis_pool, Some(mqtt_options), config);
-    tracing::info!("Axum started on {}", listener_address);
-    axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
+    let existing_user: Option<users::Model> = Users::find()
+        .filter(users::Column::Username.eq(&username))
+        .one(&db)
         .await?;
 
+    if existing_user.is_some() {
+        return Err(anyhow!("User with username '{}' already exists", username));
+    }
+
+    let new_user = entities::users::ActiveModel {
+        username: Set(username),
+        password: Set(password),
+        email: Set(email),
+        full_name: Set(full_name),
+        user_role: Set(UserRole::Admin),
+        ..Default::default()
+    };
+
+    new_user.insert(&db).await?;
+
+    info!("Superuser created successfully!");
+
     Ok(())
 }
 
-async fn shutdown_signal() {
-    let ctrl_c = async {
-        signal::ctrl_c()
-            .await
-            .expect("failed to install Ctrl+C handler");
+async fn run_server(db_url: String) -> anyhow::Result<()> {
+    // Rocket environment variables
+    let redis_url =
+        env::var("REDIS_URL").map_err(|_| anyhow!("REDIS_URL environment variable is not set"))?;
+    let rocket_port = env::var("ROCKET_PORT")
+        .map_err(|_| anyhow!("ROCKET_PORT environment variable is not set"))?;
+    let rocket_port: u16 = rocket_port
+        .parse()
+        .map_err(|e| anyhow!("Failed to parse ROCKET_PORT as u16: {}", e))?;
+
+    // MQTT environment variables
+    let mqtt_host = env::var("MQTT_URL").unwrap_or_else(|_| "localhost".to_string());
+    let mqtt_port: u16 = env::var("MQTT_PORT")
+        .unwrap_or_else(|_| "1883".to_string())
+        .parse()
+        .unwrap_or(1883);
+    let mqtt_client = env::var("MQTT_CLIENT").unwrap_or_else(|_| "poolcar_backend".to_string());
+    let mqtt_use_tls = env::var("MQTT_SECURE")
+        .unwrap_or_else(|_| "false".to_string())
+        .parse::<bool>()
+        .unwrap_or(false);
+    let mqtt_username = env::var("MQTT_USERNAME").unwrap_or_else(|_| "poolcar".to_string());
+    let mqtt_password = env::var("MQTT_PASSWORD").unwrap_or_else(|_| "poolcar".to_string());
+    let mqtt_topic = env::var("MQTT_TOPIC").unwrap_or_else(|_| "poolcar/+".to_string());
+
+    let (db, redis) = tokio::try_join!(connect_db(&db_url), connect_redis(&redis_url))?;
+
+    let (tx, _rx) = tokio::sync::broadcast::channel::<String>(1024);
+    let tx_clone = tx.clone();
+
+    let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
+
+    tokio::try_join!(
+        run::run_rocket(
+            rocket_port,
+            db.clone(),
+            redis.clone(),
+            tx_clone,
+            shutdown_tx
+        ),
+        run::run_mqtt(
+            db.clone(),
+            redis.clone(),
+            &mqtt_host,
+            mqtt_port,
+            &mqtt_client,
+            mqtt_use_tls,
+            &mqtt_username,
+            &mqtt_password,
+            &mqtt_topic,
+            tx,
+            shutdown_rx.clone(),
+        ),
+        run::run_audit(db, redis, shutdown_rx)
+    )?;
+
+    Ok(())
+}
+
+async fn connect_db(db_url: &str) -> Result<DatabaseConnection, anyhow::Error> {
+    let db_url = if db_url.starts_with("mariadb://") {
+        db_url.replacen("mariadb://", "mysql://", 1)
+    } else {
+        db_url.to_string()
     };
+    let db = Database::connect(&db_url).await?;
+    db.ping().await?;
+    Migrator::up(&db, None).await?;
+    info!("Database connection established successfully!");
+    Ok(db)
+}
 
-    #[cfg(unix)]
-    let terminate = async {
-        signal::unix::signal(signal::unix::SignalKind::terminate())
-            .expect("failed to install signal handler")
-            .recv()
-            .await;
-    };
-
-    #[cfg(not(unix))]
-    let terminate = std::future::pending::<()>();
-
-    tokio::select! {
-        _ = ctrl_c => {
-            tracing::info!("Shutdown signal received (Ctrl+C)");
-        },
-        _ = terminate => {
-            tracing::info!("Shutdown signal received (SIGTERM)");
-        },
-    }
+async fn connect_redis(redis_url: &str) -> Result<redis::Client, anyhow::Error> {
+    let redis = redis::Client::open(redis_url)?;
+    let mut redis_conn = redis.get_multiplexed_async_connection().await?;
+    redis::cmd("PING")
+        .query_async::<()>(&mut redis_conn)
+        .await?;
+    info!("Redis connection established successfully!");
+    Ok(redis)
 }

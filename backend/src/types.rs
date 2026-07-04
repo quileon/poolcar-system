@@ -1,53 +1,20 @@
-use chrono::NaiveDate;
-use serde::{Deserialize, Serialize};
-use sqlx::prelude::FromRow;
-use ts_rs::TS;
+use rocket::http::Header;
 
-#[derive(Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
-#[ts(export)]
-pub struct PaginationParams {
-    pub page: Option<u32>,
-    pub limit: Option<u32>,
-    pub status: Option<String>,
-    pub start_date: Option<NaiveDate>,
+#[derive(rocket::Responder)]
+#[response(status = 200)]
+pub struct HxRedirect {
+    pub body: &'static str,
+    pub header: Header<'static>,
 }
 
-#[derive(Clone, Debug, FromRow, Deserialize, Serialize, PartialEq, TS)]
-#[ts(export)]
-pub struct Claims {
-    pub username: String,
-    pub role_name: String,
-    pub exp: usize,
+#[derive(rocket::Responder)]
+#[response(status = 200)]
+pub struct HxLocation {
+    pub body: &'static str,
+    pub header: Header<'static>,
 }
 
-#[derive(Debug, Serialize, TS)]
-#[ts(export)]
-pub struct SuccessResponse {
-    pub status: String,
-    pub message: String,
-}
-
-impl SuccessResponse {
-    pub fn new(message: impl Into<String>) -> Self {
-        Self {
-            status: "success".to_string(),
-            message: message.into(),
-        }
-    }
-}
-
-#[derive(Debug, Serialize, TS)]
-#[ts(export)]
-pub struct SuccessDataResponse {
-    pub status: String,
-    pub data: serde_json::Value,
-}
-
-impl SuccessDataResponse {
-    pub fn new<T: serde::Serialize>(data: T) -> Result<Self, serde_json::Error> {
-        Ok(Self {
-            status: "success".to_string(),
-            data: serde_json::to_value(data)?,
-        })
-    }
+pub struct AppConfig {
+    pub jwt_secret: Vec<u8>,
+    pub google_api_key: String,
 }
