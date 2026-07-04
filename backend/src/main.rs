@@ -153,8 +153,16 @@ async fn run_server(db_url: String) -> anyhow::Result<()> {
     let (tx, _rx) = tokio::sync::broadcast::channel::<String>(1024);
     let tx_clone = tx.clone();
 
+    let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
+
     tokio::try_join!(
-        run::run_rocket(rocket_port, db.clone(), redis.clone(), tx_clone),
+        run::run_rocket(
+            rocket_port,
+            db.clone(),
+            redis.clone(),
+            tx_clone,
+            shutdown_tx
+        ),
         run::run_mqtt(
             db.clone(),
             redis.clone(),
@@ -166,8 +174,9 @@ async fn run_server(db_url: String) -> anyhow::Result<()> {
             &mqtt_password,
             &mqtt_topic,
             tx,
+            shutdown_rx.clone(),
         ),
-        run::run_audit(db, redis)
+        run::run_audit(db, redis, shutdown_rx)
     )?;
 
     Ok(())

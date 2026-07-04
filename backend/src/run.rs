@@ -17,6 +17,7 @@ pub async fn run_rocket(
     db: sea_orm::DatabaseConnection,
     redis: redis::Client,
     tx: tokio::sync::broadcast::Sender<String>,
+    shutdown_tx: tokio::sync::watch::Sender<bool>,
 ) -> anyhow::Result<()> {
     let jwt_secret = env::var("JWT_SECRET")
         .map(|s| s.into_bytes())
@@ -93,6 +94,8 @@ pub async fn run_rocket(
         .launch()
         .await?;
 
+    // Notify other tasks that Rocket has shut down
+    let _ = shutdown_tx.send(true);
     Ok(())
 }
 
@@ -107,6 +110,7 @@ pub async fn run_mqtt(
     mqtt_password: &str,
     mqtt_topic: &str,
     tx: tokio::sync::broadcast::Sender<String>,
+    mut shutdown_rx: tokio::sync::watch::Receiver<bool>,
 ) -> anyhow::Result<()> {
     let random_suffix: String = {
         let mut rng = rand::rng();
@@ -138,42 +142,63 @@ pub async fn run_mqtt(
     info!("MQTT topic: {}", mqtt_topic);
 
     loop {
-        match eventloop.poll().await {
-            Ok(notification) => match notification {
-                Event::Incoming(Packet::ConnAck(_)) => {
-                    info!("MQTT has connected successfully!");
-                }
-                Event::Incoming(Packet::Publish(publish)) => {
-                    let topic = publish.topic;
-                    info!("Received MQTT payload on topic: {}", &topic);
+        tokio::select! {
+            _ = shutdown_rx.changed() => {
+                info!("MQTT loop received shutdown signal, exiting.");
+                let _ = client.disconnect().await;
+                break;
+            }
+            poll_result = eventloop.poll() => {
+                match poll_result {
+                    Ok(notification) => match notification {
+                        Event::Incoming(Packet::ConnAck(_)) => {
+                            info!("MQTT has connected successfully!");
+                        }
+                        Event::Incoming(Packet::Publish(publish)) => {
+                            let topic = publish.topic;
+                            info!("Received MQTT payload on topic: {}", &topic);
 
-                    if let Err(e) =
-                        mqtt::handle_mqtt_payload(publish.payload, &db, &redis, &tx).await
-                    {
-                        error!("Error handling MQTT payload on topic {}: {:?}", &topic, e);
+                            if let Err(e) =
+                                mqtt::handle_mqtt_payload(publish.payload, &db, &redis, &tx).await
+                            {
+                                error!("Error handling MQTT payload on topic {}: {:?}", &topic, e);
+                            }
+                        }
+                        _ => {}
+                    },
+                    Err(e) => {
+                        error!("Error in MQTT eventloop: {:?}", e);
+                        tokio::time::sleep(Duration::from_secs(5)).await;
                     }
                 }
-                _ => {}
-            },
-            Err(e) => {
-                error!("Error in MQTT eventloop: {:?}", e);
-                tokio::time::sleep(Duration::from_secs(5)).await;
             }
         }
     }
+
+    Ok(())
 }
 
 pub async fn run_audit(
     db: sea_orm::DatabaseConnection,
     redis: redis::Client,
+    mut shutdown_rx: tokio::sync::watch::Receiver<bool>,
 ) -> anyhow::Result<()> {
     let mut interval = time::interval(Duration::from_mins(1));
     interval.tick().await;
 
     loop {
-        interval.tick().await;
-        if let Err(e) = audit::audit_handler(&db, &redis).await {
-            error!("Error in auditing location: {:?}", e);
+        tokio::select! {
+            _ = shutdown_rx.changed() => {
+                info!("Audit loop received shutdown signal, exiting.");
+                break;
+            }
+            _ = interval.tick() => {
+                if let Err(e) = audit::audit_handler(&db, &redis).await {
+                    error!("Error in auditing location: {:?}", e);
+                }
+            }
         }
     }
+
+    Ok(())
 }
