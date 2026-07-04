@@ -19,21 +19,58 @@ impl MigrationTrait for Migration {
                             .primary_key(),
                     )
                     .col(integer(HardwareTest::TrackerId))
-                    .col(ColumnDef::new(HardwareTest::Uptime).integer().unsigned().not_null())
-                    .col(ColumnDef::new(HardwareTest::ConnectionInterval).integer().unsigned().not_null())
-                    .col(ColumnDef::new(HardwareTest::ConnectionRetries).integer().unsigned().not_null())
-                    .col(ColumnDef::new(HardwareTest::ConnectionSequenceId).integer().unsigned().not_null())
-                    .col(ColumnDef::new(HardwareTest::ConnectionIterationId).integer().unsigned().not_null())
-                    .col(ColumnDef::new(HardwareTest::NetworkRssi).integer().unsigned())
+                    .col(
+                        ColumnDef::new(HardwareTest::Uptime)
+                            .integer()
+                            .unsigned()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(HardwareTest::ConnectionInterval)
+                            .integer()
+                            .unsigned()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(HardwareTest::ConnectionRetries)
+                            .integer()
+                            .unsigned()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(HardwareTest::ConnectionSequenceId)
+                            .integer()
+                            .unsigned()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(HardwareTest::ConnectionIterationId)
+                            .integer()
+                            .unsigned()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(HardwareTest::NetworkRssi)
+                            .integer()
+                            .unsigned(),
+                    )
                     .col(string_null(HardwareTest::NetworkLac))
                     .col(string_null(HardwareTest::NetworkCi))
                     .col(ColumnDef::new(HardwareTest::LocationLatitude).double())
                     .col(ColumnDef::new(HardwareTest::LocationLongitude).double())
-                    .col(ColumnDef::new(HardwareTest::LocationAge).integer().unsigned())
+                    .col(
+                        ColumnDef::new(HardwareTest::LocationAge)
+                            .integer()
+                            .unsigned(),
+                    )
                     .col(boolean(HardwareTest::LocationValid))
                     .col(ColumnDef::new(HardwareTest::AltitudeMeters).double())
                     .col(ColumnDef::new(HardwareTest::AltitudeFeet).double())
-                    .col(ColumnDef::new(HardwareTest::AltitudeAge).integer().unsigned())
+                    .col(
+                        ColumnDef::new(HardwareTest::AltitudeAge)
+                            .integer()
+                            .unsigned(),
+                    )
                     .col(boolean(HardwareTest::AltitudeValid))
                     .col(ColumnDef::new(HardwareTest::SpeedKmph).double())
                     .col(ColumnDef::new(HardwareTest::SpeedMph).double())
@@ -45,31 +82,103 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(HardwareTest::CourseAge).integer().unsigned())
                     .col(boolean(HardwareTest::CourseValid))
                     .col(string_null(HardwareTest::DatetimeIso8601))
-                    .col(ColumnDef::new(HardwareTest::DatetimeYear).integer().unsigned())
-                    .col(ColumnDef::new(HardwareTest::DatetimeMonth).tiny_integer().unsigned())
-                    .col(ColumnDef::new(HardwareTest::DatetimeDay).tiny_integer().unsigned())
-                    .col(ColumnDef::new(HardwareTest::DatetimeHour).tiny_integer().unsigned())
-                    .col(ColumnDef::new(HardwareTest::DatetimeMinute).tiny_integer().unsigned())
-                    .col(ColumnDef::new(HardwareTest::DatetimeSecond).tiny_integer().unsigned())
-                    .col(ColumnDef::new(HardwareTest::DatetimeCentisecond).integer().unsigned())
-                    .col(ColumnDef::new(HardwareTest::DatetimeAge).integer().unsigned())
+                    .col(
+                        ColumnDef::new(HardwareTest::DatetimeYear)
+                            .integer()
+                            .unsigned(),
+                    )
+                    .col(
+                        ColumnDef::new(HardwareTest::DatetimeMonth)
+                            .tiny_integer()
+                            .unsigned(),
+                    )
+                    .col(
+                        ColumnDef::new(HardwareTest::DatetimeDay)
+                            .tiny_integer()
+                            .unsigned(),
+                    )
+                    .col(
+                        ColumnDef::new(HardwareTest::DatetimeHour)
+                            .tiny_integer()
+                            .unsigned(),
+                    )
+                    .col(
+                        ColumnDef::new(HardwareTest::DatetimeMinute)
+                            .tiny_integer()
+                            .unsigned(),
+                    )
+                    .col(
+                        ColumnDef::new(HardwareTest::DatetimeSecond)
+                            .tiny_integer()
+                            .unsigned(),
+                    )
+                    .col(
+                        ColumnDef::new(HardwareTest::DatetimeCentisecond)
+                            .integer()
+                            .unsigned(),
+                    )
+                    .col(
+                        ColumnDef::new(HardwareTest::DatetimeAge)
+                            .integer()
+                            .unsigned(),
+                    )
                     .col(boolean(HardwareTest::DatetimeValid))
-                    .col(ColumnDef::new(HardwareTest::SatellitesVisible).tiny_integer().unsigned())
-                    .col(ColumnDef::new(HardwareTest::SatellitesUsed).tiny_integer().unsigned())
-                    .col(ColumnDef::new(HardwareTest::SatellitesCarrierToNoise).tiny_integer().unsigned())
-                    .col(ColumnDef::new(HardwareTest::SatellitesAge).integer().unsigned())
+                    .col(
+                        ColumnDef::new(HardwareTest::SatellitesVisible)
+                            .tiny_integer()
+                            .unsigned(),
+                    )
+                    .col(
+                        ColumnDef::new(HardwareTest::SatellitesUsed)
+                            .tiny_integer()
+                            .unsigned(),
+                    )
+                    .col(
+                        ColumnDef::new(HardwareTest::SatellitesCarrierToNoise)
+                            .tiny_integer()
+                            .unsigned(),
+                    )
+                    .col(
+                        ColumnDef::new(HardwareTest::SatellitesAge)
+                            .integer()
+                            .unsigned(),
+                    )
                     .col(boolean(HardwareTest::SatellitesValid))
                     .col(ColumnDef::new(HardwareTest::DopHdop).double())
                     .col(ColumnDef::new(HardwareTest::DopPdop).double())
                     .col(ColumnDef::new(HardwareTest::DopVdop).double())
                     .col(ColumnDef::new(HardwareTest::DopAge).integer().unsigned())
                     .col(boolean(HardwareTest::DopValid))
-                    .col(ColumnDef::new(HardwareTest::StatsCharsProcessed).integer().unsigned())
-                    .col(ColumnDef::new(HardwareTest::StatsSentencesWithFix).integer().unsigned())
-                    .col(ColumnDef::new(HardwareTest::StatsFailedChecksum).integer().unsigned())
-                    .col(ColumnDef::new(HardwareTest::StatsPassedChecksum).integer().unsigned())
-                    .col(date_time(HardwareTest::ReceivedAt))
-                    .col(date_time(HardwareTest::CreatedAt).default(Expr::current_timestamp()))
+                    .col(
+                        ColumnDef::new(HardwareTest::StatsCharsProcessed)
+                            .integer()
+                            .unsigned(),
+                    )
+                    .col(
+                        ColumnDef::new(HardwareTest::StatsSentencesWithFix)
+                            .integer()
+                            .unsigned(),
+                    )
+                    .col(
+                        ColumnDef::new(HardwareTest::StatsFailedChecksum)
+                            .integer()
+                            .unsigned(),
+                    )
+                    .col(
+                        ColumnDef::new(HardwareTest::StatsPassedChecksum)
+                            .integer()
+                            .unsigned(),
+                    )
+                    .col(
+                        ColumnDef::new(HardwareTest::ReceivedAt)
+                            .custom("DATETIME(3)")
+                            .default(Expr::current_timestamp()),
+                    )
+                    .col(
+                        ColumnDef::new(HardwareTest::CreatedAt)
+                            .custom("DATETIME(3)")
+                            .default(Expr::current_timestamp()),
+                    )
                     .to_owned(),
             )
             .await
