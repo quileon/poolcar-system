@@ -1,4 +1,4 @@
-name: Build and Release
+name: Build, Release, and Push Image
 on:
   push:
     branches: ["dev"]
@@ -7,18 +7,19 @@ permissions:
   contents: write
 
 jobs:
-  prepare-release:
+  release-and-publish:
     runs-on: ubuntu-24.04
+    environment: gitea
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
-      - name: Get backend version
+      - name: Get version
         id: version
         run: |
           VERSION=$(awk -F'"' '/^version =/ {print $2}' backend/Cargo.toml)
           SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-7)
-          echo "version=$VERSION-$SHORT_SHA" >> $GITHUB_OUTPUT # Appends the commit hash!
+          echo "version=$VERSION-$SHORT_SHA" >> $GITHUB_OUTPUT
 
       - name: Install dependencies
         run: |
@@ -33,11 +34,12 @@ jobs:
         with:
           workspaces: backend
 
-      - name: Build
+      - name: Build Binary
         run: |
           cd backend
           cargo build --release
 
+      # Upload to GitHub Release
       - name: Create Pre-release
         uses: softprops/action-gh-release@v2
         with:
@@ -47,3 +49,24 @@ jobs:
           files: backend/target/release/backend
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build and Push Image to Gitea
+      - name: Build Image with Buildah
+        id: build-image
+        uses: redhat-actions/buildah-build@v2
+        with:
+          image: quilavr/poolcar
+          tags: ${{ steps.version.outputs.version }} latest
+          containerfiles: |
+            ./Containerfile
+          context: .
+
+      - name: Push To Gitea
+        id: push-to-gitea
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          image: ${{ steps.build-image.outputs.image }}
+          tags: ${{ steps.build-image.outputs.tags }}
+          registry: gitea.quilavr.top
+          username: ${{ vars.USERNAME }}
+          password: ${{ secrets.PASSWORD_TOKEN }}
