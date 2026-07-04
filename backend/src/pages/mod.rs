@@ -9,5 +9,6 @@ pub mod users;
 pub mod trips;
 pub mod trips_employee;
 pub mod live;
+pub mod audit;
 
 

@@ -25,7 +25,7 @@
 		<div class="card border-0 shadow-sm p-4 h-100 d-flex flex-column gap-4">
 			<div class="d-flex align-items-center justify-content-between">
 				<h5 class="mb-0 fw-bold text-dark">Registered Trackers</h5>
-				<span class="badge rounded-pill bg-primary py-2 px-3 fw-semibold">
+				<span class="badge rounded-pill bg-primary bg-opacity-10 text-primary py-2 px-3 fw-semibold">
 				    {{ trackers.len() }} Devices
 				</span>
 			</div>
@@ -102,32 +102,32 @@
 					<ul class="pagination pagination-sm mb-0">
 						<!-- Previous Page -->
 						<li class="page-item {% if current_page == 1 %}disabled{% endif %}">
-							<button class="page-link" 
-								hx-get="/crud/trackers?page={{ current_page - 1 }}{% if let Some(e) = editing_tracker %}&edit={{ e.tracker_id }}{% endif %}" 
-								hx-target="body" 
+							<button class="page-link"
+								hx-get="/crud/trackers?page={{ current_page - 1 }}{% if let Some(e) = editing_tracker %}&edit={{ e.tracker_id }}{% endif %}"
+								hx-target="body"
 								hx-swap="innerHTML"
 								{% if current_page == 1 %}disabled{% endif %}>
 								Previous
 							</button>
 						</li>
-						
+
 						<!-- Page Numbers -->
 						{% for p in pages %}
 						<li class="page-item {% if *p == current_page %}active{% endif %}">
-							<button class="page-link" 
-								hx-get="/crud/trackers?page={{ p }}{% if let Some(e) = editing_tracker %}&edit={{ e.tracker_id }}{% endif %}" 
-								hx-target="body" 
+							<button class="page-link"
+								hx-get="/crud/trackers?page={{ p }}{% if let Some(e) = editing_tracker %}&edit={{ e.tracker_id }}{% endif %}"
+								hx-target="body"
 								hx-swap="innerHTML">
 								{{ p }}
 							</button>
 						</li>
 						{% endfor %}
-						
+
 						<!-- Next Page -->
 						<li class="page-item {% if current_page == total_pages %}disabled{% endif %}">
-							<button class="page-link" 
-								hx-get="/crud/trackers?page={{ current_page + 1 }}{% if let Some(e) = editing_tracker %}&edit={{ e.tracker_id }}{% endif %}" 
-								hx-target="body" 
+							<button class="page-link"
+								hx-get="/crud/trackers?page={{ current_page + 1 }}{% if let Some(e) = editing_tracker %}&edit={{ e.tracker_id }}{% endif %}"
+								hx-target="body"
 								hx-swap="innerHTML"
 								{% if current_page == total_pages %}disabled{% endif %}>
 								Next

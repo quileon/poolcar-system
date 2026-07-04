@@ -114,32 +114,32 @@
 					<ul class="pagination pagination-sm mb-0">
 						<!-- Previous Page -->
 						<li class="page-item {% if current_page == 1 %}disabled{% endif %}">
-							<button class="page-link" 
-								hx-get="/crud/cars?page={{ current_page - 1 }}{% if let Some(e) = editing_car %}&edit={{ e.car_id }}{% endif %}" 
-								hx-target="body" 
+							<button class="page-link"
+								hx-get="/crud/cars?page={{ current_page - 1 }}{% if let Some(e) = editing_car %}&edit={{ e.car_id }}{% endif %}"
+								hx-target="body"
 								hx-swap="innerHTML"
 								{% if current_page == 1 %}disabled{% endif %}>
 								Previous
 							</button>
 						</li>
-						
+
 						<!-- Page Numbers -->
 						{% for p in pages %}
 						<li class="page-item {% if *p == current_page %}active{% endif %}">
-							<button class="page-link" 
-								hx-get="/crud/cars?page={{ p }}{% if let Some(e) = editing_car %}&edit={{ e.car_id }}{% endif %}" 
-								hx-target="body" 
+							<button class="page-link"
+								hx-get="/crud/cars?page={{ p }}{% if let Some(e) = editing_car %}&edit={{ e.car_id }}{% endif %}"
+								hx-target="body"
 								hx-swap="innerHTML">
 								{{ p }}
 							</button>
 						</li>
 						{% endfor %}
-						
+
 						<!-- Next Page -->
 						<li class="page-item {% if current_page == total_pages %}disabled{% endif %}">
-							<button class="page-link" 
-								hx-get="/crud/cars?page={{ current_page + 1 }}{% if let Some(e) = editing_car %}&edit={{ e.car_id }}{% endif %}" 
-								hx-target="body" 
+							<button class="page-link"
+								hx-get="/crud/cars?page={{ current_page + 1 }}{% if let Some(e) = editing_car %}&edit={{ e.car_id }}{% endif %}"
+								hx-target="body"
 								hx-swap="innerHTML"
 								{% if current_page == total_pages %}disabled{% endif %}>
 								Next
