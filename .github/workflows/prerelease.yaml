@@ -1,0 +1,49 @@
+name: Build and Release
+on:
+  push:
+    branches: ["dev"]
+
+permissions:
+  contents: write
+
+jobs:
+  prepare-release:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Get backend version
+        id: version
+        run: |
+          VERSION=$(awk -F'"' '/^version =/ {print $2}' backend/Cargo.toml)
+          SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-7)
+          echo "version=$VERSION-$SHORT_SHA" >> $GITHUB_OUTPUT # Appends the commit hash!
+
+      - name: Install dependencies
+        run: |
+          sudo apt update -y
+          sudo apt install -y build-essential pkg-config libssl-dev libmysqlclient-dev
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+
+      - name: Build
+        run: |
+          cd backend
+          cargo build --release
+
+      - name: Create Pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Release ${{ steps.version.outputs.version }}
+          prerelease: true
+          files: backend/target/release/htmx
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
