@@ -112,28 +112,24 @@ bool GsmWrapper::ensureConnection()
     {
         return this->isConnected();
     }
-
     lastConnectionCheck = millis();
 
-    // Reconnect when not connected
-    if (!this->isConnected())
+    // Check if already connected
+    if (this->isConnected())
     {
-        Serial.println("Reconnecting to GPRS...");
-        if (connectGprs())
-        {
-            connected = true;
-            return true;
-        }
-        connected = false;
-        return false;
+        return true;
+    }
+    Serial.println("Reconnecting to GPRS...");
+    
+    // Reconnect
+    if (connectGprs())
+    {
+        connected = true;
+        return true;
     }
 
-    if (this->getSignalStrength() < 10)
-    {
-        Serial.println("Warning: Low signal quality");
-    }
-
-    return true;
+    connected = false;
+    return false;
 }
 
 int GsmWrapper::getSignalStrength()
