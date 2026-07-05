@@ -17,6 +17,19 @@ JsonDocument &GpsGsmClient::toJsonDocument()
 
     // Location Data
     String rawGPS = this->gsmModem.getGPSraw();
+
+    // If the raw string hasn't changed, retry up to 5 times (1 s each)
+    // to wait for a fresh GPS fix.
+    if (rawGPS == this->_lastRawGPS) {
+        for (int attempt = 0; attempt < 5; attempt++) {
+            delay(1000);
+            rawGPS = this->gsmModem.getGPSraw();
+            if (rawGPS != this->_lastRawGPS) {
+                break;
+            }
+        }
+    }
+    this->_lastRawGPS = rawGPS;
     char buffer[128];
     rawGPS.toCharArray(buffer, sizeof(buffer));
     
