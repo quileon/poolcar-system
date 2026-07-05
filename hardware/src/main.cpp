@@ -85,8 +85,6 @@ void setup()
 
     pinMode(SIM808_POWER_PIN_PRIMARY, OUTPUT);
     pinMode(SIM808_POWER_PIN_SECONDARY, OUTPUT);
-    digitalWrite(SIM808_POWER_PIN_PRIMARY, HIGH);
-    digitalWrite(SIM808_POWER_PIN_SECONDARY, HIGH);
     Serial.println("GSM Power Pin Initialized");
 
 #ifdef MQTT_SECURE

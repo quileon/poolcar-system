@@ -54,6 +54,7 @@ bool GsmWrapper::isActive()
     unsigned short retries = 0;
     while (retries < 10)
     {
+        delay(100);
         if (gsmModem.testAT(1000))
         {
             return true;
