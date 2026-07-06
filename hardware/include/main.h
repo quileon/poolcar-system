@@ -14,9 +14,11 @@
 // #define DUMP_AT_COMMANDS
 
 // GPS config
-// Use TinyGPS++ NMEA parsing from the GPS serial pins.
-// #define GPS_USE_NMEA
+#define USE_EXTERNAL_GPS
+constexpr int GPS_RX_PIN = 25; // Connect to TX of GPS module
+constexpr int GPS_TX_PIN = 26; // Connect to RX of GPS module
 
+// GSM config
 constexpr short GSM_MAX_RETRIES = 3;
 
 // MQTT Configuration
@@ -54,8 +56,8 @@ MrY=
 )";
 
 // Pin Configuration
-constexpr int GSM_RX_PIN = 16; // Connect to TX of GSM module
-constexpr int GSM_TX_PIN = 17; // Connect to RX of GSM module
+constexpr int GSM_RX_PIN = 32; // Connect to TX of GSM module
+constexpr int GSM_TX_PIN = 33; // Connect to RX of GSM module
 constexpr int ESP32_COMMUNICATION_BAUD_RATE = 9600;
 
 // SIM808 Power (PWRKEY wired to GPIO22 & GPIO23)

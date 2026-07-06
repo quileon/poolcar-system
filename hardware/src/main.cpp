@@ -8,35 +8,43 @@
 #include <MqttClient.h>
 #include <GsmWrapper.h>
 
+#if defined(USE_EXTERNAL_GPS)
+#include <GpsClient.h>
+#else
 #include <GpsGsmClient.h>
+#endif
 
 HardwareSerial gsmSerial(1);
 
-#ifdef DUMP_AT_COMMANDS
+#if defined(DUMP_AT_COMMANDS)
 #include <StreamDebugger.h>
 StreamDebugger debugger(gsmSerial, Serial);
 TinyGsm modem(debugger);
 #else
 TinyGsm modem(gsmSerial);
 #endif
-GsmWrapper gsmWrapper(modem, APN, APN_USER, APN_PASSWORD, GSM_MAX_RETRIES);
 
+GsmWrapper gsmWrapper(modem, APN, APN_USER, APN_PASSWORD, GSM_MAX_RETRIES);
 TinyGsmClient client(modem);
+
+#if defined(USE_EXTERNAL_GPS)
+HardwareSerial gpsSerial(2);
+TinyGPSPlus gps;
+GpsClient gpsClient(gps);
+#else
 GpsGsmClient gpsClient(modem);
+#endif
 
 #ifdef MQTT_SECURE
-SSLClient sslClient(&client);
+ESP_SSLClient sslClient(&client);
 PubSubClient mqtt(sslClient);
 MqttClient mqttClient(mqtt, MQTT_BROKER, MQTT_PORT, MQTT_TOPIC, MQTT_MESSAGE_SIZE, MQTT_KEEP_ALIVE_TIMEOUT, MQTT_RECONNECT_TIMEOUT, MQTT_USERNAME, MQTT_PASSWORD);
-
 #elif defined(MQTT_USERNAME)
 PubSubClient mqtt(client);
 MqttClient mqttClient(mqtt, MQTT_BROKER, MQTT_PORT, MQTT_TOPIC, MQTT_MESSAGE_SIZE, MQTT_KEEP_ALIVE_TIMEOUT, MQTT_RECONNECT_TIMEOUT, MQTT_USERNAME, MQTT_PASSWORD);
-
 #else
 PubSubClient mqtt(client);
 MqttClient mqttClient(mqtt, MQTT_BROKER, MQTT_PORT, MQTT_TOPIC, MQTT_MESSAGE_SIZE, MQTT_KEEP_ALIVE_TIMEOUT, MQTT_RECONNECT_TIMEOUT);
-
 #endif
 
 bool modemConnected = false;
@@ -83,6 +91,15 @@ void setup()
 #endif
     Serial.println("GSM Serial initialized!");
 
+#if defined(USE_EXTERNAL_GPS)
+    gpsSerial.begin(38400, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
+    while (!gpsSerial)
+    {
+        delay(10);
+    }
+    Serial.println("GPS Serial initialized!");
+#endif
+
     pinMode(SIM808_POWER_PIN_PRIMARY, OUTPUT);
     pinMode(SIM808_POWER_PIN_SECONDARY, OUTPUT);
     Serial.println("GSM Power Pin Initialized");
@@ -125,6 +142,12 @@ void loop()
             delay(1000);
             return;
         }
+    }
+    
+    while (gpsSerial.available() > 0)
+    {
+        char c = gpsSerial.read();
+        gpsClient.encode(c);
     }
 
     if (millis() - retryTimeout > PUBLISH_INTERVAL)
@@ -207,12 +230,14 @@ bool initialization()
         return false;
     }
 
+    #if !defined(USE_EXTERNAL_GPS)
     if (!gsmWrapper.enableGPS())
     {
         Serial.println("Failed to initialize GPS modem!");
         systemReady = false;
         return false;
     }
+    #endif
 
     systemReady = true;
     return true;
