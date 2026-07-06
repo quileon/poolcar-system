@@ -84,7 +84,8 @@ pub async fn run_rocket(
                 pages::trips_employee::finish_trip_employee,
                 pages::trips_employee::export_trips_csv,
                 pages::live::live_tracking,
-                pages::audit::audit_page
+                pages::audit::audit_page,
+                pages::audit::export_audit_csv
             ],
         )
         .mount("/js", rocket::fs::FileServer::from("templates/js"))
@@ -193,6 +194,7 @@ pub async fn run_audit(
                 break;
             }
             _ = interval.tick() => {
+                info!("Saving location to audit log");
                 if let Err(e) = audit::audit_handler(&db, &redis).await {
                     error!("Error in auditing location: {:?}", e);
                 }

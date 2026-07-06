@@ -13,30 +13,28 @@
 {% endif %}
 
 <!-- Page Header -->
-<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
-	<div>
-		<h3 class="fw-bold text-dark mb-1">Audit Log</h3>
-		<p class="text-muted mb-0">Track device and vehicle location history</p>
-	</div>
+<div class="d-flex flex-column">
+	<h3 class="fw-bold text-dark">Audit Log</h3>
+	<p class="text-dark-emphasis">See history of car/tracker movement.</p>
 </div>
 
 <!-- Filters Card -->
 <div class="card border-0 shadow-sm mb-2">
 	<div class="card-body p-4">
-		<form class="row g-3 align-items-end">
+		<form class="row g-3 align-items-end" hx-get="/audit" hx-target="body" hx-swap="innerHTML">
 			<!-- Filter Choice -->
 			<div class="col-12 col-md-3">
 				<label for="filter-choice" class="form-label fw-semibold text-muted">Filter Type</label>
-				<select id="filter-choice" class="form-select">
-					<option value="tracker" selected>Tracker</option>
-					<option value="car">Car</option>
+				<select id="filter-choice" name="choice" class="form-select">
+					<option value="tracker" {% if let Some(choice) = selected_choice %}{% if choice == "tracker" %}selected{% endif %}{% endif %}>Tracker</option>
+					<option value="car" {% if let Some(choice) = selected_choice %}{% if choice == "car" %}selected{% endif %}{% endif %}>Car</option>
 				</select>
 			</div>
 
 			<!-- Filter Target -->
 			<div class="col-12 col-md-3">
 				<label for="filter-target" class="form-label fw-semibold text-muted">Select Item</label>
-				<select id="filter-target" class="form-select">
+				<select id="filter-target" name="target" class="form-select">
 					<!-- Populated by JS -->
 				</select>
 			</div>
@@ -44,16 +42,16 @@
 			<!-- Date Input -->
 			<div class="col-12 col-md-3">
 				<label for="filter-date" class="form-label fw-semibold text-muted">Date</label>
-				<input type="date" id="filter-date" class="form-control">
+				<input type="date" id="filter-date" name="date" class="form-control">
 			</div>
 
 			<!-- Action Buttons -->
 			<div class="col-12 col-md-3 d-flex gap-2">
-				<button type="button" class="btn btn-primary w-100">Filter</button>
-				<button type="button" class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2">
+				<button type="submit" class="btn btn-primary w-100">Filter</button>
+				<a id="export-csv-btn" href="#" class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2" hx-boost="false">
 					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 -960 960 960"><path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>
 					Export CSV
-				</button>
+				</a>
 			</div>
 		</form>
 	</div>
@@ -62,6 +60,16 @@
 <!-- Map Container -->
 <div class="rounded-4 overflow-hidden border border-secondary-subtle" style="height: calc(100vh - 380px); width: 100%; position: relative;">
 	<div id="audit-map" style="position: absolute; top: 0; bottom: 0; left: 0; right: 0; z-index: 1;"></div>
+</div>
+
+<div id="audit-records-data" style="display: none;">
+	{% for record in audit_records %}
+		<div class="audit-point"
+			 data-lat="{{ record.latitude }}"
+			 data-lng="{{ record.longitude }}"
+			 data-time="{{ record.time_wib }}">
+		</div>
+	{% endfor %}
 </div>
 
 <script>
@@ -112,9 +120,22 @@
 
 		L.marker([homeLat, homeLng], { icon: homeIcon }).addTo(map).bindPopup('Politeknik Negeri Jakarta');
 
-		// Handle Dynamic Dropdown Options
+		// Handle Dynamic Dropdown Options and Map Plotting
 		const choiceEl = document.getElementById('filter-choice');
 		const targetEl = document.getElementById('filter-target');
+		const dateInput = document.getElementById('filter-date');
+		const exportBtn = document.getElementById('export-csv-btn');
+
+		const selectedChoice = {% if let Some(choice) = selected_choice %}"{{ choice }}"{% else %}null{% endif %};
+		const selectedTarget = {% if let Some(target) = selected_target %}{{ target }}{% else %}null{% endif %};
+		const selectedDate = {% if let Some(date) = selected_date %}"{{ date }}"{% else %}null{% endif %};
+
+		const plainIcon = L.icon({
+			iconUrl: '/assets/plain.png',
+			iconSize: [25, 41],
+			iconAnchor: [12.5, 41],
+			popupAnchor: [0, -35]
+		});
 
 		function updateTargetOptions() {
 			if (!choiceEl || !targetEl) return;
@@ -127,6 +148,9 @@
 						const opt = document.createElement('option');
 						opt.value = "{{ tracker.tracker_id }}";
 						opt.textContent = "{{ tracker.name }}";
+						if (selectedTarget && String(selectedTarget) === String(opt.value)) {
+							opt.selected = true;
+						}
 						targetEl.appendChild(opt);
 					}
 				{% endfor %}
@@ -136,22 +160,75 @@
 						const opt = document.createElement('option');
 						opt.value = "{{ car.car_id }}";
 						opt.textContent = "{{ car.name }} ({{ car.police_number }})";
+						if (selectedTarget && String(selectedTarget) === String(opt.value)) {
+							opt.selected = true;
+						}
 						targetEl.appendChild(opt);
 					}
 				{% endfor %}
 			}
 		}
 
+		function updateExportLink() {
+			if (!exportBtn || !choiceEl || !targetEl || !dateInput) return;
+			const choice = choiceEl.value;
+			const target = targetEl.value;
+			const date = dateInput.value;
+			exportBtn.href = `/audit/export?choice=${encodeURIComponent(choice)}&target=${encodeURIComponent(target)}&date=${encodeURIComponent(date)}`;
+		}
+
+		if (choiceEl && selectedChoice) {
+			choiceEl.value = selectedChoice;
+		}
+
 		if (choiceEl && targetEl) {
-			choiceEl.addEventListener('change', updateTargetOptions);
+			choiceEl.addEventListener('change', () => {
+				updateTargetOptions();
+				updateExportLink();
+			});
+			targetEl.addEventListener('change', updateExportLink);
 			updateTargetOptions();
 		}
 
 		// Set default date to today
 		const today = new Date().toISOString().split('T')[0];
-		const dateInput = document.getElementById('filter-date');
 		if (dateInput) {
-			dateInput.value = today;
+			if (selectedDate) {
+				dateInput.value = selectedDate;
+			} else {
+				dateInput.value = today;
+			}
+			dateInput.addEventListener('change', updateExportLink);
+		}
+
+		updateExportLink();
+
+		// Plot Audit Points
+		const auditPoints = document.querySelectorAll('.audit-point');
+		const pathCoords = [];
+
+		auditPoints.forEach((el, index) => {
+			const latStr = el.getAttribute('data-lat');
+			const lngStr = el.getAttribute('data-lng');
+			const timeStr = el.getAttribute('data-time');
+
+			if (latStr && lngStr) {
+				const lat = parseFloat(latStr);
+				const lng = parseFloat(lngStr);
+				if (!isNaN(lat) && !isNaN(lng)) {
+					const coord = [lat, lng];
+					pathCoords.push(coord);
+
+					L.marker(coord, { icon: plainIcon })
+						.addTo(map)
+						.bindPopup(`<strong>Point #${index + 1}</strong><br>Time: ${timeStr}`);
+				}
+			}
+		});
+
+		if (pathCoords.length > 0) {
+			const polyline = L.polyline(pathCoords, { color: 'maroon', weight: 4, opacity: 0.7 }).addTo(map);
+			map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
 		}
 
 		map.invalidateSize();
