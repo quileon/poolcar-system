@@ -1,8 +1,12 @@
 use crate::auth::AuthenticatedUser;
 use crate::entities::sea_orm_active_enums::ActivityType;
 use crate::entities::{activities, car_status, cars, contacts, trackers};
+use crate::loops::mqtt::MqttPayload;
+use crate::pages::live::TrackerWithCar;
+use crate::pages::trips::{self, ActiveTripCache};
 use askama::Template;
 use askama_web::WebTemplate;
+use redis::AsyncCommands;
 use rocket::State;
 use sea_orm::{
     ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
@@ -30,12 +34,24 @@ pub struct DashboardTemplate {
     pub total_trackers: u64,
     pub car_checks_today: u64,
     pub activities: Vec<FormattedActivity>,
+    pub trackers: Vec<TrackerWithCar>,
+    pub tracker_payloads: Vec<MqttPayload>,
+    pub active_trips: Vec<ActiveTripCache>,
+}
+
+impl DashboardTemplate {
+    pub fn get_payload(&self, tracker_id: &i32) -> Option<&MqttPayload> {
+        self.tracker_payloads
+            .iter()
+            .find(|payload| payload.id == *tracker_id as u32)
+    }
 }
 
 #[rocket::get("/")]
 pub async fn dashboard(
     user: AuthenticatedUser,
     db: &State<DatabaseConnection>,
+    redis: &State<redis::Client>,
 ) -> DashboardTemplate {
     let wib_now = chrono::Utc::now() + chrono::Duration::hours(7);
     let wib_today = wib_now.date_naive();
@@ -141,6 +157,59 @@ pub async fn dashboard(
         }
     }
 
+    let mut trackers = Vec::new();
+    let mut tracker_payloads = Vec::new();
+    let mut active_trips = Vec::new();
+
+    // Fetch live tracking data for the map
+    match redis.get_multiplexed_async_connection().await {
+        Ok(mut conn) => {
+            match trips::get_active_trips(db.inner(), redis.inner()).await {
+                Ok(at) => active_trips = at,
+                Err(err) => {
+                    if error.is_none() {
+                        error = Some(format!("Failed to get active trips: {}", err));
+                    }
+                }
+            }
+
+            match trackers::Entity::find()
+                .find_also_related(cars::Entity)
+                .all(db.inner())
+                .await
+            {
+                Ok(tracker_cars) => {
+                    trackers = tracker_cars
+                        .into_iter()
+                        .map(|(t, c)| TrackerWithCar { tracker: t, car: c })
+                        .collect::<Vec<_>>();
+
+                    for tracker in &trackers {
+                        let bytes: Option<Vec<u8>> = conn
+                            .get(format!("tracker:{}:live", tracker.tracker.tracker_id))
+                            .await
+                            .unwrap_or(None);
+                        if let Some(bytes) = bytes {
+                            if let Ok(payload) = serde_json::from_slice::<MqttPayload>(&bytes) {
+                                tracker_payloads.push(payload);
+                            }
+                        }
+                    }
+                }
+                Err(err) => {
+                    if error.is_none() {
+                        error = Some(format!("Failed to get trackers: {}", err));
+                    }
+                }
+            }
+        }
+        Err(err) => {
+            if error.is_none() {
+                error = Some(format!("Redis connection failed: {}", err));
+            }
+        }
+    }
+
     DashboardTemplate {
         error,
         username: user.username,
@@ -152,6 +221,9 @@ pub async fn dashboard(
         total_trackers,
         car_checks_today,
         activities: formatted_activities,
+        trackers,
+        tracker_payloads,
+        active_trips,
     }
 }
 

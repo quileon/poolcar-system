@@ -127,6 +127,33 @@
 	</div>
 </div>
 
+<div id="active-trips-data" style="display: none;">
+	{% for trip in active_trips %}
+		<div class="trip-destination"
+			 data-activity-id="{{ trip.trip.activity_id }}"
+			 data-lat="{{ trip.contact_latitude }}"
+			 data-lng="{{ trip.contact_longitude }}">
+		</div>
+	{% endfor %}
+</div>
+
+<div id="trackers-data" style="display: none;">
+	{% for tracker in trackers %}
+		{% if let Some(payload) = self.get_payload(tracker.tracker.tracker_id) %}
+			{% if let (Some(lat), Some(lng)) = (payload.location.latitude, payload.location.longitude) %}
+				<div class="tracker-item"
+					 data-tracker-id="{{ tracker.tracker.tracker_id }}"
+					 data-name="{{ tracker.tracker.name }}"
+					 data-car-name="{% if let Some(car) = tracker.car %}{{ car.name }} ({{ car.police_number }}){% endif %}"
+					 data-lat="{{ lat }}"
+					 data-lng="{{ lng }}"
+					 data-car-type="{% if let Some(car) = tracker.car %}{{ car.car_type.as_str() }}{% else %}passenger{% endif %}">
+				</div>
+			{% endif %}
+		{% endif %}
+	{% endfor %}
+</div>
+
 <script>
 (function() {
 	function initMap() {
@@ -141,13 +168,7 @@
 			iconAnchor: [21, 21],
 			popupAnchor: [0, -15]
 		});
-
-		const carIcon = L.icon({
-			iconUrl: '/assets/plain.png',
-			iconSize: [25, 41],
-			iconAnchor: [12.5, 41],
-			popupAnchor: [0, -35]
-		});
+		const colors = ['1d00ff', '00ff0e', 'cc0000', 'ff33e1', '0074cc', 'ffda00', 'ff8300', '28cc6a', 'ff3378', '00bdff'];
 
 		// Initialize Map
 		if (window.dashboardMap) {
@@ -163,18 +184,6 @@
 		const map = L.map('dashboard-map').setView([homeLat, homeLng], 13);
 		window.dashboardMap = map;
 
-		mapElement.addEventListener('htmx:beforeCleanupElement', function() {
-			if (window.dashboardMap) {
-				try {
-					window.dashboardMap.off();
-					window.dashboardMap.remove();
-				} catch (e) {
-					console.error('Error removing map:', e);
-				}
-				window.dashboardMap = null;
-			}
-		});
-
 		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 			maxZoom: 19,
 			attribution: '© OpenStreetMap'
@@ -183,9 +192,187 @@
 		// Home Marker
 		L.marker([homeLat, homeLng], { icon: homeIcon }).addTo(map).bindPopup('Politeknik Negeri Jakarta');
 
-		// Mock Car Markers
-		L.marker([-6.368, 106.828], { icon: carIcon }).addTo(map).bindPopup('Toyota Avanza (B 1234 CD)<br>Status: Heading to Kantor Pusat Jakarta');
-		L.marker([-6.375, 106.820], { icon: carIcon }).addTo(map).bindPopup('Honda CR-V (B 5678 EF)<br>Status: Heading to Bandara Soekarno-Hatta');
+		const markers = {};
+		const destinationMarkers = {};
+		const allLatLngs = [[homeLat, homeLng]];
+
+		function recalculateBounds() {
+			const newLatLngs = [[homeLat, homeLng]];
+			for (const key in markers) {
+				newLatLngs.push(markers[key].getLatLng());
+			}
+			for (const key in destinationMarkers) {
+				newLatLngs.push(destinationMarkers[key].getLatLng());
+			}
+			allLatLngs.length = 0;
+			newLatLngs.forEach(ll => allLatLngs.push(ll));
+		}
+
+		// Initialize Tracker Markers
+		const trackerItems = document.querySelectorAll('.tracker-item');
+		trackerItems.forEach(el => {
+			const id = el.getAttribute('data-tracker-id');
+			const name = el.getAttribute('data-name');
+			const carName = el.getAttribute('data-car-name');
+			const latStr = el.getAttribute('data-lat');
+			const lngStr = el.getAttribute('data-lng');
+			const carType = el.getAttribute('data-car-type') || 'passenger';
+
+			if (latStr && lngStr) {
+				const lat = parseFloat(latStr);
+				const lng = parseFloat(lngStr);
+				if (!isNaN(lat) && !isNaN(lng)) {
+					const colorIndex = parseInt(id || '0');
+					const color = colors[colorIndex % colors.length];
+					const trackerIcon = L.icon({
+						iconUrl: `/assets/${carType}-${color}.png`,
+						iconSize: [31, 46],
+						iconAnchor: [15.5, 46],
+						popupAnchor: [0, -40]
+					});
+
+					const popupContent = carName ? `<strong>${name}</strong><br>${carName}` : `<strong>${name}</strong>`;
+					const marker = L.marker([lat, lng], { icon: trackerIcon })
+						.addTo(map)
+						.bindPopup(popupContent);
+					markers[id] = marker;
+					allLatLngs.push([lat, lng]);
+				}
+			}
+		});
+
+		// Initialize Trip Destination Flags
+		const tripDestinations = document.querySelectorAll('.trip-destination');
+		tripDestinations.forEach(el => {
+			const activityId = el.getAttribute('data-activity-id');
+			const latStr = el.getAttribute('data-lat');
+			const lngStr = el.getAttribute('data-lng');
+
+			if (latStr && lngStr) {
+				const lat = parseFloat(latStr);
+				const lng = parseFloat(lngStr);
+				if (!isNaN(lat) && !isNaN(lng)) {
+					const flagIcon = L.icon({
+						iconUrl: '/assets/flag.png',
+						iconSize: [31, 46],
+						iconAnchor: [15.5, 46],
+						popupAnchor: [0, -40]
+					});
+
+					const marker = L.marker([lat, lng], { icon: flagIcon })
+						.addTo(map)
+						.bindPopup(`<strong>Destination</strong>`);
+
+					if (activityId) {
+						destinationMarkers[activityId] = marker;
+					}
+					allLatLngs.push([lat, lng]);
+				}
+			}
+		});
+
+		// Fit bounds initially if we have trackers/destinations
+		if (allLatLngs.length > 1) {
+			map.fitBounds(L.latLngBounds(allLatLngs), { padding: [50, 50] });
+		}
+
+		// Setup WebSocket
+		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+		const wsUrl = `${protocol}//${window.location.host}/ws/live`;
+		const socket = new WebSocket(wsUrl);
+
+		socket.onmessage = function(event) {
+			try {
+				const message = JSON.parse(event.data);
+				if (message.message_type === 'tracker_location') {
+					const payload = message.data;
+					const trackerId = payload.id;
+
+					if (payload.location && payload.location.latitude !== null && payload.location.longitude !== null) {
+						const lat = payload.location.latitude;
+						const lng = payload.location.longitude;
+
+						let marker = markers[trackerId];
+						if (marker) {
+							marker.setLatLng([lat, lng]);
+						} else {
+							const trackerEl = document.querySelector(`.tracker-item[data-tracker-id="${trackerId}"]`);
+							const name = trackerEl ? trackerEl.getAttribute('data-name') : 'Tracker ' + trackerId;
+							const carName = trackerEl ? trackerEl.getAttribute('data-car-name') : '';
+							const carType = trackerEl ? (trackerEl.getAttribute('data-car-type') || 'passenger') : 'passenger';
+							const color = colors[trackerId % colors.length];
+
+							const customIcon = L.icon({
+								iconUrl: `/assets/${carType}-${color}.png`,
+								iconSize: [31, 46],
+								iconAnchor: [15.5, 46],
+								popupAnchor: [0, -40]
+							});
+
+							const popupContent = carName ? `<strong>${name}</strong><br>${carName}` : `<strong>${name}</strong>`;
+							marker = L.marker([lat, lng], { icon: customIcon })
+								.addTo(map)
+								.bindPopup(popupContent);
+							markers[trackerId] = marker;
+						}
+
+						recalculateBounds();
+					}
+				} else if (message.message_type === 'update_destination') {
+					const payload = message.data;
+					const activityId = payload.activity_id;
+					const lat = parseFloat(payload.contact_latitude);
+					const lng = parseFloat(payload.contact_longitude);
+
+					if (!isNaN(lat) && !isNaN(lng)) {
+						let marker = destinationMarkers[activityId];
+						if (marker) {
+							marker.setLatLng([lat, lng]);
+							marker.setPopupContent(`<strong>Destination</strong>`);
+						} else {
+							const flagIcon = L.icon({
+								iconUrl: '/assets/flag.png',
+								iconSize: [31, 46],
+								iconAnchor: [15.5, 46],
+								popupAnchor: [0, -40]
+							});
+							marker = L.marker([lat, lng], { icon: flagIcon })
+								.addTo(map)
+								.bindPopup(`<strong>Destination</strong>`);
+							destinationMarkers[activityId] = marker;
+						}
+						recalculateBounds();
+					}
+				} else if (message.message_type === 'remove_destination') {
+					const payload = message.data;
+					const activityId = payload.activity_id;
+					const marker = destinationMarkers[activityId];
+					if (marker) {
+						map.removeLayer(marker);
+						delete destinationMarkers[activityId];
+						recalculateBounds();
+					}
+				}
+			} catch (e) {
+				console.error('Error handling WebSocket message:', e);
+			}
+		};
+
+		socket.onclose = function() {
+			console.log('Dashboard WebSocket connection closed');
+		};
+
+		socket.onerror = function(err) {
+			console.error('Dashboard WebSocket error:', err);
+		};
+
+		mapElement.addEventListener('htmx:beforeCleanupElement', function() {
+			try {
+				socket.close();
+			} catch (e) {
+				console.error('Error closing WebSocket:', e);
+			}
+		});
 
 		map.invalidateSize();
 	}

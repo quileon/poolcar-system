@@ -25,6 +25,8 @@
 						<option value="{{ tracker.tracker.tracker_id }}"
 								data-lat="{{ lat }}"
 								data-lng="{{ lng }}"
+								data-name="{{ tracker.tracker.name }}"
+								data-car-name="{% if let Some(car) = tracker.car %}{{ car.name }} ({{ car.police_number }}){% endif %}"
 								data-car-type="{% if let Some(car) = tracker.car %}{{ car.car_type.as_str() }}{% else %}passenger{% endif %}">
 							{{ tracker.tracker.name }}
 							{% if let Some(car) = tracker.car %}
@@ -33,7 +35,10 @@
 						</option>
 					{% endif %}
 				{% else %}
-					<option value="{{ tracker.tracker.tracker_id }}" disabled>
+					<option value="{{ tracker.tracker.tracker_id }}" disabled
+							data-name="{{ tracker.tracker.name }}"
+							data-car-name="{% if let Some(car) = tracker.car %}{{ car.name }} ({{ car.police_number }}){% endif %}"
+							data-car-type="{% if let Some(car) = tracker.car %}{{ car.car_type.as_str() }}{% else %}passenger{% endif %}">
 						{{ tracker.tracker.name }}
 						{% if let Some(car) = tracker.car %}
 							({{ car.name }} - {{ car.police_number }})
@@ -56,8 +61,7 @@
 		<div class="trip-destination"
 			 data-activity-id="{{ trip.trip.activity_id }}"
 			 data-lat="{{ trip.contact_latitude }}"
-			 data-lng="{{ trip.contact_longitude }}"
-			 data-desc="{% if let Some(desc) = trip.trip.description.clone() %}{{ desc }}{% else %}No Description{% endif %}">
+			 data-lng="{{ trip.contact_longitude }}">
 		</div>
 	{% endfor %}
 </div>
@@ -147,9 +151,13 @@
 							popupAnchor: [0, -40]
 						});
 
+						const name = opt.getAttribute('data-name');
+						const carName = opt.getAttribute('data-car-name');
+						const popupContent = carName ? `<strong>${name}</strong><br>${carName}` : `<strong>${name}</strong>`;
+
 						const marker = L.marker([lat, lng], { icon: trackerIcon })
 							.addTo(map)
-							.bindPopup(`<strong>${opt.text}</strong>`);
+							.bindPopup(popupContent);
 						markers[id] = marker;
 						allLatLngs.push([lat, lng]);
 					}
@@ -163,7 +171,6 @@
 			const activityId = el.getAttribute('data-activity-id');
 			const latStr = el.getAttribute('data-lat');
 			const lngStr = el.getAttribute('data-lng');
-			const desc = el.getAttribute('data-desc') || 'Destination';
 
 			if (latStr && lngStr) {
 				const lat = parseFloat(latStr);
@@ -178,7 +185,7 @@
 
 					const marker = L.marker([lat, lng], { icon: flagIcon })
 						.addTo(map)
-						.bindPopup(`<strong>${desc}</strong>`);
+						.bindPopup(`<strong>Destination</strong>`);
 
 					if (activityId) {
 						destinationMarkers[activityId] = marker;
@@ -260,9 +267,13 @@
 								popupAnchor: [0, -40]
 							});
 
+							const name = opt ? opt.getAttribute('data-name') : 'Tracker ' + trackerId;
+							const carName = opt ? opt.getAttribute('data-car-name') : '';
+							const popupContent = carName ? `<strong>${name}</strong><br>${carName}` : `<strong>${name}</strong>`;
+
 							marker = L.marker([lat, lng], { icon: customIcon })
 								.addTo(map)
-								.bindPopup(`<strong>${opt ? opt.text : 'Tracker ' + trackerId}</strong>`);
+								.bindPopup(popupContent);
 							markers[trackerId] = marker;
 						}
 
@@ -278,13 +289,12 @@
 					const activityId = payload.activity_id;
 					const lat = parseFloat(payload.contact_latitude);
 					const lng = parseFloat(payload.contact_longitude);
-					const desc = payload.contact_name || 'No Description';
 
 					if (!isNaN(lat) && !isNaN(lng)) {
 						let marker = destinationMarkers[activityId];
 						if (marker) {
 							marker.setLatLng([lat, lng]);
-							marker.setPopupContent(`<strong>${desc}</strong>`);
+							marker.setPopupContent(`<strong>Destination</strong>`);
 						} else {
 							const flagIcon = L.icon({
 								iconUrl: '/assets/flag.png',
@@ -294,7 +304,7 @@
 							});
 							marker = L.marker([lat, lng], { icon: flagIcon })
 								.addTo(map)
-								.bindPopup(`<strong>${desc}</strong>`);
+								.bindPopup(`<strong>Destination</strong>`);
 							destinationMarkers[activityId] = marker;
 						}
 						recalculateBounds();
