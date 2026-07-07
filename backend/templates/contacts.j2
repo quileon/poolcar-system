@@ -173,7 +173,7 @@
 				<form hx-put="/crud/contacts/{{ editing.contact_id }}?page={{ current_page }}" hx-target="body" hx-swap="innerHTML">
 					<div class="mb-3">
 						<label for="contact-name" class="form-label fw-semibold text-muted">Contact Name</label>
-						<input type="text" class="form-control form-control-lg" id="contact-name" name="name" value="{{ editing.name }}" placeholder="e.g. Acme Corp" required>
+						<input type="text" class="form-control form-control-lg" id="contact-name" name="name" value="{{ editing.name }}" placeholder="e.g. Politeknik Negeri Jakarta" required>
 					</div>
 					<div class="mb-3 position-relative">
 						<label for="contact-search" class="form-label fw-semibold text-muted">Google Maps Search</label>
@@ -219,7 +219,7 @@
 				<form hx-post="/crud/contacts" hx-target="body" hx-swap="innerHTML">
 					<div class="mb-3">
 						<label for="contact-name" class="form-label fw-semibold text-muted">Contact Name</label>
-						<input type="text" class="form-control form-control-lg" id="contact-name" name="name" placeholder="e.g. Acme Corp" required>
+						<input type="text" class="form-control form-control-lg" id="contact-name" name="name" placeholder="e.g. Politeknik Negeri Jakarta" required>
 					</div>
 					<div class="mb-3 position-relative">
 						<label for="contact-search" class="form-label fw-semibold text-muted">Google Maps Search</label>
