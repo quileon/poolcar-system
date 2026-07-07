@@ -70,6 +70,7 @@ pub struct Model {
     pub stats_sentences_with_fix: Option<u32>,
     pub stats_failed_checksum: Option<u32>,
     pub stats_passed_checksum: Option<u32>,
+    pub payload_size: Option<u32>,
     pub received_at: DateTime,
     pub created_at: DateTime,
 }
