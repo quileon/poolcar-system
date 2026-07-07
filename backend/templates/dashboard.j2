@@ -2,186 +2,389 @@
 
 {% block head %}
 	<title>Dashboard - Poolcar</title>
+	<style>
+		.icon-box {
+			width: 60px;
+			height: 60px;
+			border-radius: 12px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+	</style>
 {% endblock %}
 
 {% block body %}
-<!-- Welcome Banner -->
-<div class="card border-0 shadow-sm p-4 bg-white d-flex flex-row align-items-center justify-content-between">
-	<div>
-		<h3 class="mb-1 fw-bold text-dark">Welcome back, {{ username }}!</h3>
-		<p class="text-muted mb-0" style="font-size: 0.95rem;">Here is what's happening with the Poolcar system today.</p>
+<div class="d-flex flex-column gap-4" style="height: calc(100vh - 140px);">
+	<!-- Page Header -->
+	<div class="flex-shrink-0">
+		<h3 class="fw-bold text-dark">Dashboard</h3>
+		<p class="text-dark-emphasis">Welcome back, {{ username }}</p>
 	</div>
-	<div>
-		<span class="badge rounded-pill px-3 py-2 fs-6 
-			{% if role == "Admin" %}
-				bg-primary bg-opacity-10 text-primary
-			{% else if role == "Security" %}
-				bg-warning bg-opacity-10 text-warning
-			{% else %}
-				bg-success bg-opacity-10 text-success
+
+	<!-- Information Cards -->
+	<div class="row g-4 flex-shrink-0">
+		<!-- Card 1: Active Activities -->
+		<div class="col-3">
+			<div class="card border-0 shadow-sm h-100">
+				<div class="card-body p-4 d-flex align-items-center gap-3">
+					<div class="icon-box text-bg-primary">
+						<img src="/assets/trip_bold.svg" alt="Active Activities" width="40" height="40">
+					</div>
+					<div>
+						<div class="text-dark-emphasis fw-semibold">Active Activities Today</div>
+						<div class="fs-4 text-dark fw-bold">{{ active_activities_today }} <span class="fs-6 text-dark-emphasis fw-normal">/ {{ all_activities_today }} total</span></div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Card 2: Cars with Assigned Trackers -->
+		<div class="col-3">
+			<div class="card border-0 shadow-sm h-100">
+				<div class="card-body p-4 d-flex align-items-center gap-3">
+					<div class="icon-box text-bg-success">
+						<img src="/assets/cars_bold.svg" alt="Cars" width="40" height="40">
+					</div>
+					<div>
+						<div class="text-dark-emphasis fw-semibold">Cars with Assigned Trackers</div>
+						<div class="fs-4 text-dark fw-bold">{{ assigned_cars }} <span class="fs-6 text-dark-emphasis fw-normal">/ {{ all_cars }} cars</span></div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Card 3: Total Trackers -->
+		<div class="col-3">
+			<div class="card border-0 shadow-sm h-100">
+				<div class="card-body p-4 d-flex align-items-center gap-3">
+					<div class="icon-box text-bg-warning">
+						<img src="/assets/trackers_bold.svg" alt="Total Trackers" width="40" height="40">
+					</div>
+					<div>
+						<div class="text-dark-emphasis fw-semibold">Total Trackers</div>
+						<div class="fs-4 text-dark fw-bold">{{ total_trackers }}</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Card 4: Car History -->
+		<div class="col-3">
+			<div class="card border-0 shadow-sm h-100">
+				<div class="card-body p-4 d-flex align-items-center gap-3">
+					<div class="icon-box text-bg-info">
+						<img src="/assets/car_history_bold.svg" alt="Car Checks Today" width="24" height="24">
+					</div>
+					<div>
+						<div class="text-dark-emphasis fw-semibold">Car History</div>
+						<div class="fs-4 text-dark fw-bold">{{ car_checks_today }}</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Main Row -->
+	<div class="row g-4 flex-grow-1">
+		<!-- Left Side: Recent Activities -->
+		<div class="col-4 d-flex flex-column" style="height: 100%; min-height: 0;">
+			<div class="card border-0 shadow-sm flex-grow-1 d-flex flex-column overflow-hidden p-4">
+				<div class="card-header border-0 bg-transparent p-0 mb-2 flex-shrink-0">
+					<h5 class="fw-bold text-dark mb-0">Recent Activities</h5>
+				</div>
+				<div class="card-body flex-grow-1 p-0" style="overflow-y: auto; height: 0;">
+					<div class="list-group list-group-flush">
+						{% for activity in activities %}
+						<div class="list-group-item py-3">
+							<div class="d-flex align-items-center justify-content-between">
+								{% if activity.is_active %}
+								<span class="badge bg-primary-subtle text-primary rounded-pill">Active</span>
+								{% else %}
+								<span class="badge bg-success-subtle text-success rounded-pill">Completed</span>
+								{% endif %}
+								<small class="text-dark-emphasis">{{ activity.time_ago }}</small>
+							</div>
+							<h6 class="text-dark-emphasis mt-2 mb-1">Destination: <span class="fw-semibold">{{ activity.contact_name }}</span></h6>
+							<p class="text-dark-emphasis m-0">Activity Type: <span class="fw-semibold">{{ activity.activity_type }}</span></p>
+						</div>
+						{% else %}
+						<div class="text-muted text-center py-4">No recent activities found in the last week.</div>
+						{% endfor %}
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Right Side: Dashboard Map -->
+		<div class="col-8 d-flex flex-column">
+			<div class="card border-0 shadow-sm flex-grow-1 d-flex flex-column overflow-hidden">
+				<div class="card-body p-0 position-relative flex-grow-1" style="min-height: 350px;">
+					<div id="dashboard-map" style="position: absolute; top: 0; bottom: 0; left: 0; right: 0; z-index: 1;"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div id="active-trips-data" style="display: none;">
+	{% for trip in active_trips %}
+		<div class="trip-destination"
+			 data-activity-id="{{ trip.trip.activity_id }}"
+			 data-lat="{{ trip.contact_latitude }}"
+			 data-lng="{{ trip.contact_longitude }}">
+		</div>
+	{% endfor %}
+</div>
+
+<div id="trackers-data" style="display: none;">
+	{% for tracker in trackers %}
+		{% if let Some(payload) = self.get_payload(tracker.tracker.tracker_id) %}
+			{% if let (Some(lat), Some(lng)) = (payload.location.latitude, payload.location.longitude) %}
+				<div class="tracker-item"
+					 data-tracker-id="{{ tracker.tracker.tracker_id }}"
+					 data-name="{{ tracker.tracker.name }}"
+					 data-car-name="{% if let Some(car) = tracker.car %}{{ car.name }} ({{ car.police_number }}){% endif %}"
+					 data-lat="{{ lat }}"
+					 data-lng="{{ lng }}"
+					 data-car-type="{% if let Some(car) = tracker.car %}{{ car.car_type.as_str() }}{% else %}passenger{% endif %}">
+				</div>
 			{% endif %}
-		">
-			<i class="bi bi-shield-check me-1"></i> {{ role }} Mode
-		</span>
-	</div>
+		{% endif %}
+	{% endfor %}
 </div>
 
-<!-- Metrics Grid -->
-<div class="row g-4">
-	<!-- Metric 1: Active Fleet -->
-	<div class="col-12 col-sm-6 col-xl-3">
-		<div class="card border-0 shadow-sm p-4 h-100">
-			<div class="d-flex align-items-center justify-content-between mb-3">
-				<div class="rounded-3 bg-primary bg-opacity-10 p-3 text-primary d-inline-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-					<i class="bi bi-car-front fs-4"></i>
-				</div>
-				<span class="text-success fw-semibold" style="font-size: 0.9rem;"><i class="bi bi-arrow-up-right"></i> +8.2%</span>
-			</div>
-			<h6 class="text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.75rem; letter-spacing: 0.5px;">Active Fleet</h6>
-			<h3 class="mb-0 fw-bold">12 <span class="fs-5 text-muted fw-normal">/ 15 Cars</span></h3>
-		</div>
-	</div>
+<script>
+(function() {
+	function initMap() {
+		const mapElement = document.getElementById('dashboard-map');
+		if (!mapElement) return;
 
-	<!-- Metric 2: Bookings -->
-	<div class="col-12 col-sm-6 col-xl-3">
-		<div class="card border-0 shadow-sm p-4 h-100">
-			<div class="d-flex align-items-center justify-content-between mb-3">
-				<div class="rounded-3 bg-warning bg-opacity-10 p-3 text-warning d-inline-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-					<i class="bi bi-calendar-event fs-4"></i>
-				</div>
-				<span class="text-success fw-semibold" style="font-size: 0.9rem;"><i class="bi bi-arrow-up-right"></i> +12%</span>
-			</div>
-			<h6 class="text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.75rem; letter-spacing: 0.5px;">Bookings Today</h6>
-			<h3 class="mb-0 fw-bold">8 <span class="fs-5 text-muted fw-normal">Active</span></h3>
-		</div>
-	</div>
+		const homeLat = -6.370901936057233;
+		const homeLng = 106.82459298887727;
+		const homeIcon = L.icon({
+			iconUrl: '/assets/home.png',
+			iconSize: [42, 42],
+			iconAnchor: [21, 21],
+			popupAnchor: [0, -15]
+		});
+		const colors = ['1d00ff', '00ff0e', 'cc0000', 'ff33e1', '0074cc', 'ffda00', 'ff8300', '28cc6a', 'ff3378', '00bdff'];
 
-	<!-- Metric 3: GPS Trackers -->
-	<div class="col-12 col-sm-6 col-xl-3">
-		<div class="card border-0 shadow-sm p-4 h-100">
-			<div class="d-flex align-items-center justify-content-between mb-3">
-				<div class="rounded-3 bg-success bg-opacity-10 p-3 text-success d-inline-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-					<i class="bi bi-geo-alt fs-4"></i>
-				</div>
-				<span class="text-muted fw-normal" style="font-size: 0.85rem;">100% Online</span>
-			</div>
-			<h6 class="text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.75rem; letter-spacing: 0.5px;">GPS Trackers</h6>
-			<h3 class="mb-0 fw-bold">15 <span class="fs-5 text-muted fw-normal">Devices</span></h3>
-		</div>
-	</div>
+		// Initialize Map
+		if (window.dashboardMap) {
+			try {
+				window.dashboardMap.off();
+				window.dashboardMap.remove();
+			} catch (e) {
+				console.error('Error removing map:', e);
+			}
+			window.dashboardMap = null;
+		}
 
-	<!-- Metric 4: Average Fuel -->
-	<div class="col-12 col-sm-6 col-xl-3">
-		<div class="card border-0 shadow-sm p-4 h-100">
-			<div class="d-flex align-items-center justify-content-between mb-3">
-				<div class="rounded-3 bg-info bg-opacity-10 p-3 text-info d-inline-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-					<i class="bi bi-lightning fs-4"></i>
-				</div>
-				<span class="text-danger fw-semibold" style="font-size: 0.9rem;"><i class="bi bi-arrow-down-right"></i> -1.4%</span>
-			</div>
-			<h6 class="text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.75rem; letter-spacing: 0.5px;">Fuel Efficiency</h6>
-			<h3 class="mb-0 fw-bold">14.2 <span class="fs-5 text-muted fw-normal">km/L avg</span></h3>
-		</div>
-	</div>
-</div>
+		const map = L.map('dashboard-map').setView([homeLat, homeLng], 13);
+		window.dashboardMap = map;
 
-<!-- Fleet Status Table -->
-<div class="card border-0 shadow-sm p-4">
-	<div class="d-flex align-items-center justify-content-between mb-4">
-		<h5 class="mb-0 fw-bold text-dark">Live Fleet Status</h5>
-		<button class="btn btn-outline-primary btn-sm rounded-pill px-3" style="font-size: 0.85rem;">View All Cars</button>
-	</div>
+		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+			maxZoom: 19,
+			attribution: '© OpenStreetMap'
+		}).addTo(map);
 
-	<div class="table-responsive">
-		<table class="table align-middle mb-0">
-			<thead class="table-light">
-				<tr>
-					<th>Car Model</th>
-					<th>License Plate</th>
-					<th>Driver</th>
-					<th>Tracker Status</th>
-					<th>Battery</th>
-					<th>Action</th>
-				</tr>
-			</thead>
-			<tbody>
-				<tr>
-					<td>
-						<div class="d-flex align-items-center">
-							<div class="bg-light p-2 rounded me-3">
-								<i class="bi bi-car-front text-primary fs-5"></i>
-							</div>
-							<div>
-								<span class="fw-semibold d-block" style="font-size: 0.95rem;">Toyota Prius (Hybrid)</span>
-								<span class="text-muted" style="font-size: 0.8rem;">Compact Hatchback</span>
-							</div>
-						</div>
-					</td>
-					<td><span class="font-monospace text-uppercase" style="font-size: 0.9rem;">B 1234 XYZ</span></td>
-					<td>John Doe</td>
-					<td><span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2 py-1" style="font-size: 0.8rem;">Active (Moving)</span></td>
-					<td>
-						<div class="d-flex align-items-center gap-2">
-							<div class="progress flex-grow-1" style="height: 6px; width: 60px;">
-								<div class="progress-bar bg-success" role="progressbar" style="width: 85%" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100"></div>
-							</div>
-							<span class="text-muted fw-semibold" style="font-size: 0.8rem;">85%</span>
-						</div>
-					</td>
-					<td><button class="btn btn-sm btn-light border" style="font-size: 0.85rem;">Track</button></td>
-				</tr>
-				<tr>
-					<td>
-						<div class="d-flex align-items-center">
-							<div class="bg-light p-2 rounded me-3">
-								<i class="bi bi-car-front text-primary fs-5"></i>
-							</div>
-							<div>
-								<span class="fw-semibold d-block" style="font-size: 0.95rem;">Honda Civic</span>
-								<span class="text-muted" style="font-size: 0.8rem;">Sedan</span>
-							</div>
-						</div>
-					</td>
-					<td><span class="font-monospace text-uppercase" style="font-size: 0.9rem;">B 5678 ABC</span></td>
-					<td>Jane Smith</td>
-					<td><span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2 py-1" style="font-size: 0.8rem;">Active (Stationary)</span></td>
-					<td>
-						<div class="d-flex align-items-center gap-2">
-							<div class="progress flex-grow-1" style="height: 6px; width: 60px;">
-								<div class="progress-bar bg-success" role="progressbar" style="width: 92%" aria-valuenow="92" aria-valuemin="0" aria-valuemax="100"></div>
-							</div>
-							<span class="text-muted fw-semibold" style="font-size: 0.8rem;">92%</span>
-						</div>
-					</td>
-					<td><button class="btn btn-sm btn-light border" style="font-size: 0.85rem;">Track</button></td>
-				</tr>
-				<tr>
-					<td>
-						<div class="d-flex align-items-center">
-							<div class="bg-light p-2 rounded me-3">
-								<i class="bi bi-car-front text-primary fs-5"></i>
-							</div>
-							<div>
-								<span class="fw-semibold d-block" style="font-size: 0.95rem;">Tesla Model 3</span>
-								<span class="text-muted" style="font-size: 0.8rem;">Electric Sedan</span>
-							</div>
-						</div>
-					</td>
-					<td><span class="font-monospace text-uppercase" style="font-size: 0.9rem;">B 9012 DEF</span></td>
-					<td>— (Available)</td>
-					<td><span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-2 py-1" style="font-size: 0.8rem;">Standby</span></td>
-					<td>
-						<div class="d-flex align-items-center gap-2">
-							<div class="progress flex-grow-1" style="height: 6px; width: 60px;">
-								<div class="progress-bar bg-warning" role="progressbar" style="width: 45%" aria-valuenow="45" aria-valuemin="0" aria-valuemax="100"></div>
-							</div>
-							<span class="text-muted fw-semibold" style="font-size: 0.8rem;">45%</span>
-						</div>
-					</td>
-					<td><button class="btn btn-sm btn-light border" style="font-size: 0.85rem;">Track</button></td>
-				</tr>
-			</tbody>
-		</table>
-	</div>
-</div>
+		// Home Marker
+		L.marker([homeLat, homeLng], { icon: homeIcon }).addTo(map).bindPopup('Politeknik Negeri Jakarta');
+
+		const markers = {};
+		const destinationMarkers = {};
+		const allLatLngs = [[homeLat, homeLng]];
+
+		function recalculateBounds() {
+			const newLatLngs = [[homeLat, homeLng]];
+			for (const key in markers) {
+				newLatLngs.push(markers[key].getLatLng());
+			}
+			for (const key in destinationMarkers) {
+				newLatLngs.push(destinationMarkers[key].getLatLng());
+			}
+			allLatLngs.length = 0;
+			newLatLngs.forEach(ll => allLatLngs.push(ll));
+		}
+
+		// Initialize Tracker Markers
+		const trackerItems = document.querySelectorAll('.tracker-item');
+		trackerItems.forEach(el => {
+			const id = el.getAttribute('data-tracker-id');
+			const name = el.getAttribute('data-name');
+			const carName = el.getAttribute('data-car-name');
+			const latStr = el.getAttribute('data-lat');
+			const lngStr = el.getAttribute('data-lng');
+			const carType = el.getAttribute('data-car-type') || 'passenger';
+
+			if (latStr && lngStr) {
+				const lat = parseFloat(latStr);
+				const lng = parseFloat(lngStr);
+				if (!isNaN(lat) && !isNaN(lng)) {
+					const colorIndex = parseInt(id || '0');
+					const color = colors[colorIndex % colors.length];
+					const trackerIcon = L.icon({
+						iconUrl: `/assets/${carType}-${color}.png`,
+						iconSize: [31, 46],
+						iconAnchor: [15.5, 46],
+						popupAnchor: [0, -40]
+					});
+
+					const popupContent = carName ? `<strong>${name}</strong><br>${carName}` : `<strong>${name}</strong>`;
+					const marker = L.marker([lat, lng], { icon: trackerIcon })
+						.addTo(map)
+						.bindPopup(popupContent);
+					markers[id] = marker;
+					allLatLngs.push([lat, lng]);
+				}
+			}
+		});
+
+		// Initialize Trip Destination Flags
+		const tripDestinations = document.querySelectorAll('.trip-destination');
+		tripDestinations.forEach(el => {
+			const activityId = el.getAttribute('data-activity-id');
+			const latStr = el.getAttribute('data-lat');
+			const lngStr = el.getAttribute('data-lng');
+
+			if (latStr && lngStr) {
+				const lat = parseFloat(latStr);
+				const lng = parseFloat(lngStr);
+				if (!isNaN(lat) && !isNaN(lng)) {
+					const flagIcon = L.icon({
+						iconUrl: '/assets/flag.png',
+						iconSize: [31, 46],
+						iconAnchor: [15.5, 46],
+						popupAnchor: [0, -40]
+					});
+
+					const marker = L.marker([lat, lng], { icon: flagIcon })
+						.addTo(map)
+						.bindPopup(`<strong>Destination</strong>`);
+
+					if (activityId) {
+						destinationMarkers[activityId] = marker;
+					}
+					allLatLngs.push([lat, lng]);
+				}
+			}
+		});
+
+		// Fit bounds initially if we have trackers/destinations
+		if (allLatLngs.length > 1) {
+			map.fitBounds(L.latLngBounds(allLatLngs), { padding: [50, 50] });
+		}
+
+		// Setup WebSocket
+		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+		const wsUrl = `${protocol}//${window.location.host}/ws/live`;
+		const socket = new WebSocket(wsUrl);
+
+		socket.onmessage = function(event) {
+			try {
+				const message = JSON.parse(event.data);
+				if (message.message_type === 'tracker_location') {
+					const payload = message.data;
+					const trackerId = payload.id;
+
+					if (payload.location && payload.location.latitude !== null && payload.location.longitude !== null) {
+						const lat = payload.location.latitude;
+						const lng = payload.location.longitude;
+
+						let marker = markers[trackerId];
+						if (marker) {
+							marker.setLatLng([lat, lng]);
+						} else {
+							const trackerEl = document.querySelector(`.tracker-item[data-tracker-id="${trackerId}"]`);
+							const name = trackerEl ? trackerEl.getAttribute('data-name') : 'Tracker ' + trackerId;
+							const carName = trackerEl ? trackerEl.getAttribute('data-car-name') : '';
+							const carType = trackerEl ? (trackerEl.getAttribute('data-car-type') || 'passenger') : 'passenger';
+							const color = colors[trackerId % colors.length];
+
+							const customIcon = L.icon({
+								iconUrl: `/assets/${carType}-${color}.png`,
+								iconSize: [31, 46],
+								iconAnchor: [15.5, 46],
+								popupAnchor: [0, -40]
+							});
+
+							const popupContent = carName ? `<strong>${name}</strong><br>${carName}` : `<strong>${name}</strong>`;
+							marker = L.marker([lat, lng], { icon: customIcon })
+								.addTo(map)
+								.bindPopup(popupContent);
+							markers[trackerId] = marker;
+						}
+
+						recalculateBounds();
+					}
+				} else if (message.message_type === 'update_destination') {
+					const payload = message.data;
+					const activityId = payload.activity_id;
+					const lat = parseFloat(payload.contact_latitude);
+					const lng = parseFloat(payload.contact_longitude);
+
+					if (!isNaN(lat) && !isNaN(lng)) {
+						let marker = destinationMarkers[activityId];
+						if (marker) {
+							marker.setLatLng([lat, lng]);
+							marker.setPopupContent(`<strong>Destination</strong>`);
+						} else {
+							const flagIcon = L.icon({
+								iconUrl: '/assets/flag.png',
+								iconSize: [31, 46],
+								iconAnchor: [15.5, 46],
+								popupAnchor: [0, -40]
+							});
+							marker = L.marker([lat, lng], { icon: flagIcon })
+								.addTo(map)
+								.bindPopup(`<strong>Destination</strong>`);
+							destinationMarkers[activityId] = marker;
+						}
+						recalculateBounds();
+					}
+				} else if (message.message_type === 'remove_destination') {
+					const payload = message.data;
+					const activityId = payload.activity_id;
+					const marker = destinationMarkers[activityId];
+					if (marker) {
+						map.removeLayer(marker);
+						delete destinationMarkers[activityId];
+						recalculateBounds();
+					}
+				}
+			} catch (e) {
+				console.error('Error handling WebSocket message:', e);
+			}
+		};
+
+		socket.onclose = function() {
+			console.log('Dashboard WebSocket connection closed');
+		};
+
+		socket.onerror = function(err) {
+			console.error('Dashboard WebSocket error:', err);
+		};
+
+		mapElement.addEventListener('htmx:beforeCleanupElement', function() {
+			try {
+				socket.close();
+			} catch (e) {
+				console.error('Error closing WebSocket:', e);
+			}
+		});
+
+		map.invalidateSize();
+	}
+
+	const isHtmxSwap = document.querySelector('.htmx-swapping, .htmx-settling') !== null;
+	if (isHtmxSwap) {
+		document.body.addEventListener('htmx:afterSettle', function() {
+			initMap();
+		}, { once: true });
+	} else {
+		initMap();
+	}
+})();
+</script>
 {% endblock %}

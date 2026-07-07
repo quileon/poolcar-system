@@ -68,6 +68,7 @@ pub async fn handle_mqtt_payload(
         stats_sentences_with_fix: Set(p.stats.sentences_with_fix),
         stats_failed_checksum: Set(p.stats.failed_checksum),
         stats_passed_checksum: Set(p.stats.passed_checksum),
+        payload_size: Set(Some(payload.len() as u32)),
         received_at: Set(chrono::Utc::now().naive_utc()),
         ..Default::default()
     };

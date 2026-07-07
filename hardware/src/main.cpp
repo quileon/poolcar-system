@@ -43,6 +43,7 @@ bool modemConnected = false;
 bool systemReady = false;
 unsigned short retryCount = 0;
 unsigned long lastPublish = 0;
+unsigned long retryTimeout = 0;
 unsigned long sequence = 1;
 unsigned long iteration = 1;
 
@@ -84,8 +85,6 @@ void setup()
 
     pinMode(SIM808_POWER_PIN_PRIMARY, OUTPUT);
     pinMode(SIM808_POWER_PIN_SECONDARY, OUTPUT);
-    digitalWrite(SIM808_POWER_PIN_PRIMARY, HIGH);
-    digitalWrite(SIM808_POWER_PIN_SECONDARY, HIGH);
     Serial.println("GSM Power Pin Initialized");
 
 #ifdef MQTT_SECURE
@@ -119,13 +118,16 @@ void loop()
     }
 
     mqttClient.loop();
-
     if (!mqttClient.isConnected())
     {
-        mqttClient.connect();
+        if (!mqttClient.connect())
+        {
+            delay(1000);
+            return;
+        }
     }
 
-    if (millis() - lastPublish > PUBLISH_INTERVAL)
+    if (millis() - retryTimeout > PUBLISH_INTERVAL)
     {
         JsonDocument payload = gpsClient.toJsonDocument();
         payload["connection"]["interval"] = millis() - lastPublish;
@@ -159,12 +161,14 @@ void loop()
         if (isSuccess)
         {
             lastPublish = millis();
+            retryTimeout = lastPublish;
             retryCount = 0;
             sequence = sequence + 1;
             iteration = iteration + 1;
         }
         else
         {
+            retryTimeout = millis();
             retryCount = retryCount + 1;
             iteration = iteration + 1;
         }
@@ -173,6 +177,7 @@ void loop()
         //     ? Serial.println("Message published successfully!")
         //     : Serial.println("Failed to publish message!");
     }
+    delay(1000);
 }
 
 bool initialization()

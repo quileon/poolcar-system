@@ -24,6 +24,9 @@ private:
     TinyGsm &gsmModem;
     JsonDocument jsonDoc;
 
+    // Stores the last raw GPS string to detect stale fixes
+    String _lastRawGPS;
+
 public:
     GpsGsmClient(TinyGsm &gsmModem);
     ~GpsGsmClient();

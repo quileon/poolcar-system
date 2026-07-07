@@ -170,6 +170,11 @@ impl MigrationTrait for Migration {
                             .unsigned(),
                     )
                     .col(
+                        ColumnDef::new(HardwareTest::PayloadSize)
+                            .integer()
+                            .unsigned(),
+                    )
+                    .col(
                         ColumnDef::new(HardwareTest::ReceivedAt)
                             .custom("DATETIME(3)")
                             .default(Expr::current_timestamp()),
@@ -245,6 +250,7 @@ enum HardwareTest {
     StatsSentencesWithFix,
     StatsFailedChecksum,
     StatsPassedChecksum,
+    PayloadSize,
     ReceivedAt,
     CreatedAt,
 }

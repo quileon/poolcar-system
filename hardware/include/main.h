@@ -63,6 +63,6 @@ constexpr int SIM808_POWER_PIN_PRIMARY = 22;
 constexpr int SIM808_POWER_PIN_SECONDARY = 23;
 
 // App Configuration
-constexpr timer_t PUBLISH_INTERVAL = 1000;
+constexpr timer_t PUBLISH_INTERVAL = 5000;
 
 #endif // MAIN_H
