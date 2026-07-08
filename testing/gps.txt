@@ -1,0 +1,42 @@
+poolcar_htmx2/testing on  htmx [!?⇡] is 📦 v0.1.0 via 🐍 v3.14.6
+❯ uv run oa.py
+Analyzing OA scenario...
+
+Filled 1 missing value(s) in 'dop_hdop' with mean (0.7556)
+Reference GPS : -6.368865457032259, 106.82835956774194
+Total Test    : 100 tests
+CEP           : 4.58 m
+Error Summary : Average: 4.45 m, Min: 3.36 m, Max: 5.53 m
+CN0 Summary   : Average: 44.13, Min: 39.00, Max: 47.00
+HDOP Summary  : Average: 0.76, Min: 0.70, Max: 0.90
+Plot saved to oa_scatter.png
+Plot saved to oa_error_cn0.png
+Plot saved to oa_error_hdop.png
+
+poolcar_htmx2/testing on  htmx [!?⇡] is 📦 v0.1.0 via 🐍 v3.14.6 took 2s
+❯ uv run si.py
+Analyzing SI scenario...
+
+Reference GPS : -6.3710721033, 106.825056658
+Total Test    : 100 tests
+CEP           : 20.74 m
+Error Summary : Average: 20.44 m, Min: 10.15 m, Max: 29.33 m
+CN0 Summary   : Average: 33.44, Min: 25.00, Max: 39.00
+HDOP Summary  : Average: 1.01, Min: 1.00, Max: 1.10
+Plot saved to si_scatter.png
+Plot saved to si_error_cn0.png
+Plot saved to si_error_hdop.png
+
+poolcar_htmx2/testing on  htmx [!?⇡] is 📦 v0.1.0 via 🐍 v3.14.6 took 2s
+❯ uv run su.py
+Analyzing SU scenario...
+
+Reference GPS : -6.3606593467, 106.82314065599999
+Total Test    : 100 tests
+CEP           : 2.56 m
+Error Summary : Average: 2.75 m, Min: 1.28 m, Max: 5.13 m
+CN0 Summary   : Average: 44.37, Min: 40.00, Max: 48.00
+HDOP Summary  : Average: 0.90, Min: 0.90, Max: 1.00
+Plot saved to su_scatter.png
+Plot saved to su_error_cn0.png
+Plot saved to su_error_hdop.png
