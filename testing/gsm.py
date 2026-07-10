@@ -1,4 +1,4 @@
-from main import pengujian_gsm, plot_gsm_route
+from main import pengujian_gsm, plot_gsm_latency_vs_rssi, plot_gsm_route
 
 # GSM Test
 START_TEST_ID = 4775
@@ -13,6 +13,11 @@ def main():
         ts,
         title="GSM Strength",
         output_file="gsm_route.png",
+    )
+    plot_gsm_latency_vs_rssi(
+        ts,
+        title="GSM Latency & RSSI vs Test ID",
+        output_file="gsm_latency_rssi.png",
     )
 
 

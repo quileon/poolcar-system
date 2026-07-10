@@ -304,19 +304,40 @@ def pengujian_gsm(start_test_id, end_test_id, csv_file):
     df = pd.read_csv(csv_file, sep=";")
     ts = df[(df["test_id"] >= start_test_id) & (df["test_id"] <= end_test_id)].copy()
 
-    # Fill missing RSSI with mean
+    # network_rssi column actually stores CSQ values; fill missing with mean first
     if ts["network_rssi"].isna().any():
-        mean_rssi = ts["network_rssi"].mean()
+        mean_csq = ts["network_rssi"].mean()
         n = ts["network_rssi"].isna().sum()
-        ts["network_rssi"] = ts["network_rssi"].fillna(mean_rssi)
+        ts["network_rssi"] = ts["network_rssi"].fillna(mean_csq)
         print(
-            f"Filled {n} missing value(s) in 'network_rssi' with mean ({mean_rssi:.2f})"
+            f"Filled {n} missing value(s) in 'network_rssi' (CSQ) with mean ({mean_csq:.2f})"
         )
 
+    # Convert CSQ → true RSSI  (CSQ = (RSSI + 113) / 2  →  RSSI = 2*CSQ - 113)
+    ts["rssi"] = ts["network_rssi"] * 2 - 113
+
+    # Compute latency
+    ts["datetime_send"] = pd.to_datetime(ts["datetime_iso8601"], errors="coerce", utc=True)
+    ts["datetime_receive"] = pd.to_datetime(ts["received_at"], errors="coerce", utc=True)
+    is_frozen = (
+        ts["datetime_send"].isna()
+        | (ts["datetime_send"].dt.year == 1980)
+        | (ts["datetime_send"] == ts["datetime_send"].shift(1))
+    )
+    ts["latency_s"] = (ts["datetime_receive"] - ts["datetime_send"]).dt.total_seconds()
+    ts.loc[is_frozen, "latency_s"] = None
+
     total = len(ts)
+    valid_lat = ts["latency_s"].dropna()
     print(f"Total GSM test rows : {total}")
     print(
-        f"RSSI range          : {ts['network_rssi'].min()} – {ts['network_rssi'].max()}"
+        f"CSQ range           : {ts['network_rssi'].min()} – {ts['network_rssi'].max()} (mean: {ts['network_rssi'].mean():.2f})"
+    )
+    print(
+        f"RSSI range (dBm)    : {ts['rssi'].min()} – {ts['rssi'].max()} (mean: {ts['rssi'].mean():.2f})"
+    )
+    print(
+        f"Latency (s)         : {valid_lat.min():.4f} – {valid_lat.max():.4f} (mean: {valid_lat.mean():.4f})"
     )
     print(
         f"Unique cell towers  : {ts['network_ci'].nunique()} ({', '.join(ts['network_ci'].unique())})"
@@ -324,10 +345,11 @@ def pengujian_gsm(start_test_id, end_test_id, csv_file):
     return ts
 
 
+
 def plot_gsm_route(ts, title="GSM Route", output_file=None):
     lats = ts["location_latitude"].values
     lons = ts["location_longitude"].values
-    rssi = ts["network_rssi"].values
+    rssi = ts["rssi"].values
     cells = ts["network_ci"].values
 
     fig, ax = plt.subplots(figsize=(7, 7))
@@ -353,7 +375,7 @@ def plot_gsm_route(ts, title="GSM Route", output_file=None):
     ax.add_collection(lc)
 
     cbar = fig.colorbar(lc, ax=ax, pad=0.02)
-    cbar.set_label("RSSI", color="#333333", fontsize=9)
+    cbar.set_label("RSSI (dBm)", color="#333333", fontsize=9)
     cbar.ax.yaxis.set_tick_params(color="#333333")
     plt.setp(cbar.ax.yaxis.get_ticklabels(), color="#333333")
 
@@ -413,7 +435,82 @@ def plot_gsm_route(ts, title="GSM Route", output_file=None):
         plt.show()
 
 
+def plot_gsm_latency_vs_rssi(ts, title="GSM Latency & RSSI vs Test ID", output_file=None):
+    """Dual-axis line graph: latency in seconds (left) and RSSI (right) over test_id."""
+    x = ts["test_id"].values
+    latency = ts["latency_s"].values
+    rssi = ts["rssi"].values
+
+    latency_color = "#e05c00"
+    rssi_color = "#0077b6"
+
+    fig, ax1 = plt.subplots(figsize=(12, 5))
+    fig.patch.set_facecolor("white")
+    ax1.set_facecolor("#f7f7f7")
+    ax1.grid(color="#cccccc", linewidth=0.6, linestyle="--", alpha=0.8, zorder=0)
+
+    # --- Left axis: latency ---
+    ax1.plot(
+        x,
+        latency,
+        color=latency_color,
+        linewidth=1.4,
+        alpha=0.9,
+        label="Latency (s)",
+        zorder=2,
+    )
+    ax1.fill_between(x, latency, alpha=0.12, color=latency_color, zorder=1)
+    ax1.set_xlabel("Test ID", color="#333333")
+    ax1.set_ylabel("Latency (s)", color=latency_color)
+    ax1.tick_params(axis="y", colors=latency_color)
+    ax1.tick_params(axis="x", colors="#333333")
+    for spine in ax1.spines.values():
+        spine.set_edgecolor("#aaaaaa")
+
+    # --- Right axis: RSSI ---
+    ax2 = ax1.twinx()
+    ax2.plot(
+        x,
+        rssi,
+        color=rssi_color,
+        linewidth=1.4,
+        alpha=0.9,
+        label="RSSI",
+        zorder=2,
+    )
+    ax2.fill_between(x, rssi, -113, alpha=0.08, color=rssi_color, zorder=1)
+    ax2.set_ylabel("RSSI (dBm)", color=rssi_color)
+    ax2.set_ylim(bottom=-113)
+    ax2.tick_params(axis="y", colors=rssi_color)
+    ax2.spines["right"].set_edgecolor(rssi_color)
+
+    # Combined legend above the axes
+    lines1, labels1 = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax1.legend(
+        lines1 + lines2,
+        labels1 + labels2,
+        facecolor="white",
+        edgecolor="#aaaaaa",
+        labelcolor="#111111",
+        fontsize=8.5,
+        loc="lower left",
+        bbox_to_anchor=(0, 1.01),
+        borderaxespad=0,
+        ncols=2,
+    )
+
+    ax1.set_title(title, color="#111111", fontsize=13, fontweight="bold", pad=42)
+    plt.tight_layout()
+    if output_file:
+        plt.savefig(output_file, dpi=150, bbox_inches="tight")
+        print(f"Plot saved to {output_file}")
+    else:
+        plt.show()
+
+
 def pengujian_qos(start_test_id, end_test_id, csv_file):
+
     df = pd.read_csv(csv_file, sep=";")
     
     # Filter by test_id
