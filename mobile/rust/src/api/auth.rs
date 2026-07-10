@@ -16,19 +16,19 @@ struct LoginRequest {
     password: String,
 }
 
+/// Successful login response: { "token": "...", "username": "...", "role": "..." }
 #[derive(Deserialize)]
-struct LoginData {
-    role: String,
+struct LoginSuccess {
     token: String,
     #[allow(dead_code)]
     username: String,
+    role: String,
 }
 
+/// Error response: { "error": "..." }
 #[derive(Deserialize)]
-struct LoginResponse {
-    status: String,
-    data: Option<LoginData>,
-    message: Option<String>,
+struct LoginError {
+    error: String,
 }
 
 pub async fn verify(token: String) -> AuthResult {
@@ -42,58 +42,74 @@ pub async fn verify(token: String) -> AuthResult {
             return AuthResult {
                 success: false,
                 error_message: Some(format!("Failed to build client: {}", e)),
-                token: None
+                token: None,
             }
         }
     };
 
-    // Make sure we pass the token as a Bearer token
     let auth_header = format!("Bearer {}", token);
 
     let res = client
-        .get(concatcp!(BASE_URL, "/auth/verify"))
+        .get(concatcp!(BASE_URL, "/verify"))
         .header(AUTHORIZATION, auth_header)
         .send()
         .await;
 
     match res {
         Ok(response) => {
-            if let Ok(json) = response.json::<LoginResponse>().await {
-                if json.status == "success" {
-                    if let Some(data) = json.data {
+            let status = response.status();
+            let body = match response.text().await {
+                Ok(b) => b,
+                Err(e) => {
+                    return AuthResult {
+                        success: false,
+                        error_message: Some(format!("Failed to read response: {}", e)),
+                        token: None,
+                    }
+                }
+            };
+
+            if status.is_success() {
+                match serde_json::from_str::<LoginSuccess>(&body) {
+                    Ok(data) => {
                         if data.role == "Security" || data.role == "Admin" {
-                            return AuthResult {
+                            AuthResult {
                                 success: true,
                                 error_message: None,
                                 token: Some(data.token),
-                            };
+                            }
                         } else {
-                            return AuthResult {
+                            AuthResult {
                                 success: false,
                                 error_message: Some("User is not authorized".to_string()),
                                 token: None,
-                            };
+                            }
                         }
                     }
-                    return AuthResult {
+                    Err(_) => AuthResult {
                         success: false,
-                        error_message: Some("Invalid response format: Missing user data".to_string()),
+                        error_message: Some("Failed to parse API response".to_string()),
                         token: None,
-                    };
-                } else {
-                    return AuthResult {
-                        success: false,
-                        error_message: Some(
-                            json.message.unwrap_or_else(|| "Token is invalid or expired".to_string()),
-                        ),
-                        token: None,
-                    };
+                    },
                 }
-            }
-            AuthResult {
-                success: false,
-                error_message: Some("Failed to parse API response".to_string()),
-                token: None,
+            } else {
+                // Try to extract the error message from the response body
+                let msg = serde_json::from_str::<LoginError>(&body)
+                    .map(|e| e.error)
+                    .unwrap_or_else(|_| {
+                        if status.as_u16() == 401 {
+                            "Invalid username or password".to_string()
+                        } else if status.as_u16() == 403 {
+                            "Access denied".to_string()
+                        } else {
+                            format!("Request failed with status {}", status)
+                        }
+                    });
+                AuthResult {
+                    success: false,
+                    error_message: Some(msg),
+                    token: None,
+                }
             }
         }
         Err(e) => AuthResult {
@@ -126,49 +142,66 @@ pub async fn login(username: String, password: String) -> AuthResult {
     };
 
     let res = client
-        .post(concatcp!(BASE_URL, "/auth/login"))
+        .post(concatcp!(BASE_URL, "/login"))
         .json(&req_body)
         .send()
         .await;
 
     match res {
         Ok(response) => {
-            if let Ok(json) = response.json::<LoginResponse>().await {
-                if json.status == "success" {
-                    if let Some(data) = json.data {
+            let status = response.status();
+            let body = match response.text().await {
+                Ok(b) => b,
+                Err(e) => {
+                    return AuthResult {
+                        success: false,
+                        error_message: Some(format!("Failed to read response: {}", e)),
+                        token: None,
+                    }
+                }
+            };
+
+            if status.is_success() {
+                match serde_json::from_str::<LoginSuccess>(&body) {
+                    Ok(data) => {
                         if data.role == "Security" || data.role == "Admin" {
-                            return AuthResult {
+                            AuthResult {
                                 success: true,
                                 error_message: None,
                                 token: Some(data.token),
-                            };
+                            }
                         } else {
-                            return AuthResult {
+                            AuthResult {
                                 success: false,
                                 error_message: Some("User is not authorized".to_string()),
                                 token: None,
-                            };
+                            }
                         }
                     }
-                    return AuthResult {
+                    Err(_) => AuthResult {
                         success: false,
-                        error_message: Some("Invalid response format: Missing user data".to_string()),
+                        error_message: Some("Failed to parse API response".to_string()),
                         token: None,
-                    };
-                } else {
-                    return AuthResult {
-                        success: false,
-                        error_message: Some(
-                            json.message.unwrap_or_else(|| "Invalid credentials".to_string()),
-                        ),
-                        token: None,
-                    };
+                    },
                 }
-            }
-            AuthResult {
-                success: false,
-                error_message: Some("Failed to parse API response".to_string()),
-                token: None,
+            } else {
+                // Try to extract the error message from the response body
+                let msg = serde_json::from_str::<LoginError>(&body)
+                    .map(|e| e.error)
+                    .unwrap_or_else(|_| {
+                        if status.as_u16() == 401 {
+                            "Invalid username or password".to_string()
+                        } else if status.as_u16() == 403 {
+                            "Access denied".to_string()
+                        } else {
+                            format!("Request failed with status {}", status)
+                        }
+                    });
+                AuthResult {
+                    success: false,
+                    error_message: Some(msg),
+                    token: None,
+                }
             }
         }
         Err(e) => AuthResult {

@@ -371,20 +371,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Car dco_decode_car(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 11)
-      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
     return Car(
       carId: dco_decode_i_32(arr[0]),
       name: dco_decode_String(arr[1]),
       policeNumber: dco_decode_String(arr[2]),
-      active: dco_decode_bool(arr[3]),
-      carTypeId: dco_decode_i_32(arr[4]),
-      carTypeName: dco_decode_String(arr[5]),
-      trackerId: dco_decode_opt_box_autoadd_i_32(arr[6]),
-      trackerName: dco_decode_opt_String(arr[7]),
-      createdAt: dco_decode_String(arr[8]),
-      updatedAt: dco_decode_String(arr[9]),
-      deletedAt: dco_decode_opt_String(arr[10]),
+      active: dco_decode_i_32(arr[3]),
+      carType: dco_decode_String(arr[4]),
+      trackerId: dco_decode_opt_box_autoadd_i_32(arr[5]),
+      createdAt: dco_decode_String(arr[6]),
+      updatedAt: dco_decode_String(arr[7]),
+      deletedAt: dco_decode_opt_String(arr[8]),
     );
   }
 
@@ -405,20 +403,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CarStatus dco_decode_car_status(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 11)
-      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
     return CarStatus(
       carStatusId: dco_decode_i_32(arr[0]),
       carId: dco_decode_i_32(arr[1]),
       carName: dco_decode_String(arr[2]),
-      carPoliceNumber: dco_decode_String(arr[3]),
+      policeNumber: dco_decode_String(arr[3]),
       gasLevel: dco_decode_f_64(arr[4]),
       kilometres: dco_decode_f_64(arr[5]),
       statusType: dco_decode_String(arr[6]),
       recordedAt: dco_decode_String(arr[7]),
-      createdAt: dco_decode_String(arr[8]),
-      updatedAt: dco_decode_String(arr[9]),
-      deletedAt: dco_decode_opt_String(arr[10]),
     );
   }
 
@@ -539,11 +534,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_carId = sse_decode_i_32(deserializer);
     var var_name = sse_decode_String(deserializer);
     var var_policeNumber = sse_decode_String(deserializer);
-    var var_active = sse_decode_bool(deserializer);
-    var var_carTypeId = sse_decode_i_32(deserializer);
-    var var_carTypeName = sse_decode_String(deserializer);
+    var var_active = sse_decode_i_32(deserializer);
+    var var_carType = sse_decode_String(deserializer);
     var var_trackerId = sse_decode_opt_box_autoadd_i_32(deserializer);
-    var var_trackerName = sse_decode_opt_String(deserializer);
     var var_createdAt = sse_decode_String(deserializer);
     var var_updatedAt = sse_decode_String(deserializer);
     var var_deletedAt = sse_decode_opt_String(deserializer);
@@ -552,10 +545,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       name: var_name,
       policeNumber: var_policeNumber,
       active: var_active,
-      carTypeId: var_carTypeId,
-      carTypeName: var_carTypeName,
+      carType: var_carType,
       trackerId: var_trackerId,
-      trackerName: var_trackerName,
       createdAt: var_createdAt,
       updatedAt: var_updatedAt,
       deletedAt: var_deletedAt,
@@ -581,26 +572,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_carStatusId = sse_decode_i_32(deserializer);
     var var_carId = sse_decode_i_32(deserializer);
     var var_carName = sse_decode_String(deserializer);
-    var var_carPoliceNumber = sse_decode_String(deserializer);
+    var var_policeNumber = sse_decode_String(deserializer);
     var var_gasLevel = sse_decode_f_64(deserializer);
     var var_kilometres = sse_decode_f_64(deserializer);
     var var_statusType = sse_decode_String(deserializer);
     var var_recordedAt = sse_decode_String(deserializer);
-    var var_createdAt = sse_decode_String(deserializer);
-    var var_updatedAt = sse_decode_String(deserializer);
-    var var_deletedAt = sse_decode_opt_String(deserializer);
     return CarStatus(
       carStatusId: var_carStatusId,
       carId: var_carId,
       carName: var_carName,
-      carPoliceNumber: var_carPoliceNumber,
+      policeNumber: var_policeNumber,
       gasLevel: var_gasLevel,
       kilometres: var_kilometres,
       statusType: var_statusType,
       recordedAt: var_recordedAt,
-      createdAt: var_createdAt,
-      updatedAt: var_updatedAt,
-      deletedAt: var_deletedAt,
     );
   }
 
@@ -743,11 +728,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.carId, serializer);
     sse_encode_String(self.name, serializer);
     sse_encode_String(self.policeNumber, serializer);
-    sse_encode_bool(self.active, serializer);
-    sse_encode_i_32(self.carTypeId, serializer);
-    sse_encode_String(self.carTypeName, serializer);
+    sse_encode_i_32(self.active, serializer);
+    sse_encode_String(self.carType, serializer);
     sse_encode_opt_box_autoadd_i_32(self.trackerId, serializer);
-    sse_encode_opt_String(self.trackerName, serializer);
     sse_encode_String(self.createdAt, serializer);
     sse_encode_String(self.updatedAt, serializer);
     sse_encode_opt_String(self.deletedAt, serializer);
@@ -767,14 +750,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.carStatusId, serializer);
     sse_encode_i_32(self.carId, serializer);
     sse_encode_String(self.carName, serializer);
-    sse_encode_String(self.carPoliceNumber, serializer);
+    sse_encode_String(self.policeNumber, serializer);
     sse_encode_f_64(self.gasLevel, serializer);
     sse_encode_f_64(self.kilometres, serializer);
     sse_encode_String(self.statusType, serializer);
     sse_encode_String(self.recordedAt, serializer);
-    sse_encode_String(self.createdAt, serializer);
-    sse_encode_String(self.updatedAt, serializer);
-    sse_encode_opt_String(self.deletedAt, serializer);
   }
 
   @protected

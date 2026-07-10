@@ -15,14 +15,11 @@ pub struct CarStatus {
     pub car_status_id: i32,
     pub car_id: i32,
     pub car_name: String,
-    pub car_police_number: String,
+    pub police_number: String,
     pub gas_level: f64,
     pub kilometres: f64,
     pub status_type: String,
     pub recorded_at: String,
-    pub created_at: String,
-    pub updated_at: String,
-    pub deleted_at: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -34,20 +31,15 @@ pub struct CarStatusBody {
 }
 
 #[derive(Deserialize)]
-struct HistoryResponse {
-    car_statuses: Option<Vec<CarStatus>>,
-    #[allow(dead_code)]
-    car_status_count: Option<i32>,
-    message: Option<String>,
-    status: Option<String>,
+struct ErrorResponse {
+    error: String,
 }
 
-
 pub async fn post_history(token: String, car_id: i32, gas_level: f64, kilometres: f64, status_type: String) -> HistoryResult {
-    if status_type != "DEPARTURE" && status_type != "RETURN" {
+    if status_type != "Departure" && status_type != "Return" {
         return HistoryResult {
             success: false,
-            error_message: Some("Invalid status type".to_string()),
+            error_message: Some("Invalid status type: must be \"Departure\" or \"Return\"".to_string()),
             items: None,
         };
     }
@@ -77,7 +69,7 @@ pub async fn post_history(token: String, car_id: i32, gas_level: f64, kilometres
     };
 
     let res = client
-        .post(concatcp!(BASE_URL, "/cars/status"))
+        .post(concatcp!(BASE_URL, "/cars/history"))
         .header(AUTHORIZATION, auth_header)
         .json(&body)
         .send()
@@ -85,16 +77,29 @@ pub async fn post_history(token: String, car_id: i32, gas_level: f64, kilometres
 
     match res {
         Ok(response) => {
-            if response.status().is_success() {
+            let status = response.status();
+            let body_text = match response.text().await {
+                Ok(b) => b,
+                Err(e) => return HistoryResult {
+                    success: false,
+                    error_message: Some(format!("Failed to read response: {}", e)),
+                    items: None,
+                },
+            };
+
+            if status.is_success() {
                 HistoryResult {
                     success: true,
                     error_message: None,
                     items: None,
                 }
             } else {
+                let msg = serde_json::from_str::<ErrorResponse>(&body_text)
+                    .map(|e| e.error)
+                    .unwrap_or_else(|_| format!("Request failed with status {}", status));
                 HistoryResult {
                     success: false,
-                    error_message: Some(format!("Failed with status: {}", response.status())),
+                    error_message: Some(msg),
                     items: None,
                 }
             }
@@ -126,43 +131,45 @@ pub async fn get_histories(token: String) -> HistoryResult {
     let auth_header = format!("Bearer {}", token);
 
     let res = client
-        .get(concatcp!(BASE_URL, "/cars/status"))
+        .get(concatcp!(BASE_URL, "/cars/history"))
         .header(AUTHORIZATION, auth_header)
         .send()
         .await;
 
     match res {
         Ok(response) => {
-            if let Ok(json) = response.json::<HistoryResponse>().await {
-                // Check if the backend returned an explicit error object
-                if json.status.as_deref() == Some("error") {
-                    return HistoryResult {
-                        success: false,
-                        error_message: Some(json.message.unwrap_or_else(|| "Unknown error".to_string())),
-                        items: None,
-                    };
-                }
+            let status = response.status();
+            let body_text = match response.text().await {
+                Ok(b) => b,
+                Err(e) => return HistoryResult {
+                    success: false,
+                    error_message: Some(format!("Failed to read response: {}", e)),
+                    items: None,
+                },
+            };
 
-                // If we have car statuses, it's a success
-                if let Some(statuses) = json.car_statuses {
-                    return HistoryResult {
+            if status.is_success() {
+                match serde_json::from_str::<Vec<CarStatus>>(&body_text) {
+                    Ok(statuses) => HistoryResult {
                         success: true,
                         error_message: None,
                         items: Some(statuses),
-                    };
+                    },
+                    Err(_) => HistoryResult {
+                        success: false,
+                        error_message: Some(format!("Failed to parse API response: {}", body_text)),
+                        items: None,
+                    },
                 }
-
-                // Fallback for unexpected format
-                return HistoryResult {
+            } else {
+                let msg = serde_json::from_str::<ErrorResponse>(&body_text)
+                    .map(|e| e.error)
+                    .unwrap_or_else(|_| format!("Request failed with status {}", status));
+                HistoryResult {
                     success: false,
-                    error_message: Some("Invalid response format: Missing car_statuses".to_string()),
+                    error_message: Some(msg),
                     items: None,
-                };
-            }
-            HistoryResult {
-                success: false,
-                error_message: Some("Failed to parse API response".to_string()),
-                items: None,
+                }
             }
         }
         Err(e) => HistoryResult {

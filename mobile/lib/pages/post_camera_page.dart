@@ -19,7 +19,7 @@ class _PostCameraPageState extends State<PostCameraPage> {
   final _formKey = GlobalKey<FormState>();
   final _gasLevelController = TextEditingController();
   final _kilometresController = TextEditingController();
-  String _statusType = 'DEPARTURE'; // Default to DEPARTURE
+  String _statusType = 'Departure'; // Default to Departure
   bool _isSubmitting = false;
 
   @override
@@ -112,7 +112,7 @@ class _PostCameraPageState extends State<PostCameraPage> {
       final result = await postHistory(
         token: token,
         carId: _car!.carId,
-        gasLevel: gasLevel / 100.0, // Assuming API expects 0.0 to 1.0 based on typical "gas level" patterns. Adjust if necessary.
+        gasLevel: gasLevel, // API expects raw gas level in bars
         kilometres: kilometres,
         statusType: _statusType,
       );
@@ -197,8 +197,8 @@ class _PostCameraPageState extends State<PostCameraPage> {
               border: OutlineInputBorder(),
             ),
             items: const [
-              DropdownMenuItem(value: 'DEPARTURE', child: Text('Departure')),
-              DropdownMenuItem(value: 'RETURN', child: Text('Return')),
+              DropdownMenuItem(value: 'Departure', child: Text('Departure')),
+              DropdownMenuItem(value: 'Return', child: Text('Return')),
             ],
             onChanged: (value) {
               setState(() {
@@ -210,16 +210,17 @@ class _PostCameraPageState extends State<PostCameraPage> {
           TextFormField(
             controller: _gasLevelController,
             decoration: const InputDecoration(
-              labelText: 'Gas Level (%)',
+              labelText: 'Gas Bar Level',
+              hintText: '2.5',
               border: OutlineInputBorder(),
-              suffixText: '%',
+              suffixText: 'bar',
             ),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             validator: (value) {
-              if (value == null || value.isEmpty) return 'Please enter gas level';
+              if (value == null || value.isEmpty) return 'Please enter gas bar level';
               final numValue = double.tryParse(value);
               if (numValue == null) return 'Enter a valid number';
-              if (numValue < 0 || numValue > 100) return 'Gas level must be between 0 and 100';
+              if (numValue < 0) return 'Gas bar level cannot be negative';
               return null;
             },
           ),
@@ -227,14 +228,17 @@ class _PostCameraPageState extends State<PostCameraPage> {
           TextFormField(
             controller: _kilometresController,
             decoration: const InputDecoration(
-              labelText: 'Kilometres (km)',
+              labelText: 'Odometer',
+              hintText: '727',
               border: OutlineInputBorder(),
               suffixText: 'km',
             ),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             validator: (value) {
-              if (value == null || value.isEmpty) return 'Please enter kilometres';
-              if (double.tryParse(value) == null) return 'Enter a valid number';
+              if (value == null || value.isEmpty) return 'Please enter odometer';
+              final numValue = double.tryParse(value);
+              if (numValue == null) return 'Enter a valid number';
+              if (numValue < 0) return 'Odometer cannot be negative';
               return null;
             },
           ),
@@ -301,13 +305,13 @@ class _PostCameraPageState extends State<PostCameraPage> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                     decoration: BoxDecoration(
-                                      color: _car!.active ? Colors.green.shade100 : Colors.red.shade100,
+                                      color: _car!.active != 0 ? Colors.green.shade100 : Colors.red.shade100,
                                       borderRadius: BorderRadius.circular(16),
                                     ),
                                     child: Text(
-                                      _car!.active ? 'Active' : 'Inactive',
+                                      _car!.active != 0 ? 'Active' : 'Inactive',
                                       style: TextStyle(
-                                        color: _car!.active ? Colors.green.shade800 : Colors.red.shade800,
+                                        color: _car!.active != 0 ? Colors.green.shade800 : Colors.red.shade800,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -315,10 +319,10 @@ class _PostCameraPageState extends State<PostCameraPage> {
                                 ],
                               ),
                               const Divider(height: 32),
-                              Text('Type: ${_car!.carTypeName}', style: const TextStyle(fontSize: 16)),
-                              if (_car!.trackerName != null) ...[
+                              Text('Type: ${_car!.carType}', style: const TextStyle(fontSize: 16)),
+                              if (_car!.trackerId != null) ...[
                                 const SizedBox(height: 8),
-                                Text('Tracker: ${_car!.trackerName}', style: const TextStyle(fontSize: 16)),
+                                Text('Tracker ID: ${_car!.trackerId}', style: const TextStyle(fontSize: 16)),
                               ]
                             ],
                           ),
