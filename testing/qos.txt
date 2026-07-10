@@ -1,0 +1,43 @@
+poolcar_htmx2/testing on  htmx [!?⇡] is 📦 v0.1.0 via 🐍 v3.14.6
+❯ uv run qos_analysis_improved.py
+================================================================================
+QoS ANALYSIS
+================================================================================
+
+[INFO] Loaded 3776 records (test_id: 1669 - 5444)
+
+[RETRIES]
+  Total connection retries: 6
+  Retry events (seq_id same, iter_id increases): 0
+
+[FROZEN DATETIMES]
+  NaN datetime: 4
+  Year 1980: 0
+  Duplicate (frozen iteration): 995
+  Total frozen: 999
+
+[LATENCY (seconds, excluding frozen datetimes)]
+  Valid latency records: 2777
+  Minimum: 1.7770s
+  Maximum: 56.3480s
+  Average: 5.6135s
+  Median: 3.6980s
+
+[PACKET LOSS]
+  Packet loss events: 38
+  Total packets lost: 50
+  First few loss events:
+    test_id=2056: seq 398 → 400 (lost 1)
+    test_id=2083: seq 426 → 428 (lost 1)
+    test_id=2238: seq 582 → 584 (lost 1)
+    test_id=2293: seq 638 → 640 (lost 1)
+    test_id=2296: seq 642 → 644 (lost 1)
+
+================================================================================
+
+[GENERATING PLOTS]
+
+✓ Saved: qos_sequence_loss.png
+✓ Saved: qos_latency.png
+
+✓ Analysis complete!

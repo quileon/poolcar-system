@@ -110,6 +110,13 @@ void loop()
         }
     }
 
+    if (!gsmWrapper.enableGPS())
+    {
+        Serial.println("Failed to enable GPS!");
+        delay(1000);
+        return;
+    }
+
     if (!gsmWrapper.ensureConnection())
     {
         Serial.println("GPRS connection lost!");
@@ -203,13 +210,6 @@ bool initialization()
     if (!mqttClient.connect())
     {
         Serial.println("Failed to connect to MQTT broker!");
-        systemReady = false;
-        return false;
-    }
-
-    if (!gsmWrapper.enableGPS())
-    {
-        Serial.println("Failed to initialize GPS modem!");
         systemReady = false;
         return false;
     }

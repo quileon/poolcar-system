@@ -113,14 +113,14 @@ class _HistoryPageState extends State<HistoryPage> {
                           final item = _historyItems![index];
                           return ListTile(
                             leading: CircleAvatar(child: Text(item.carId.toString())),
-                            title: Text('${item.carName} (${item.carPoliceNumber})'),
+                            title: Text('${item.carName} (${item.policeNumber})'),
                             subtitle: Text('${item.statusType} at ${item.recordedAt}'),
                             trailing: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text('${item.kilometres.toStringAsFixed(1)} km'),
-                                Text('Gas: ${(item.gasLevel * 100).toStringAsFixed(0)}%'),
+                                Text('Gas: ${item.gasLevel.toStringAsFixed(1)} bar'),
                               ],
                             ),
                           );

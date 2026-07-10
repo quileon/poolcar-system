@@ -1,0 +1,14 @@
+Metric,Value
+Total Records,3776
+Frozen Datetimes,999
+Valid Records for Analysis,2777
+Connection Retries,6
+Retry Events,0
+Min Latency (s),1.7770
+Max Latency (s),56.3480
+Average Latency (s),5.6135
+Median Latency (s),3.6980
+Std Dev Latency (s),5.2487
+Packet Loss Events,38
+Total Packets Lost,50
+Packet Loss Rate (%),1.32

@@ -6,8 +6,6 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `CarResponse`
-
 Future<CarResult> getCarById({required String token, required int carId}) =>
     RustLib.instance.api.crateApiCarGetCarById(token: token, carId: carId);
 
@@ -15,11 +13,9 @@ class Car {
   final int carId;
   final String name;
   final String policeNumber;
-  final bool active;
-  final int carTypeId;
-  final String carTypeName;
+  final int active;
+  final String carType;
   final int? trackerId;
-  final String? trackerName;
   final String createdAt;
   final String updatedAt;
   final String? deletedAt;
@@ -29,10 +25,8 @@ class Car {
     required this.name,
     required this.policeNumber,
     required this.active,
-    required this.carTypeId,
-    required this.carTypeName,
+    required this.carType,
     this.trackerId,
-    this.trackerName,
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
@@ -44,10 +38,8 @@ class Car {
       name.hashCode ^
       policeNumber.hashCode ^
       active.hashCode ^
-      carTypeId.hashCode ^
-      carTypeName.hashCode ^
+      carType.hashCode ^
       trackerId.hashCode ^
-      trackerName.hashCode ^
       createdAt.hashCode ^
       updatedAt.hashCode ^
       deletedAt.hashCode;
@@ -61,10 +53,8 @@ class Car {
           name == other.name &&
           policeNumber == other.policeNumber &&
           active == other.active &&
-          carTypeId == other.carTypeId &&
-          carTypeName == other.carTypeName &&
+          carType == other.carType &&
           trackerId == other.trackerId &&
-          trackerName == other.trackerName &&
           createdAt == other.createdAt &&
           updatedAt == other.updatedAt &&
           deletedAt == other.deletedAt;

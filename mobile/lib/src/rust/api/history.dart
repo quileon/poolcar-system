@@ -6,7 +6,7 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `CarStatusBody`, `HistoryResponse`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `CarStatusBody`, `ErrorResponse`
 
 Future<HistoryResult> postHistory({
   required String token,
@@ -29,27 +29,21 @@ class CarStatus {
   final int carStatusId;
   final int carId;
   final String carName;
-  final String carPoliceNumber;
+  final String policeNumber;
   final double gasLevel;
   final double kilometres;
   final String statusType;
   final String recordedAt;
-  final String createdAt;
-  final String updatedAt;
-  final String? deletedAt;
 
   const CarStatus({
     required this.carStatusId,
     required this.carId,
     required this.carName,
-    required this.carPoliceNumber,
+    required this.policeNumber,
     required this.gasLevel,
     required this.kilometres,
     required this.statusType,
     required this.recordedAt,
-    required this.createdAt,
-    required this.updatedAt,
-    this.deletedAt,
   });
 
   @override
@@ -57,14 +51,11 @@ class CarStatus {
       carStatusId.hashCode ^
       carId.hashCode ^
       carName.hashCode ^
-      carPoliceNumber.hashCode ^
+      policeNumber.hashCode ^
       gasLevel.hashCode ^
       kilometres.hashCode ^
       statusType.hashCode ^
-      recordedAt.hashCode ^
-      createdAt.hashCode ^
-      updatedAt.hashCode ^
-      deletedAt.hashCode;
+      recordedAt.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -74,14 +65,11 @@ class CarStatus {
           carStatusId == other.carStatusId &&
           carId == other.carId &&
           carName == other.carName &&
-          carPoliceNumber == other.carPoliceNumber &&
+          policeNumber == other.policeNumber &&
           gasLevel == other.gasLevel &&
           kilometres == other.kilometres &&
           statusType == other.statusType &&
-          recordedAt == other.recordedAt &&
-          createdAt == other.createdAt &&
-          updatedAt == other.updatedAt &&
-          deletedAt == other.deletedAt;
+          recordedAt == other.recordedAt;
 }
 
 class HistoryResult {

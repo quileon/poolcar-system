@@ -6,7 +6,7 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `LoginData`, `LoginRequest`, `LoginResponse`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `LoginError`, `LoginRequest`, `LoginSuccess`
 
 Future<AuthResult> verify({required String token}) =>
     RustLib.instance.api.crateApiAuthVerify(token: token);

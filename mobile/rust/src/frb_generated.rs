@@ -350,11 +350,9 @@ impl SseDecode for crate::api::car::Car {
         let mut var_carId = <i32>::sse_decode(deserializer);
         let mut var_name = <String>::sse_decode(deserializer);
         let mut var_policeNumber = <String>::sse_decode(deserializer);
-        let mut var_active = <bool>::sse_decode(deserializer);
-        let mut var_carTypeId = <i32>::sse_decode(deserializer);
-        let mut var_carTypeName = <String>::sse_decode(deserializer);
+        let mut var_active = <i32>::sse_decode(deserializer);
+        let mut var_carType = <String>::sse_decode(deserializer);
         let mut var_trackerId = <Option<i32>>::sse_decode(deserializer);
-        let mut var_trackerName = <Option<String>>::sse_decode(deserializer);
         let mut var_createdAt = <String>::sse_decode(deserializer);
         let mut var_updatedAt = <String>::sse_decode(deserializer);
         let mut var_deletedAt = <Option<String>>::sse_decode(deserializer);
@@ -363,10 +361,8 @@ impl SseDecode for crate::api::car::Car {
             name: var_name,
             police_number: var_policeNumber,
             active: var_active,
-            car_type_id: var_carTypeId,
-            car_type_name: var_carTypeName,
+            car_type: var_carType,
             tracker_id: var_trackerId,
-            tracker_name: var_trackerName,
             created_at: var_createdAt,
             updated_at: var_updatedAt,
             deleted_at: var_deletedAt,
@@ -394,26 +390,20 @@ impl SseDecode for crate::api::history::CarStatus {
         let mut var_carStatusId = <i32>::sse_decode(deserializer);
         let mut var_carId = <i32>::sse_decode(deserializer);
         let mut var_carName = <String>::sse_decode(deserializer);
-        let mut var_carPoliceNumber = <String>::sse_decode(deserializer);
+        let mut var_policeNumber = <String>::sse_decode(deserializer);
         let mut var_gasLevel = <f64>::sse_decode(deserializer);
         let mut var_kilometres = <f64>::sse_decode(deserializer);
         let mut var_statusType = <String>::sse_decode(deserializer);
         let mut var_recordedAt = <String>::sse_decode(deserializer);
-        let mut var_createdAt = <String>::sse_decode(deserializer);
-        let mut var_updatedAt = <String>::sse_decode(deserializer);
-        let mut var_deletedAt = <Option<String>>::sse_decode(deserializer);
         return crate::api::history::CarStatus {
             car_status_id: var_carStatusId,
             car_id: var_carId,
             car_name: var_carName,
-            car_police_number: var_carPoliceNumber,
+            police_number: var_policeNumber,
             gas_level: var_gasLevel,
             kilometres: var_kilometres,
             status_type: var_statusType,
             recorded_at: var_recordedAt,
-            created_at: var_createdAt,
-            updated_at: var_updatedAt,
-            deleted_at: var_deletedAt,
         };
     }
 }
@@ -589,10 +579,8 @@ impl flutter_rust_bridge::IntoDart for crate::api::car::Car {
             self.name.into_into_dart().into_dart(),
             self.police_number.into_into_dart().into_dart(),
             self.active.into_into_dart().into_dart(),
-            self.car_type_id.into_into_dart().into_dart(),
-            self.car_type_name.into_into_dart().into_dart(),
+            self.car_type.into_into_dart().into_dart(),
             self.tracker_id.into_into_dart().into_dart(),
-            self.tracker_name.into_into_dart().into_dart(),
             self.created_at.into_into_dart().into_dart(),
             self.updated_at.into_into_dart().into_dart(),
             self.deleted_at.into_into_dart().into_dart(),
@@ -630,14 +618,11 @@ impl flutter_rust_bridge::IntoDart for crate::api::history::CarStatus {
             self.car_status_id.into_into_dart().into_dart(),
             self.car_id.into_into_dart().into_dart(),
             self.car_name.into_into_dart().into_dart(),
-            self.car_police_number.into_into_dart().into_dart(),
+            self.police_number.into_into_dart().into_dart(),
             self.gas_level.into_into_dart().into_dart(),
             self.kilometres.into_into_dart().into_dart(),
             self.status_type.into_into_dart().into_dart(),
             self.recorded_at.into_into_dart().into_dart(),
-            self.created_at.into_into_dart().into_dart(),
-            self.updated_at.into_into_dart().into_dart(),
-            self.deleted_at.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -705,11 +690,9 @@ impl SseEncode for crate::api::car::Car {
         <i32>::sse_encode(self.car_id, serializer);
         <String>::sse_encode(self.name, serializer);
         <String>::sse_encode(self.police_number, serializer);
-        <bool>::sse_encode(self.active, serializer);
-        <i32>::sse_encode(self.car_type_id, serializer);
-        <String>::sse_encode(self.car_type_name, serializer);
+        <i32>::sse_encode(self.active, serializer);
+        <String>::sse_encode(self.car_type, serializer);
         <Option<i32>>::sse_encode(self.tracker_id, serializer);
-        <Option<String>>::sse_encode(self.tracker_name, serializer);
         <String>::sse_encode(self.created_at, serializer);
         <String>::sse_encode(self.updated_at, serializer);
         <Option<String>>::sse_encode(self.deleted_at, serializer);
@@ -731,14 +714,11 @@ impl SseEncode for crate::api::history::CarStatus {
         <i32>::sse_encode(self.car_status_id, serializer);
         <i32>::sse_encode(self.car_id, serializer);
         <String>::sse_encode(self.car_name, serializer);
-        <String>::sse_encode(self.car_police_number, serializer);
+        <String>::sse_encode(self.police_number, serializer);
         <f64>::sse_encode(self.gas_level, serializer);
         <f64>::sse_encode(self.kilometres, serializer);
         <String>::sse_encode(self.status_type, serializer);
         <String>::sse_encode(self.recorded_at, serializer);
-        <String>::sse_encode(self.created_at, serializer);
-        <String>::sse_encode(self.updated_at, serializer);
-        <Option<String>>::sse_encode(self.deleted_at, serializer);
     }
 }
 
