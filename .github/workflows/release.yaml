@@ -1,0 +1,71 @@
+name: Build, Release, and Push Image
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: write
+
+jobs:
+  release-and-publish:
+    runs-on: ubuntu-24.04
+    environment: gitea
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(awk -F'"' '/^version =/ {print $2}' web/Cargo.toml)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Install dependencies
+        run: |
+          sudo apt update -y
+          sudo apt install -y build-essential pkg-config libssl-dev libmysqlclient-dev
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: web
+
+      - name: Build Binary
+        run: |
+          cd web
+          cargo build --release
+
+      # Upload to GitHub Release
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Release ${{ steps.version.outputs.version }}
+          prerelease: false
+          files: web/target/release/backend
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build and Push Image to Gitea
+      - name: Build Image with Buildah
+        id: build-image
+        uses: redhat-actions/buildah-build@v2
+        with:
+          image: quilavr/poolcar
+          tags: ${{ steps.version.outputs.version }} latest
+          containerfiles: |
+            ./Containerfile
+          context: .
+
+      - name: Push To Gitea
+        id: push-to-gitea
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          image: ${{ steps.build-image.outputs.image }}
+          tags: ${{ steps.build-image.outputs.tags }}
+          registry: gitea.quilavr.top
+          username: ${{ vars.USERNAME }}
+          password: ${{ secrets.PASSWORD_TOKEN }}
